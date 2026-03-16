@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 
 import AuthPage from '@/modules/auth/pages/AuthPage';
 import HomePage from '@/pages/HomePage';
+import ChatPage from '@/modules/chat/pages/ChatPage'; 
 // import Terms from '@/pages/Terms';     
 // import Privacy from '@/pages/Privacy'; 
 
@@ -32,6 +33,13 @@ function App() {
 
       {/* Fallback route: Bất kỳ đường dẫn nào không tồn tại sẽ tự văng về trang chủ */}
       <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/chat" element={
+        isAuthenticated ? <ChatPage /> : <Navigate to="/" replace />
+      } />
+
+      <Route path="/chat/:conversationId" element={
+        isAuthenticated ? <ChatPage /> : <Navigate to="/" replace />
+      } />
     </Routes>
   );
 }
