@@ -10,7 +10,7 @@ type RegisterStep = 1 | 2 | 3 | 4;
 
 export const useRegisterWizard = () => {
   const { updateRegisterData, registerData, email, resetFlow } = useAuthFlow();
-  const { login } = useGlobalAuth(); // Hàm này sẽ lưu token vào localStorage
+  const { login } = useGlobalAuth(); // This function stores tokens in localStorage
   const navigate = useNavigate();
   
   const [step, setStep] = useState<RegisterStep>(1);
@@ -27,7 +27,7 @@ export const useRegisterWizard = () => {
     setStep(3);
   };
 
-  // Bước 3: Gửi thông tin -> Nhận OTP
+  // Step 3: Submit profile info -> Receive OTP
   const handleHandleSubmit = async (handle: string) => {
     setIsLoading(true);
     setError(null);
@@ -46,12 +46,12 @@ export const useRegisterWizard = () => {
 
       await authService.registerStep1(payload as any);
       
-      setStep(4); // Chuyển sang màn nhập OTP
-      toast.success(`Mã xác thực đã được gửi tới ${email}`);
+      setStep(4); // Move to OTP input step
+      toast.success(`Verification code sent to ${email}`);
 
     } catch (err: any) {
       console.error("Register Error:", err);
-      const msg = err.response?.data?.message || "Đăng ký thất bại";
+      const msg = err.response?.data?.message || "Registration failed";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -59,21 +59,21 @@ export const useRegisterWizard = () => {
     }
   };
 
-  // --- BƯỚC 4: XÁC THỰC OTP & AUTO LOGIN ---
+  // --- STEP 4: VERIFY OTP & AUTO LOGIN ---
   const handleOtpVerify = async (email: string, otpCode: string) => {
-    // Không cần try-catch vì OtpForm đã xử lý lỗi
+    // No try-catch here because OtpForm already handles errors
     const { data } = await authService.verifyRegisterOtp(email, otpCode);
     
-    // 1. Lưu token vào hệ thống (QUAN TRỌNG: dùng await nếu login là async)
+    // 1. Store tokens in auth system (IMPORTANT: await if login is async)
     await login(data.data.accessToken, data.data.refreshToken);
     
-    // 2. Thông báo thành công
-    toast.success("Đăng ký thành công! Đang vào trang chủ...");
+    // 2. Notify success
+    toast.success("Registration successful! Redirecting to home...");
     
-    // 3. Reset luồng đăng ký để dọn dẹp data cũ
+    // 3. Reset registration flow to clean stale data
     resetFlow();
 
-    // 4. Chuyển hướng ngay lập tức về trang chủ
+    // 4. Redirect to home immediately
     navigate('/', { replace: true });
   };
 

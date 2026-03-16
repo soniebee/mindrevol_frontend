@@ -1,27 +1,27 @@
 // src/modules/auth/types.ts
 
-// 1. DTO cho User (dùng chung cho Auth và User module)
+// 1. User DTO (shared by Auth and User modules)
 export interface UserSummary {
-  id: number; // Lưu ý: Backend bạn trả về String (UUID), xem xét sửa lại type ở đây là string nếu cần
+  id: number; // Note: backend may return UUID string; switch this to string if needed
   handle: string;
   fullname: string;
   avatarUrl: string;
   isOnline: boolean;
   
-  // --- THÊM MỚI ---
+  // --- Added fields ---
   hasPassword: boolean; 
   authProvider: string; 
-  // ----------------
+  // ------------------
 }
 
-// 2. DTO phản hồi khi Login/Register thành công
+// 2. Login/Register success response DTO
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
 }
 
-// 3. DTO gửi lên khi Register
+// 3. Register request DTO
 export interface RegisterPayload {
   email: string;
   password?: string;
@@ -32,7 +32,7 @@ export interface RegisterPayload {
   agreedToTerms?: boolean;
 }
 
-// 4. Format chuẩn của API Response (bọc ngoài)
+// 4. Standard API response wrapper
 export interface ApiResponse<T> {
   status: number;
   message: string;
@@ -41,9 +41,9 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
-// 5. Type định nghĩa các bước của luồng Auth
+// 5. Auth flow step definitions
 export type AuthStep = 
-  | 'EMAIL_INPUT'       // Bước 1: Nhập Email
-  | 'PASSWORD_LOGIN'    // Bước 2a: Nhập Pass (User cũ)
-  | 'OTP_INPUT'         // Bước 2b: Nhập OTP (Quên pass hoặc login nhanh)
-  | 'REGISTER_WIZARD';  // Bước 2c: Đăng ký mới (User mới)
+  | 'EMAIL_INPUT'       // Step 1: enter email
+  | 'PASSWORD_LOGIN'    // Step 2a: enter password (existing user)
+  | 'OTP_INPUT'         // Step 2b: enter OTP (quick sign-in or no password)
+  | 'REGISTER_WIZARD';  // Step 2c: new user registration

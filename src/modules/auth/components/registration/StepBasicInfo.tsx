@@ -4,68 +4,89 @@ import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
 import { useStepBasicInfo } from '../../hooks/useRegisterSteps';
 import { StepBasicInfoValues } from '../../schemas/auth.schema';
+import { ArrowLeft } from 'lucide-react';
 
 interface Props {
   onNext: (data: StepBasicInfoValues) => void;
   onBack: () => void;
 }
 
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
 export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
   const { form, onSubmit } = useStepBasicInfo(onNext);
   const { register, formState: { errors } } = form;
 
-  // ĐÃ XÓA LOGIC CHECK EMAIL Ở ĐÂY
-
   return (
     <motion.div 
-      initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}
-      className="space-y-6"
+      initial={{ x: 20, opacity: 0 }} 
+      animate={{ x: 0, opacity: 1 }} 
+      exit={{ x: -20, opacity: 0 }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
+      className="space-y-5"
     >
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold">Giới thiệu bản thân</h2>
-        <p className="text-muted text-sm">Chúng tôi cần một chút thông tin cơ bản.</p>
+      <div className="space-y-1.5">
+        <h3 className="text-xl font-bold text-zinc-900">Tell us about yourself</h3>
+        <p className="text-sm text-zinc-600">We need a few basic details.</p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        {/* Tên */}
-        <Input 
-          label="Tên hiển thị"
-          placeholder="Ví dụ: Minh Developer"
-          {...register('fullname')} 
-          error={errors.fullname?.message} 
-          autoFocus
-        />
-
-        {/* Ngày sinh */}
-        <Input 
-          label="Ngày sinh"
-          type="date"
-          {...register('dateOfBirth')} 
-          error={errors.dateOfBirth?.message} 
-        />
-
-        {/* Giới tính */}
-        <div className="w-full space-y-1.5">
-          <label className="text-xs font-semibold text-muted ml-1 uppercase">Giới tính</label>
-          <div className="relative">
-            <select
-              {...register('gender')}
-              className={`w-full bg-surface border-2 border-transparent rounded-2xl px-5 py-3.5 text-foreground outline-none transition-all font-medium appearance-none cursor-pointer focus:border-primary focus:bg-background ${errors.gender ? 'border-destructive/50 bg-destructive/5' : ''}`}
-              defaultValue="" 
-            >
-              <option value="" disabled>Chọn giới tính...</option>
-              <option value="MALE">Nam</option>
-              <option value="FEMALE">Nữ</option>
-              <option value="OTHER">Khác</option>
-              <option value="PREFER_NOT_TO_SAY">Không muốn tiết lộ</option>
-            </select>
-          </div>
-          {errors.gender && <span className="text-xs text-destructive font-bold ml-1">{errors.gender.message}</span>}
+      <form onSubmit={onSubmit} className="space-y-3">
+        {/* Display name */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-zinc-700">Display name</label>
+          <Input 
+            placeholder="Example: Son Tran"
+            {...register('fullname')} 
+            error={errors.fullname?.message} 
+            autoFocus
+            className="h-11 rounded-lg border-zinc-200 bg-white pl-4 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-0 shadow-none"
+          />
         </div>
-        
-        <div className="flex gap-3 mt-6">
-          <Button type="button" variant="ghost" onClick={onBack} className="w-1/3">Quay lại</Button>
-          <Button type="submit" className="w-2/3">Tiếp theo</Button>
+
+        {/* Date of birth */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-zinc-700">Date of birth</label>
+          <Input 
+            type="date"
+            {...register('dateOfBirth')} 
+            error={errors.dateOfBirth?.message} 
+            className="h-11 rounded-lg border-zinc-200 bg-white pl-4 pr-4 text-sm focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-0 shadow-none"
+          />
+        </div>
+
+        {/* Gender */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-zinc-700">Gender</label>
+          <select
+            {...register('gender')}
+            defaultValue=""
+            className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 outline-none transition-all cursor-pointer focus:border-sky-500 focus:ring-2 focus:ring-sky-200 hover:border-zinc-300 shadow-none"
+          >
+            <option value="" disabled>Select gender...</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+            <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+          </select>
+          {errors.gender && <span className="text-xs text-red-600 font-medium">{errors.gender.message}</span>}
+        </div>
+
+        {/* Navigation buttons */}
+        <div className="flex gap-3 pt-3">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onBack} 
+            className="h-11 px-3 rounded-lg border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 font-medium text-sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button 
+            type="submit" 
+            className="h-11 flex-1 rounded-lg bg-zinc-900 font-semibold text-white text-sm transition-all hover:bg-zinc-800 shadow-[0_4px_12px_rgba(15,23,42,0.15)]"
+          >
+            Continue
+          </Button>
         </div>
       </form>
     </motion.div>

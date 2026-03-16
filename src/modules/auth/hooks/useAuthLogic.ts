@@ -15,7 +15,7 @@ export const useAuthLogic = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // [NEW] State lưu thời điểm gửi OTP cuối cùng (Client-side Cooldown)
+  // [NEW] Store the last OTP send timestamp (client-side cooldown)
   const [lastOtpSentAt, setLastOtpSentAt] = useState<number>(0);
 
   // --- HELPERS ---
@@ -37,36 +37,36 @@ export const useAuthLogic = () => {
     setLastOtpSentAt(0); // Reset cooldown
   };
 
-  // --- [NEW] SMART GO TO OTP (Hàm chuyển hướng thông minh) ---
+  // --- [NEW] SMART GO TO OTP ---
   const goToOtp = async () => {
     const now = Date.now();
-    const COOLDOWN_TIME = 60000; // 60 giây
+    const COOLDOWN_TIME = 60000; // 60 seconds
 
-    // 1. Kiểm tra Cooldown: Nếu vừa gửi chưa được 60s
+    // 1. Cooldown check: if OTP was sent in the last 60s
     if (now - lastOtpSentAt < COOLDOWN_TIME) {
-        // KHÔNG GỌI API. Chỉ chuyển màn hình.
-        toast('Vui lòng kiểm tra email để lấy mã', { icon: '📧' });
+        // Do not call API, only navigate to OTP screen.
+        toast('Please check your email for the code', { icon: '📧' });
         setCurrentStep('OTP_INPUT');
         return;
     }
 
-    // 2. Nếu đã quá 60s hoặc chưa gửi lần nào -> Gọi API gửi mới
-    // (Không set loading toàn cục để tránh block UI khi chuyển tab, có thể dùng loading cục bộ nếu cần)
+    // 2. If cooldown passed or no OTP sent yet -> request a new OTP
+    // Avoid global loading state here to keep screen transitions smooth.
     try {
         await authService.sendOtp(email);
-        setLastOtpSentAt(Date.now()); // Cập nhật thời điểm gửi
-        toast.success('Đã gửi mã xác thực mới');
+        setLastOtpSentAt(Date.now());
+        toast.success('A new verification code was sent');
         setCurrentStep('OTP_INPUT');
     } catch (e: any) {
-        console.error("Lỗi gửi OTP", e);
+        console.error('Failed to send OTP', e);
         
-        // Trường hợp đặc biệt: Backend trả về 400 (Rate Limit) nhưng Client bị mất sync state
-        // Vẫn cho user vào màn hình nhập (có thể họ đã nhận được mail trước đó)
+        // Special case: backend returns 400 (rate limit) while client state is out of sync.
+        // Let user proceed since they may already have a valid code in email.
         if (e.response?.status === 400) {
-             toast('Mã vừa được gửi. Vui lòng kiểm tra email.', { icon: '⏳' });
+             toast('A code was recently sent. Please check your email.', { icon: '⏳' });
              setCurrentStep('OTP_INPUT');
         } else {
-             setError("Không thể gửi mã. Vui lòng thử lại sau.");
+             setError('Unable to send code. Please try again later.');
         }
     }
   };
@@ -83,24 +83,24 @@ export const useAuthLogic = () => {
       const userData = response.data.data;
 
       if (userData) {
-        // User tồn tại -> Smart Login
+        // Existing user -> Smart login path
         setUserInfo(userData);
         
         if (userData.hasPassword) {
-            // Có pass -> Vào màn hình nhập Pass
+            // Has password -> go to password step
             setCurrentStep('PASSWORD_LOGIN');
         } else {
-            // Không có pass (Social) -> Gọi hàm thông minh để gửi OTP
+            // No password (social account) -> go through OTP flow
             await goToOtp();
         }
       } else {
-        // User chưa tồn tại -> Đăng ký
+        // New user -> registration flow
         setUserInfo(null);
         setCurrentStep('REGISTER_WIZARD');
       }
     } catch (err: any) {
       console.error(err);
-      setError('Không thể kết nối đến máy chủ.');
+      setError('Unable to connect to the server.');
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +113,7 @@ export const useAuthLogic = () => {
       const res = await authService.login(email, password);
       handleAuthSuccess(res);
     } catch (err: any) {
-      handleError(err, 'Mật khẩu không chính xác');
+      handleError(err, 'Incorrect password');
     } finally {
       setIsLoading(false);
     }
@@ -126,14 +126,14 @@ export const useAuthLogic = () => {
         const res = await authService.verifyOtp(email, code);
         handleAuthSuccess(res);
     } catch (err: any) {
-        handleError(err, 'Mã xác thực không đúng');
+        handleError(err, 'Invalid verification code');
     } finally {
         setIsLoading(false);
     }
   };
 
   const resendOtp = async () => {
-    // Tận dụng lại hàm goToOtp để check cooldown luôn
+    // Reuse goToOtp to keep cooldown behavior consistent
     await goToOtp();
   };
 
@@ -149,7 +149,7 @@ export const useAuthLogic = () => {
         
         if (res) handleAuthSuccess(res);
     } catch (err: any) {
-        handleError(err, `Đăng nhập ${provider} thất bại`);
+        handleError(err, `${provider} sign-in failed`);
     } finally {
         setIsLoading(false);
     }
@@ -173,6 +173,7 @@ export const useAuthLogic = () => {
     // Navigation Helpers
     goToLogin: () => setCurrentStep('PASSWORD_LOGIN'),
     goToRegister: () => setCurrentStep('REGISTER_WIZARD'),
-    goToOtp: goToOtp, // Export hàm thông minh này để PasswordForm sử dụng
+    goToOtp: goToOtp,
   };
 };
+

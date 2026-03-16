@@ -17,7 +17,7 @@ export const useOtpForm = ({ customVerify, onResend, initialCountdown = 0 }: Use
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // LOG DEBUG: Kiểm tra xem số 60 có vào được đây không
+  // Debug log for initial countdown value
   useEffect(() => {
     console.log("useOtpForm initialized with countdown:", initialCountdown);
   }, [initialCountdown]);
@@ -61,7 +61,7 @@ export const useOtpForm = ({ customVerify, onResend, initialCountdown = 0 }: Use
 
   const executeSubmit = async (otpCode: string) => {
      if (!email) {
-        setLocalError("Không tìm thấy email.");
+        setLocalError("Email not found.");
         return;
      }
      setLocalError(null);
@@ -71,7 +71,7 @@ export const useOtpForm = ({ customVerify, onResend, initialCountdown = 0 }: Use
         try {
             await customVerify(email, otpCode);
         } catch (err: any) {
-            setLocalError(err.response?.data?.message || "Mã xác thực không đúng");
+            setLocalError(err.response?.data?.message || "Invalid verification code");
             setOtp(new Array(6).fill(""));
             inputRefs.current[0]?.focus();
         } finally {
@@ -95,9 +95,9 @@ export const useOtpForm = ({ customVerify, onResend, initialCountdown = 0 }: Use
         else await defaultResend();
         
         setCountdown(60); 
-        toast.success(`Đã gửi lại mã tới ${email}`);
+        toast.success(`Code resent to ${email}`);
     } catch (e) {
-        toast.error("Gửi mã thất bại. Vui lòng thử lại sau.");
+        toast.error("Failed to resend code. Please try again later.");
     } finally {
         setLocalLoading(false);
     }

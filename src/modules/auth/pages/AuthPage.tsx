@@ -5,51 +5,45 @@ import { EmailForm } from '../components/EmailForm';
 import { PasswordForm } from '../components/PasswordForm';
 import { RegisterWizard } from '../components/RegisterWizard';
 import { OtpForm } from '../components/OtpForm';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 const AuthHeader = () => {
-  const { currentStep } = useAuthFlow();
+  const { currentStep, userInfo } = useAuthFlow();
+
+  if (currentStep === 'EMAIL_INPUT') return null;
   
   const getTitle = () => {
     switch (currentStep) {
-      case 'EMAIL_INPUT': return 'Xin chào';
-      case 'OTP_INPUT': return 'Xác thực';
-      case 'PASSWORD_LOGIN': return 'Mật khẩu';
-      case 'REGISTER_WIZARD': return 'Đăng ký';
+      case 'OTP_INPUT': return 'Verification';
+      case 'PASSWORD_LOGIN': return userInfo?.fullname ? `Hi, ${userInfo.fullname.split(' ')[0]}!` : 'Welcome back';
+      case 'REGISTER_WIZARD': return 'Sign up';
       default: return 'MindRevol';
     }
   };
 
   const getSubtitle = () => {
     switch (currentStep) {
-      case 'EMAIL_INPUT': return 'Đăng nhập để tiếp tục hành trình.';
-      case 'OTP_INPUT': return 'Nhập mã gồm 6 số vừa được gửi.';
-      case 'PASSWORD_LOGIN': return 'Nhập mật khẩu của bạn.';
-      case 'REGISTER_WIZARD': return 'Hoàn tất thông tin tài khoản.';
+      case 'OTP_INPUT': return 'Enter the 6-digit code we just sent.';
+      case 'PASSWORD_LOGIN': return 'Enter your password to continue.';
+      case 'REGISTER_WIZARD': return 'Complete your account details.';
       default: return '';
     }
   };
 
   return (
-    <div className="mb-10">
-      {/* Logo + Brand Name */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-[#FFF5C0] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(255,245,192,0.2)]">
-          <span className="text-black font-extrabold text-xl">M</span>
-        </div>
-        <span className="text-xl font-bold text-white tracking-tight">MindRevol</span>
-      </div>
+    <div className="mb-6 rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-600">Authentication</p>
 
       <motion.div
         key={currentStep}
-        initial={{ opacity: 0, x: -5 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22 }}
       >
-        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
           {getTitle()}
         </h1>
-        <p className="text-zinc-400 text-base">
+        <p className="text-sm text-slate-600">
           {getSubtitle()}
         </p>
       </motion.div>
@@ -59,39 +53,39 @@ const AuthHeader = () => {
 
 const AuthContent = () => {
   const { currentStep } = useAuthFlow();
+  const shouldReduceMotion = useReducedMotion();
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 'EMAIL_INPUT':
+        return <EmailForm />;
+      case 'OTP_INPUT':
+        return <OtpForm initialCountdown={60} />;
+      case 'PASSWORD_LOGIN':
+        return <PasswordForm />;
+      case 'REGISTER_WIZARD':
+        return <RegisterWizard />;
+      default:
+        return <EmailForm />;
+    }
+  };
 
   return (
     <>
       <AuthHeader />
-      
-      <div className="relative w-full min-h-[400px]"> 
-        <AnimatePresence mode="wait" initial={false}>
-          
-          {currentStep === 'EMAIL_INPUT' && (
-            <div key="email" className="absolute inset-0">
-              <EmailForm />
-            </div>
-          )}
-          
-          {/* --- SỬA Ở ĐÂY: Thêm initialCountdown={60} --- */}
-          {currentStep === 'OTP_INPUT' && (
-            <div key="otp" className="absolute inset-0">
-              <OtpForm initialCountdown={60} />
-            </div>
-          )}
-          {/* ------------------------------------------- */}
 
-          {currentStep === 'PASSWORD_LOGIN' && (
-            <div key="password" className="absolute inset-0">
-              <PasswordForm />
-            </div>
-          )}
-          
-          {currentStep === 'REGISTER_WIZARD' && (
-            <div key="register" className="absolute inset-0">
-              <RegisterWizard />
-            </div>
-          )}
+      <div className="w-full">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={currentStep}
+            className="w-full"
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {renderStep()}
+          </motion.div>
         </AnimatePresence>
       </div>
     </>

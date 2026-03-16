@@ -4,42 +4,56 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthFlow } from '../store/AuthFlowContext';
 import { authService } from '../services/auth.service';
 import { passwordSchema, PasswordFormValues } from '../schemas/auth.schema';
+import { toast } from 'react-hot-toast';
+
+type ForgotStatus = 'idle' | 'loading' | 'sent' | 'error';
 
 export const usePasswordForm = () => {
-  const { email, resetFlow, login, isLoading, error, goToOtp } = useAuthFlow();
+  const { email, userInfo, resetFlow, login, isLoading, error, goToOtp } = useAuthFlow();
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotStatus, setForgotStatus] = useState<ForgotStatus>('idle');
 
-  // 1. Setup Form
+  // 1. Setup form
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
   });
 
-  // 2. Xử lý Submit Login
+  // 2. Handle login submit
   const onSubmit = async (data: PasswordFormValues) => {
     await login(data.password);
   };
 
-  // 3. Xử lý chuyển sang đăng nhập OTP
-  // [QUAN TRỌNG]: Đã xóa dòng authService.sendOtp(email) để tránh gửi kép
+  // 3. Switch to OTP login
+  // IMPORTANT: authService.sendOtp(email) was removed to avoid duplicate sends
   const handleSwitchToOtp = async () => {
      goToOtp(); 
   };
 
-  // 4. Xử lý quên mật khẩu
+  // 4. Handle forgot password
   const handleForgotPassword = async () => {
+    if (forgotStatus === 'loading' || forgotStatus === 'sent') return;
+
+    setForgotStatus('loading');
     try {
-        await authService.sendMagicLink(email);
-        alert('Đã gửi link đặt lại mật khẩu về email!');
-    } catch (e) {
-        alert('Có lỗi xảy ra khi gửi email reset.');
+      await authService.forgotPassword(email);
+      setForgotStatus('sent');
+      toast.success('Password reset link has been sent to your email!');
+    } catch (e: any) {
+      setForgotStatus('error');
+      const msg = e.response?.data?.message || 'Unable to send email, please try again.';
+      toast.error(msg);
+      // Auto-reset after 4 seconds so the user can retry
+      setTimeout(() => setForgotStatus('idle'), 4000);
     }
   };
 
   return {
     form,
     email,
+    userInfo,
     isLoading,
     error,
+    forgotStatus,
     showPassword,
     toggleShowPassword: () => setShowPassword(prev => !prev),
     onSubmit: form.handleSubmit(onSubmit),

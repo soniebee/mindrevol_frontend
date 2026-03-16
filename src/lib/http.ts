@@ -1,13 +1,20 @@
 // src/lib/http.ts
 import axios from 'axios';
 
-console.log(">>> VITE_API_URL:", import.meta.env.VITE_API_URL);
-console.log(">>> CURRENT DOMAIN:", import.meta.env.VITE_API_URL || 'http://localhost:8080');
-// 1. Định nghĩa các hằng số URL và EXPORT chúng
-// DOMAIN: Là địa chỉ gốc của server (dùng cho Socket, ảnh...)
-// src/lib/http.ts
-export const DOMAIN = import.meta.env.VITE_API_URL || 'http://localhost:8080'; 
-export const API_URL = `${DOMAIN}/api/v1`;
+// Accept both env formats:
+// - http://localhost:8080
+// - http://localhost:8080/api/v1
+const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080').trim();
+const normalizedBase = rawApiUrl.replace(/\/+$/, '');
+
+// 1. Define URL constants and export them
+// DOMAIN: Base server URL (used for socket, static assets, etc.)
+export const DOMAIN = normalizedBase.endsWith('/api/v1')
+  ? normalizedBase.replace(/\/api\/v1$/, '')
+  : normalizedBase;
+export const API_URL = normalizedBase.endsWith('/api/v1')
+  ? normalizedBase
+  : `${normalizedBase}/api/v1`;
 // ...
 
 export const http = axios.create({
@@ -51,7 +58,7 @@ http.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       
-      // Nếu lỗi 401 ngay tại API refresh -> Logout luôn
+      // If refresh endpoint itself returns 401 -> force logout
       if (originalRequest.url.includes('/auth/refresh-token')) {
         localStorage.clear();
         window.location.href = '/login';
@@ -82,7 +89,7 @@ http.interceptors.response.use(
       }
 
       try {
-        // Dùng axios thường để gọi refresh (tránh loop vô tận với instance http)
+        // Use plain axios for refresh request to avoid interceptor loops
         const response = await axios.post(`${API_URL}/auth/refresh-token`, {}, {
           headers: { Authorization: `Bearer ${refreshToken}` }
         });
@@ -90,7 +97,7 @@ http.interceptors.response.use(
         const { accessToken, refreshToken: newRefreshToken } = response.data.data;
 
         localStorage.setItem('accessToken', accessToken);
-        // Backend có thể trả về refreshToken mới hoặc không
+        // Backend may or may not return a new refresh token
         if (newRefreshToken) {
           localStorage.setItem('refreshToken', newRefreshToken);
         }

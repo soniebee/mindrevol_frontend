@@ -7,7 +7,7 @@ export const useTikTokCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { loginTikTok, setError } = useAuthFlow();
-  const processedRef = useRef(false); // Tránh gọi 2 lần do React StrictMode
+  const processedRef = useRef(false); // Prevent double call in React StrictMode
 
   useEffect(() => {
     if (processedRef.current) return;
@@ -17,7 +17,7 @@ export const useTikTokCallback = () => {
     const verifier = localStorage.getItem('tiktok_code_verifier');
 
     if (error) {
-        setError("Người dùng từ chối cấp quyền TikTok");
+        setError("User denied TikTok authorization");
         navigate('/auth');
         return;
     }
@@ -26,11 +26,11 @@ export const useTikTokCallback = () => {
       processedRef.current = true;
       loginTikTok(code, verifier)
         .then(() => {
-           // Login thành công -> Redirect về trang chủ hoặc setup
+           // Login success -> Redirect to home or setup
            navigate('/'); 
         })
         .catch(() => {
-           navigate('/auth'); // Lỗi thì quay về login
+           navigate('/auth'); // On error, go back to auth
         });
     }
   }, [searchParams, loginTikTok, navigate, setError]);

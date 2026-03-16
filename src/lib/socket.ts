@@ -9,11 +9,11 @@ class SocketClient {
   private client: Client;
   public connected: boolean = false;
   
-  // Hàng đợi: Lưu các lệnh subscribe khi socket chưa sẵn sàng
+  // Queue subscriptions while socket is not ready
   private pendingSubscriptions: Array<{
     topic: string;
     callback: (data: any) => void;
-    id: string; // ID tạm để hủy nếu cần
+    id: string; // Temporary ID so it can be removed before connect
   }> = [];
 
   constructor() {
@@ -33,7 +33,7 @@ class SocketClient {
       this.connected = true;
       console.log('✅ Connected to WebSocket');
       
-      // [QUAN TRỌNG] Chạy lại tất cả các subscription đang chờ
+      // [IMPORTANT] Replay all queued subscriptions
       this.processPendingSubscriptions();
     };
 
@@ -48,7 +48,7 @@ class SocketClient {
     };
   }
 
-  // Xử lý hàng đợi
+  // Process queued subscriptions
   private processPendingSubscriptions() {
     if (!this.pendingSubscriptions.length) return;
 
@@ -64,7 +64,7 @@ class SocketClient {
         }
       });
     });
-    // Xóa hàng đợi sau khi đã xử lý
+    // Clear queue after processing
     this.pendingSubscriptions = []; 
   }
 
@@ -86,17 +86,17 @@ class SocketClient {
   }
 
   /**
-   * Hàm subscribe an toàn:
-   * - Nếu đã connect: Subscribe ngay.
-   * - Nếu chưa connect: Lưu vào hàng đợi, trả về unsubscribe giả để React không lỗi.
+   * Safe subscribe behavior:
+   * - If connected: subscribe immediately.
+   * - If not connected: enqueue and return a fallback unsubscribe handle.
    */
   subscribe(topic: string, callback: (data: any) => void) {
-    // 1. Nếu socket chưa active, kích hoạt nó
+    // 1) Activate socket if needed
     if (!this.client.active) {
         this.connect();
     }
 
-    // 2. Nếu đã kết nối, gọi lệnh của thư viện
+    // 2) If already connected, subscribe directly
     if (this.client.connected) {
       return this.client.subscribe(topic, (message) => {
         if (message.body) {
@@ -110,17 +110,17 @@ class SocketClient {
       });
     }
 
-    // 3. Nếu CHƯA kết nối, đưa vào hàng đợi (Queue)
+    // 3) If not connected yet, push to queue
     console.log(`⏳ Socket not ready, queueing subscription for: ${topic}`);
     const tempId = crypto.randomUUID();
     
     this.pendingSubscriptions.push({ topic, callback, id: tempId });
 
-    // Trả về hàm unsubscribe giả để React useEffect không bị crash
+    // Return fallback unsubscribe so React effects stay safe
     return {
       id: tempId,
       unsubscribe: () => {
-        // Xóa khỏi hàng đợi nếu component unmount trước khi socket connect xong
+        // Remove queued subscription if component unmounts before connect
         this.pendingSubscriptions = this.pendingSubscriptions.filter(s => s.id !== tempId);
       }
     };
@@ -133,7 +133,7 @@ class SocketClient {
         body: JSON.stringify(body),
       });
     } else {
-        console.warn("Socket chưa kết nối, không thể gửi tin:", destination);
+        console.warn('Socket is not connected, cannot send message:', destination);
     }
   }
 }

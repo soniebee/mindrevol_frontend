@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect } from 'react'; // [SỬA] Thêm useEffect
+import React, { createContext, useContext, useEffect } from 'react'; // [UPDATED] Added useEffect
 import { UserProfile } from '@/modules/user/services/user.service';
 import { useGlobalAuth } from '../hooks/useGlobalAuth';
-import { identifyUser, resetAnalytics } from '@/lib/analytics'; // <--- [THÊM] Import
+import { identifyUser, resetAnalytics } from '@/lib/analytics'; // [ADDED] Import
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -17,17 +17,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const authLogic = useGlobalAuth();
 
-  // [THÊM] Theo dõi trạng thái đăng nhập để báo cáo Analytics
+  // Track auth state for analytics
   useEffect(() => {
     if (authLogic.user) {
-      // Khi có user -> Định danh
+      // Identify signed-in user
       identifyUser(authLogic.user.id, {
         email: authLogic.user.email,
-        fullname: authLogic.user.fullname, // Tên sẽ bị che trong session replay, chỉ hiện ở dashboard quản trị
+        fullname: authLogic.user.fullname, // Name is masked in session replay and visible in analytics dashboard
         role: authLogic.user.role
       });
     } else if (!authLogic.isAuthenticated && !authLogic.isLoading) {
-      // Khi không còn user -> Reset
+      // No active user -> reset analytics identity
       resetAnalytics();
     }
   }, [authLogic.user, authLogic.isAuthenticated, authLogic.isLoading]);

@@ -17,17 +17,17 @@ export const ActivatePage = () => {
         {status === 'LOADING' && (
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <h2 className="text-xl font-bold text-white">Đang kích hoạt tài khoản...</h2>
+            <h2 className="text-xl font-bold text-white">Activating your account...</h2>
           </div>
         )}
 
         {status === 'SUCCESS' && (
           <div className="flex flex-col items-center space-y-4">
             <CheckCircle className="h-12 w-12 text-green-500" />
-            <h2 className="text-xl font-bold text-white">Kích hoạt thành công!</h2>
-            <p className="text-zinc-400">Tài khoản của bạn đã sẵn sàng. Hãy đăng nhập để bắt đầu.</p>
+            <h2 className="text-xl font-bold text-white">Activation successful!</h2>
+            <p className="text-zinc-400">Your account is ready. Sign in to get started.</p>
             <Button onClick={goToLogin} className="w-full font-bold mt-4">
-              Về trang đăng nhập
+              Go to sign in
             </Button>
           </div>
         )}
@@ -35,10 +35,10 @@ export const ActivatePage = () => {
         {status === 'ERROR' && (
           <div className="flex flex-col items-center space-y-4">
             <XCircle className="h-12 w-12 text-red-500" />
-            <h2 className="text-xl font-bold text-white">Kích hoạt thất bại</h2>
+            <h2 className="text-xl font-bold text-white">Activation failed</h2>
             <p className="text-zinc-400">{message}</p>
             <Button variant="outline" onClick={goToLogin} className="w-full mt-4">
-              Quay lại
+              Back
             </Button>
           </div>
         )}

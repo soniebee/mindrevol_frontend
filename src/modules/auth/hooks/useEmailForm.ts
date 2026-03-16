@@ -5,7 +5,7 @@ import { emailSchema, EmailFormValues } from '../schemas/auth.schema';
 import { useGoogleLogin } from '@react-oauth/google';
 import { generateCodeVerifier, generateCodeChallenge } from '@/lib/pkce';
 
-// Config lấy từ env
+// Config from environment variables
 const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
 const TIKTOK_CLIENT_KEY = import.meta.env.VITE_TIKTOK_CLIENT_KEY;
 const TIKTOK_REDIRECT_URI = import.meta.env.VITE_TIKTOK_REDIRECT_URI;
@@ -20,39 +20,39 @@ export const useEmailForm = () => {
     loginFacebook 
   } = useAuthFlow();
 
-  // 1. Setup Form
+  // 1. Setup form
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema)
   });
 
-  // 2. Logic Submit Email
+  // 2. Email submit logic
   const onSubmit = async (data: EmailFormValues) => {
     await submitEmail(data.email);
   };
 
-  // 3. Logic Google
+  // 3. Google logic
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       await loginGoogle(tokenResponse.access_token);
     },
-    onError: () => setError("Đăng nhập Google thất bại"),
+    onError: () => setError("Google sign-in failed"),
   });
 
-  // 4. Logic Facebook
-  const handleFacebookSuccess = async (response: any) => {
+  // 4. Facebook logic
+  const handleFacebookSuccess = async (response: { accessToken?: string }) => {
     if (response.accessToken) {
       await loginFacebook(response.accessToken);
     }
   };
 
-  // 5. Logic TikTok (Đã được tách gọn gàng)
+  // 5. TikTok logic
   const handleTikTokLogin = async () => {
     try {
       const csrfState = Math.random().toString(36).substring(7);
       const codeVerifier = generateCodeVerifier();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
       
-      // Lưu verifier để dùng lại ở trang callback
+      // Store verifier for callback page
       localStorage.setItem('tiktok_code_verifier', codeVerifier);
       
       let url = 'https://www.tiktok.com/v2/auth/authorize/';
@@ -67,8 +67,13 @@ export const useEmailForm = () => {
       window.location.href = url;
     } catch (e) {
       console.error(e);
-      setError("Không thể khởi tạo đăng nhập TikTok");
+      setError("Unable to initialize TikTok sign-in");
     }
+  };
+
+  const handleAppleLogin = () => {
+    // Keep flow explicit until Apple auth API is fully wired in UI integration.
+    setError('Apple sign-in is not available yet.');
   };
 
   return {
@@ -80,6 +85,7 @@ export const useEmailForm = () => {
       google: handleGoogleLogin,
       facebook: handleFacebookSuccess,
       tiktok: handleTikTokLogin,
+      apple: handleAppleLogin,
       facebookAppId: FACEBOOK_APP_ID
     }
   };

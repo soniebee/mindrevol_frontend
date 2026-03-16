@@ -2,7 +2,7 @@ import React, { createContext, useContext } from 'react';
 import { UserSummary, RegisterPayload, AuthStep } from '../types';
 import { useAuthLogic } from '../hooks/useAuthLogic'; 
 
-// Interface định nghĩa Context
+// Context interface
 interface AuthFlowContextType {
   currentStep: AuthStep;
   email: string;
@@ -14,12 +14,12 @@ interface AuthFlowContextType {
   registerData: Partial<RegisterPayload>; 
   updateRegisterData: (data: Partial<RegisterPayload>) => void;
   
-  // Các hàm Async
+  // Async actions
   submitEmail: (email: string) => Promise<void>;
   login: (password: string) => Promise<void>;
   
-  // [ĐÃ XÓA] register: (finalData?: Partial<RegisterPayload>) => Promise<void>; 
-  // Lý do: Việc đăng ký giờ do useRegisterWizard đảm nhiệm riêng biệt
+  // [REMOVED] register: (finalData?: Partial<RegisterPayload>) => Promise<void>
+  // Reason: registration is now handled by useRegisterWizard
   
   verifyOtp: (code: string) => Promise<void>;
   resendOtp: () => Promise<void>;

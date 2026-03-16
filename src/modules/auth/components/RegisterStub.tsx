@@ -13,20 +13,20 @@ export const RegisterStub = () => {
       className="space-y-6 text-center"
     >
       <button onClick={resetFlow} className="text-muted hover:text-white flex items-center text-sm mb-4">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+        <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </button>
       
-      <h2 className="text-2xl font-bold text-white">Tạo tài khoản mới</h2>
-      <p className="text-muted">Có vẻ như <b>{email}</b> chưa được đăng ký.</p>
+      <h2 className="text-2xl font-bold text-white">Create a new account</h2>
+      <p className="text-muted">It looks like <b>{email}</b> is not registered yet.</p>
       
       <div className="p-4 bg-zinc-900 rounded-lg border border-dashed border-zinc-700">
         <p className="text-sm text-zinc-400">
-          (Đây là nơi chúng ta sẽ đặt form đăng ký nhiều bước: Tên, Ngày sinh, Avatar...)
+          (This is where the multi-step signup form will be placed: name, date of birth, avatar...)
         </p>
       </div>
 
-      <Button onClick={() => alert("Flow đăng ký sẽ code ở phần tiếp theo!")}>
-        Bắt đầu tạo hồ sơ
+      <Button onClick={() => alert('Signup flow will be implemented next!')}>
+        Start profile setup
       </Button>
     </motion.div>
   );

@@ -9,20 +9,20 @@ export const initAnalytics = () => {
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       
-      // [SỬA LẠI - QUAN TRỌNG]
-      mask_all_text: false, // <-- TẮT dòng này đi để nhìn thấy tên nút, tiêu đề
-      mask_all_element_attributes: false, // Tắt cái này để layout đỡ bị vỡ
+      // [UPDATED - IMPORTANT]
+      mask_all_text: false, // Keep visible UI text in session replay (button labels, titles)
+      mask_all_element_attributes: false, // Keep element attributes to avoid broken replay layout
       
       session_recording: {
-        maskAllInputs: true, // Vẫn giữ cái này: Che tất cả những gì User đang gõ
-        // Thêm dòng này: Bất cứ element nào có class "ph-no-capture" sẽ bị che đi
+        maskAllInputs: true, // Keep enabled: hide everything users type
+        // Any element with class "ph-no-capture" will be masked
         maskTextSelector: '.ph-no-capture', 
       },
     });
   }
 };
 
-// ... Các hàm khác giữ nguyên
+// ... Other helper functions
 export const trackEvent = (eventName: string, properties?: Record<string, any>) => {
   posthog.capture(eventName, properties);
 };

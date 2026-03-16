@@ -14,9 +14,9 @@ export const useGlobalAuth = () => {
       setUser(profile);
       setIsAuthenticated(true);
     } catch (error: any) {
-      console.error("❌ Lỗi tải thông tin User:", error);
+      console.error('Failed to load user profile:', error);
       
-      // Chỉ logout khi lỗi Auth (401/403)
+      // Only logout on auth errors (401/403)
       if (error.response?.status === 401 || error.response?.status === 403) {
         logout(); 
       }
@@ -36,21 +36,21 @@ export const useGlobalAuth = () => {
     localStorage.removeItem('refreshToken');
     setIsAuthenticated(false);
     setUser(null);
-    // Có thể thêm logic redirect hoặc clear state khác ở đây
+    // Additional redirect or cleanup logic can be added here
   };
 
   const refreshProfile = async () => {
       await fetchUserProfile();
   }
 
-  // --- EFFECT: KHỞI TẠO ---
+  // --- INIT EFFECT ---
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('accessToken');
       if (token) {
-        // Optimistic UI: Có token thì cứ coi là đã login để App render nhanh
+        // Optimistic UI: if token exists, mark authenticated for fast initial render
         setIsAuthenticated(true);
-        // Sau đó fetch profile để verify
+        // Then fetch profile to verify token validity
         await fetchUserProfile();
       }
       setIsLoading(false);
