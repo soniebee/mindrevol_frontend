@@ -9,12 +9,12 @@ interface Props {
   isMe: boolean;
   onFriendRequest: () => void;
   onShowFriends: () => void;
-  activeCount: number;
-  finishedCount: number;
+  publicCount: number;
+  privateCount: number;
 }
 
 export const ProfileHeaderBlock: React.FC<Props> = ({ 
-  userProfile, isMe, onFriendRequest, onShowFriends, activeCount, finishedCount 
+  userProfile, isMe, onFriendRequest, onShowFriends, publicCount, privateCount 
 }) => {
   const navigate = useNavigate();
 
@@ -72,13 +72,18 @@ export const ProfileHeaderBlock: React.FC<Props> = ({
 
         <div className="flex items-center justify-center md:justify-start gap-6 md:gap-10 border-t border-border pt-4">
           <div className="text-center md:text-left">
-            <div className="text-xl md:text-2xl font-bold text-foreground">{activeCount}</div>
-            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Đang chạy</div>
+            <div className="text-xl md:text-2xl font-bold text-foreground">{publicCount}</div>
+            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Công khai</div>
           </div>
-          <div className="text-center md:text-left">
-            <div className="text-xl md:text-2xl font-bold text-foreground">{finishedCount}</div>
-            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Hoàn thành</div>
-          </div>
+          
+          {/* Chỉ hiển thị tab Riêng tư nếu là trang của chính mình */}
+          {isMe && (
+             <div className="text-center md:text-left">
+               <div className="text-xl md:text-2xl font-bold text-foreground">{privateCount}</div>
+               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Riêng tư</div>
+             </div>
+          )}
+
           <div className="text-center md:text-left">
             <div className="text-xl md:text-2xl font-bold text-foreground">{userProfile.friendCount || 0}</div>
             <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Bạn bè</div>

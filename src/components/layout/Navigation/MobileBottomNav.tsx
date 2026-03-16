@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Map, User, Camera, Box } from 'lucide-react';
+import { Home, User, Camera, Box, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileNavProps {
@@ -18,34 +18,27 @@ export const MobileBottomNav: React.FC<MobileNavProps> = ({
   return (
     <div className={cn(
       "fixed z-[100] bottom-0 left-0 w-full block md:hidden pointer-events-none",
-      // [ĐÃ SỬA] Bỏ nền Gradient hoàn toàn, làm thanh nav trong suốt
-      "bg-transparent flex items-end justify-center pb-4 pt-10" // pt-10 tạo không gian để nút tròn lồi lên
+      "bg-transparent flex items-end justify-center pb-4 pt-10"
     )}>
       
       <div className="flex items-center justify-between w-full max-w-[360px] px-6 pointer-events-auto">
         
-        {/* 1. Trang chủ */}
         <NavButton to="/" icon={Home} />
-        
-        {/* 2. Box */}
         <NavButton to="/box" icon={Box} />
 
-        {/* 3. Nút Upload */}
+        {/* Nút Camera */}
         <button
           onClick={triggerUpload}
           className={cn(
-            // [ĐÃ SỬA] Bỏ -translate-y-2 để tránh nó nhảy vọt lên cao bị cắt
             "w-14 h-14 rounded-full flex items-center justify-center",
             "bg-zinc-900 text-white dark:bg-white dark:text-black",
             "shadow-xl hover:scale-105 active:scale-95 transition-all",
-            // Đổ viền trong suốt hoặc trùng màu nền nhẹ
             "border-[3px] border-zinc-100/50 dark:border-black/50 backdrop-blur-sm"
           )}
         >
           <Camera strokeWidth={2.5} className="w-6 h-6" />
         </button>
 
-        {/* 4. Hành trình */}
         <button 
           onClick={onJourneyClick} 
           className="relative p-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors group"
@@ -56,7 +49,6 @@ export const MobileBottomNav: React.FC<MobileNavProps> = ({
            )}
         </button>
 
-        {/* 5. Profile */}
         <NavButton to="/profile" icon={User} />
       </div>
     </div>
