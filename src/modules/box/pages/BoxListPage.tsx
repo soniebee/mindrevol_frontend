@@ -7,7 +7,15 @@ import MainLayout from '@/components/layout/MainLayout';
 import { CreateBoxModal } from '../components/CreateBoxModal'; 
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
+
+// Mảng Theme dùng chung để tra cứu ảnh và vị trí
+const BOX_THEMES = [
+    { id: 'theme-1', name: 'Morning Reads', image: '/themes/box/1.png', textPos: { x: 50, y: 30 }, avatarPos: { x: 15, y: 70 } },
+    { id: 'theme-2', name: 'Night Garden', image: '/themes/box/2.png', textPos: { x: 30, y: 20 }, avatarPos: { x: 80, y: 60 } },
+    { id: 'theme-3', name: 'Seaside Shells', image: '/themes/box/3.png', textPos: { x: 70, y: 40 }, avatarPos: { x: 20, y: 80 } },
+    { id: 'theme-4', name: 'Forest Forage', image: '/themes/box/4.png', textPos: { x: 50, y: 50 }, avatarPos: { x: 50, y: 80 } },
+];
 
 // Hàm hỗ trợ dịch chuỗi tọa độ lưu từ DB
 const parsePosition = (posStr?: string, defaultX = 50, defaultY = 30) => {
@@ -42,29 +50,29 @@ const BoxListPage: React.FC = () => {
             setBoxes(boxData.content || []);
             setInvitations(invitesData || []);
         } catch (error) {
-            console.error("Lỗi khi tải dữ liệu Box:", error);
+            console.error("Error loading Box data:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAcceptInvite = async (boxId: string) => {
+    const handleAcceptInvite = async (invitationId: string) => { // Sửa boxId thành invitationId
         try {
-            await boxService.acceptInvite(boxId);
-            toast.success("Đã tham gia Không gian thành công!");
+            await boxService.acceptInvite(invitationId); // Đổi biến ở đây
+            toast.success("Successfully joined the Box! ✨");
             fetchAllData(); 
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Lỗi khi tham gia");
+            toast.error(error.response?.data?.message || "Failed to join the Box");
         }
     };
 
-    const handleRejectInvite = async (boxId: string) => {
+    const handleRejectInvite = async (invitationId: string) => { // Sửa boxId thành invitationId
         try {
-            await boxService.rejectInvite(boxId);
-            toast.success("Đã từ chối lời mời");
+            await boxService.rejectInvite(invitationId); // Đổi biến ở đây
+            toast.success("Invitation declined");
             fetchAllData(); 
         } catch (error: any) {
-            toast.error("Lỗi khi từ chối");
+            toast.error("Failed to decline invitation");
         }
     };
 
@@ -102,10 +110,10 @@ const BoxListPage: React.FC = () => {
                     {/* Banner Content Ngắn Gọn */}
                     <div className="relative z-20 max-w-[1440px] mx-auto px-5 md:px-10 py-10 md:py-14">
                         <h1 className="text-[32px] md:text-[42px] lg:text-[48px] font-normal text-green-950 dark:text-green-50 mb-3 tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>
-                            Lưu giữ câu chuyện của bạn
+                            Keep your stories alive
                         </h1>
                         <p className="text-base md:text-lg text-green-800/80 dark:text-green-200/70 max-w-2xl font-medium">
-                            Tạo không gian chia sẻ những khoảnh khắc và kỷ niệm tuyệt vời.
+                            A cozy space to share your wonderful moments and core memories.
                         </p>
                     </div>
                 </div>
@@ -117,7 +125,7 @@ const BoxListPage: React.FC = () => {
                     <div className="flex justify-between items-center mb-8">
                         <div className="flex items-center gap-3">
                             <h2 className="text-[36px] md:text-[44px] font-normal text-black dark:text-white tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>
-                                Box của bạn
+                                Your Boxes
                             </h2>
                         </div>
                     </div>
@@ -126,7 +134,7 @@ const BoxListPage: React.FC = () => {
                     {invitations.length > 0 && showInvites && (
                         <div className="mb-14 animate-in fade-in slide-in-from-top-4">
                             <h3 className="text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-5 flex items-center gap-2">
-                                Lời mời đang chờ ({invitations.length})
+                                Pending Invites ({invitations.length})
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                                 {invitations.map(invite => (
@@ -143,23 +151,25 @@ const BoxListPage: React.FC = () => {
                                             </div>
                                             <div className="truncate">
                                                 <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate mb-0.5">
-                                                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">{invite.inviterName}</span> mời bạn vào
+                                                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">{invite.inviterName}</span> invited you to
                                                 </p>
                                                 <p className="text-xl font-normal text-black dark:text-white truncate" style={{ fontFamily: '"Jua", sans-serif' }}>{invite.boxName}</p>
                                                 <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">
-                                                    {formatDistanceToNow(new Date(invite.sentAt), { addSuffix: true, locale: vi })}
+                                                    {formatDistanceToNow(new Date(invite.sentAt), { addSuffix: true, locale: enUS })}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 shrink-0">
                                             <button 
-                                                onClick={() => handleAcceptInvite(invite.boxId)}
+                                                // SỬA CHỖ NÀY: invite.boxId -> invite.id
+                                                onClick={() => handleAcceptInvite(invite.id)} 
                                                 className="flex-1 h-11 rounded-xl bg-green-50 text-green-600 hover:bg-green-500 hover:text-white dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500 dark:hover:text-white flex items-center justify-center transition-all font-medium"
                                             >
                                                 <Check size={20} strokeWidth={2.5} />
                                             </button>
                                             <button 
-                                                onClick={() => handleRejectInvite(invite.boxId)}
+                                                // SỬA CHỖ NÀY: invite.boxId -> invite.id
+                                                onClick={() => handleRejectInvite(invite.id)} 
                                                 className="flex-1 h-11 rounded-xl bg-zinc-50 text-zinc-500 hover:bg-red-50 hover:text-red-500 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-red-500/10 dark:hover:text-red-500 flex items-center justify-center transition-all font-medium"
                                             >
                                                 <X size={20} strokeWidth={2.5} />
@@ -171,17 +181,20 @@ const BoxListPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* --- DANH SÁCH BOX & NÚT TẠO (4 card/hàng, gap-8) --- */}
+                    {/* --- DANH SÁCH BOX & NÚT TẠO --- */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pb-16">
                         
-                        {/* CÁC THẺ BOX */}
+                        {/* CÁC THẺ BOX ĐÃ TẠO */}
                         {boxes.map((box) => {
-                            const textPos = parsePosition(box.textPosition, 50, 30);
-                            const avatarPos = parsePosition(box.avatarPosition, 15, 70);
+                            // Tự động tìm Theme dựa trên themeSlug BE trả về (nếu không có mặc định lấy theme-1)
+                            const currentTheme = BOX_THEMES.find(t => t.id === box.themeSlug) || BOX_THEMES[0];
                             
-                            const bgImage = box.coverImage;
-                            const isBgImageValid = bgImage?.includes('/') || bgImage?.startsWith('http');
-                            const isAvatarUrl = box.avatar?.includes('/') || box.avatar?.startsWith('http');
+                            // Lấy tọa độ từ BE (nếu có), không có thì lấy mặc định của Theme
+                            const textPos = parsePosition(box.textPosition, currentTheme.textPos.x, currentTheme.textPos.y);
+                            const avatarPos = currentTheme.avatarPos;
+                            const bgImage = currentTheme.image;
+                            
+                            const isAvatarUrl = box.avatar?.includes('/') || box.avatar?.startsWith('http') || box.avatar?.startsWith('blob:');
 
                             return (
                                 <Link 
@@ -189,26 +202,18 @@ const BoxListPage: React.FC = () => {
                                     key={box.id}
                                     className="group block relative"
                                 >
-                                    {/* THẺ BOX HOÀN TOÀN TRONG SUỐT VÀ KHÔNG ĐỔ BÓNG */}
                                     <div 
                                         className="w-full aspect-[7/4] rounded-[28px] overflow-hidden relative transition-transform duration-500 group-hover:-translate-y-2 bg-transparent"
                                         style={{ containerType: 'inline-size' }}
                                     >
-                                        {/* Ảnh Cover/Màu nền */}
-                                        {isBgImageValid ? (
-                                            <img 
-                                                src={bgImage} 
-                                                alt={box.name} 
-                                                className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none group-hover:scale-105 transition-transform duration-700" 
-                                            />
-                                        ) : (
-                                            <div 
-                                                className="absolute inset-0 w-full h-full group-hover:scale-105 transition-transform duration-700" 
-                                                style={{ backgroundColor: box.themeColor || '#27272a' }} 
-                                            />
-                                        )}
+                                        {/* Ảnh Cover lấy từ Theme */}
+                                        <img 
+                                            src={bgImage} 
+                                            alt={box.name} 
+                                            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none group-hover:scale-105 transition-transform duration-700" 
+                                        />
 
-                                        {/* Chữ Nổi */}
+                                        {/* Chữ Nổi Tên Box */}
                                         <div 
                                             className="absolute flex items-center transform -translate-x-1/2 -translate-y-1/2 select-none z-20 pointer-events-none"
                                             style={{ 

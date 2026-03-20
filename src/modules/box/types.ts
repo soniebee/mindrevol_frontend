@@ -1,11 +1,10 @@
 export interface BoxResponse {
     id: string;
     name: string;
-    description?: string;
-    avatar?: string;
-    coverImage?: string;
-    themeColor?: string;
-    textPosition?: string;   // [THÊM MỚI]
+    description: string;
+    avatar: string;
+    themeSlug?: string;     // Thêm dòng này để nhận dữ liệu từ BE
+    textPosition?: string;  // [THÊM MỚI]
     avatarPosition?: string; // [THÊM MỚI]
     ownerId: string;
     isArchived: boolean;
@@ -40,16 +39,14 @@ export interface CreateBoxRequest {
     name: string;
     description?: string;
     avatar?: string;
-    coverImage?: string;
-    themeColor?: string;
-    textPosition?: string;   // [THÊM MỚI]
-    avatarPosition?: string; // [THÊM MỚI]
+    themeSlug: string;      // BE chỉ cần cái này
+    textPosition?: string;  // BE có trường này nên mình cứ để
 }
 
 export interface UpdateBoxRequest extends CreateBoxRequest {}
 
 export interface BoxInvitationResponse {
-    id: number;
+    id: string;
     boxId: string;
     boxName: string;
     boxAvatar?: string;
