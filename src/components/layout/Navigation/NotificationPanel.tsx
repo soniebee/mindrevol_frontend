@@ -13,17 +13,18 @@ interface NotificationPanelProps {
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
-    
-    const { 
-        notifications, isLoading, filter, setFilter, 
-        markAsRead, markAllAsRead, deleteNotification, deleteAll, handleAction 
+
+    const {
+        notifications, isLoading, filter, setFilter,
+        markAsRead, markAllAsRead, deleteNotification, deleteAll, handleAction
     } = useNotifications(isOpen);
 
     const handleItemClick = (noti: NotificationResponse) => {
+        // [TASK-102] Click vào item thì mark as read (Mất chấm xanh)
         if (!noti.isRead) markAsRead(noti.id);
-        
-        if (['CHECKIN', 'COMMENT'].includes(noti.type)) {
-            // navigate(...);
+
+        if (['CHECKIN', 'COMMENT', 'REACTION'].includes(noti.type)) {
+            // navigate(`/journey/checkin/${noti.referenceId}`);
             onClose();
         }
     };
@@ -37,14 +38,12 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     };
 
     return (
-        <div 
+        <div
             className={cn(
-                // Căn lề trái 88px khớp với Sidebar mới, shadow nhẹ nhàng không bị gắt
                 "fixed top-0 bottom-0 left-[80px] md:left-[88px] w-[350px] bg-white dark:bg-[#121212] border-r border-zinc-200 dark:border-white/10 z-40 shadow-[20px_0_40px_rgba(0,0,0,0.05)] dark:shadow-[20px_0_40px_rgba(0,0,0,0.3)] transition-all duration-300 flex flex-col font-sans",
                 isOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
             )}
         >
-            {/* HEADER */}
             <div className="p-6 pb-4 flex justify-between items-center shrink-0">
                 <h2 className="text-[26px] font-normal text-black dark:text-white" style={{ fontFamily: '"Jua", sans-serif' }}>
                     Notifications
@@ -62,21 +61,20 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 </div>
             </div>
 
-            {/* FILTER BUTTONS */}
             <div className="px-6 py-2 flex items-center gap-2 shrink-0">
-                <button 
-                    onClick={() => setFilter('ALL')} 
+                <button
+                    onClick={() => setFilter('ALL')}
                     className={cn(
-                        "px-4 py-1.5 rounded-[12px] text-[13px] font-bold transition-all", 
+                        "px-4 py-1.5 rounded-[12px] text-[13px] font-bold transition-all",
                         filter === 'ALL' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "bg-zinc-100 text-zinc-500 hover:text-black dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-white"
                     )}
                 >
                     All
                 </button>
-                <button 
-                    onClick={() => setFilter('UNREAD')} 
+                <button
+                    onClick={() => setFilter('UNREAD')}
                     className={cn(
-                        "px-4 py-1.5 rounded-[12px] text-[13px] font-bold transition-all", 
+                        "px-4 py-1.5 rounded-[12px] text-[13px] font-bold transition-all",
                         filter === 'UNREAD' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "bg-zinc-100 text-zinc-500 hover:text-black dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-white"
                     )}
                 >
@@ -84,7 +82,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 </button>
             </div>
 
-            {/* NOTIFICATION LIST */}
             <div className="flex-1 overflow-y-auto mt-2 custom-scrollbar">
                 {isLoading ? (
                     <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-400" /></div>
@@ -98,9 +95,9 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 ) : (
                     <div className="flex flex-col">
                         {notifications.map((noti) => (
-                            <NotificationItem 
-                                key={noti.id} 
-                                noti={noti} 
+                            <NotificationItem
+                                key={noti.id}
+                                noti={noti}
                                 onClick={handleItemClick}
                                 onDelete={async (e, id) => { e.stopPropagation(); deleteNotification(id); }}
                                 onAction={handleItemAction}

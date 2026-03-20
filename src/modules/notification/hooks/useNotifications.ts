@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { notificationService, NotificationResponse } from '../services/notification.service';
 // import { boxService } from '@/modules/box/services/box.service';
-// import { journeyService } from '@/modules/journey/services/journey.service'; // Chuẩn bị cho tương lai
-// import { friendshipService } from '@/modules/user/services/friendship.service'; // Chuẩn bị cho tương lai
+// import { journeyService } from '@/modules/journey/services/journey.service';
+// import { friendshipService } from '@/modules/user/services/friendship.service';
 import { toast } from 'react-hot-toast';
 
 export const useNotifications = (isOpen: boolean) => {
@@ -11,7 +11,12 @@ export const useNotifications = (isOpen: boolean) => {
     const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
 
     useEffect(() => {
-        if (isOpen) fetchNotifications();
+        if (isOpen) {
+            fetchNotifications().then(() => {
+                // Đánh dấu Seen toàn bộ khi mở panel để mất số đỏ ở icon chuông
+                markAllAsSeen();
+            });
+        }
     }, [isOpen]);
 
     const fetchNotifications = async () => {
@@ -19,7 +24,7 @@ export const useNotifications = (isOpen: boolean) => {
         try {
             const data = await notificationService.getMyNotifications(0, 30);
             const normalizedData = (data.content || []).map((n: any) => ({
-                ...n, isRead: n.isRead !== undefined ? n.isRead : n.read 
+                ...n, isRead: n.isRead !== undefined ? n.isRead : n.read
             }));
             setNotifications(normalizedData);
         } catch (error) {
@@ -27,6 +32,14 @@ export const useNotifications = (isOpen: boolean) => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const markAllAsSeen = async () => {
+        try {
+            await notificationService.markAllAsSeen();
+            setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
+            // TODO: Nếu bạn dùng Global State / Context cho biến đếm chuông thì reset nó về 0 ở đây
+        } catch (e) { console.error(e); }
     };
 
     const markAsRead = async (id: string) => {
@@ -59,17 +72,11 @@ export const useNotifications = (isOpen: boolean) => {
         } catch (e) { console.error(e); }
     };
 
-    // ==========================================
-    // TRUNG TÂM XỬ LÝ HÀNH ĐỘNG (STRATEGY HUB)
-    // Thêm module mới? Chỉ cần thêm case ở đây!
-    // ==========================================
     const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => {
         try {
             if (noti.type === 'BOX_INVITE') {
-                action === 'ACCEPT' 
-                    // ? await boxService.acceptInvite(noti.referenceId)
-// : await boxService.rejectInvite(noti.referenceId);
-            } 
+                // action === 'ACCEPT' ? await boxService.acceptInvite(noti.referenceId) : await boxService.rejectInvite(noti.referenceId);
+            }
             else if (noti.type === 'JOURNEY_INVITE') {
                 // action === 'ACCEPT' ? await journeyService.acceptInvitation(noti.referenceId) : ...
             }
@@ -80,13 +87,12 @@ export const useNotifications = (isOpen: boolean) => {
             if (action === 'ACCEPT') toast.success("Đã chấp nhận thành công!");
             if (action === 'REJECT') toast.success("Đã từ chối!");
 
-            // Xử lý xong thì đánh dấu đã đọc để ẩn nút
+            // Đánh dấu đã đọc để UI ẩn nút đi
             await markAsRead(noti.id);
-            
-            return true; // Trả về true nếu thành công để UI điều hướng nếu cần
+            return true;
         } catch (error: any) {
             toast.error(error?.response?.data?.message || "Yêu cầu đã hết hạn hoặc có lỗi xảy ra");
-            await markAsRead(noti.id); // Lỗi cũng ẩn nút luôn cho sạch
+            await markAsRead(noti.id);
             return false;
         }
     };
@@ -96,6 +102,6 @@ export const useNotifications = (isOpen: boolean) => {
     return {
         notifications: filteredNotifications,
         isLoading, filter, setFilter,
-        markAsRead, markAllAsRead, deleteNotification, deleteAll, handleAction
+        markAsRead, markAllAsRead, markAllAsSeen, deleteNotification, deleteAll, handleAction
     };
 };

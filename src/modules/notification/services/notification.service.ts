@@ -8,6 +8,8 @@ export interface NotificationResponse {
     referenceId: string;
     imageUrl: string;
     isRead: boolean;
+    isSeen: boolean;
+    actorsCount: number;
     createdAt: string;
     senderId: string;
     senderName: string;
@@ -40,12 +42,14 @@ export const notificationService = {
         await http.patch('/notifications/read-all');
     },
 
-    // [THÊM MỚI] Xóa 1 thông báo
+    markAllAsSeen: async (): Promise<void> => {
+        await http.patch('/notifications/seen-all');
+    },
+
     deleteNotification: async (id: string): Promise<void> => {
         await http.delete(`/notifications/${id}`);
     },
 
-    // [THÊM MỚI] Xóa tất cả thông báo
     deleteAllNotifications: async (): Promise<void> => {
         await http.delete('/notifications/all');
     }
