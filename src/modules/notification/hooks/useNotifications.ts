@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { notificationService, NotificationResponse } from '../services/notification.service';
-// import { boxService } from '@/modules/box/services/box.service';
-// import { journeyService } from '@/modules/journey/services/journey.service';
-// import { friendshipService } from '@/modules/user/services/friendship.service';
+import { friendService } from '@/modules/user/services/friend.service';
 import { toast } from 'react-hot-toast';
 
 export const useNotifications = (isOpen: boolean) => {
@@ -23,8 +21,9 @@ export const useNotifications = (isOpen: boolean) => {
         setIsLoading(true);
         try {
             const data = await notificationService.getMyNotifications(0, 30);
-            const normalizedData = (data.content || []).map((n: any) => ({
-                ...n, isRead: n.isRead !== undefined ? n.isRead : n.read
+            const normalizedData = (data.content || []).map((n: NotificationResponse & { read?: boolean }) => ({
+                ...n, 
+                isRead: n.isRead ?? n.read ?? false
             }));
             setNotifications(normalizedData);
         } catch (error) {
@@ -38,7 +37,6 @@ export const useNotifications = (isOpen: boolean) => {
         try {
             await notificationService.markAllAsSeen();
             setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
-            // TODO: Nếu bạn dùng Global State / Context cho biến đếm chuông thì reset nó về 0 ở đây
         } catch (e) { console.error(e); }
     };
 
@@ -74,25 +72,48 @@ export const useNotifications = (isOpen: boolean) => {
 
     const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => {
         try {
-            if (noti.type === 'BOX_INVITE') {
-                // action === 'ACCEPT' ? await boxService.acceptInvite(noti.referenceId) : await boxService.rejectInvite(noti.referenceId);
+            // FE-TASK-103: Handle actionable notifications
+            if (noti.type === 'FRIEND_REQUEST') {
+                if (action === 'ACCEPT') {
+                    await friendService.acceptRequest(noti.referenceId);
+                } else {
+                    await friendService.declineRequest(noti.referenceId);
+                }
             }
-            else if (noti.type === 'JOURNEY_INVITE') {
-                // action === 'ACCEPT' ? await journeyService.acceptInvitation(noti.referenceId) : ...
-            }
-            else if (noti.type === 'FRIEND_REQUEST') {
-                // action === 'ACCEPT' ? await friendshipService.acceptRequest(noti.referenceId) : ...
-            }
+            // TODO: Implement BOX_INVITE and JOURNEY_INVITE when services are available
+            // else if (noti.type === 'BOX_INVITE') {
+            //     action === 'ACCEPT'
+            //         ? await boxService.acceptInvite(noti.referenceId)
+            //         : await boxService.rejectInvite(noti.referenceId);
+            // }
+            // else if (noti.type === 'JOURNEY_INVITE') {
+            //     const invitationId = parseNumericReferenceId(noti.referenceId);
+            //     if (invitationId === null) {
+            //         throw new Error('Journey invitation id is invalid');
+            //     }
+            //     action === 'ACCEPT'
+            //         ? await journeyService.acceptInvitation(invitationId)
+            //         : await journeyService.rejectInvitation(invitationId);
+            // }
 
             if (action === 'ACCEPT') toast.success("Đã chấp nhận thành công!");
             if (action === 'REJECT') toast.success("Đã từ chối!");
 
-            // Đánh dấu đã đọc để UI ẩn nút đi
-            await markAsRead(noti.id);
+            await notificationService.markAsRead(noti.id);
+            setNotifications((prev) => prev.map((item) => {
+                if (item.id !== noti.id) return item;
+
+                return {
+                    ...item,
+                    isRead: true,
+                    actionStatus: action === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED'
+                };
+            }));
+
             return true;
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || "Yêu cầu đã hết hạn hoặc có lỗi xảy ra");
-            await markAsRead(noti.id);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Yêu cầu đã hết hạn hoặc có lỗi xảy ra';
+            toast.error(message);
             return false;
         }
     };
