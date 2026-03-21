@@ -1,20 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Smile, Send, Mic, Trash2 } from 'lucide-react'; // Đã xóa import Image
+import { Smile, Send } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { cn } from '@/lib/utils';
-import { useAudioRecorder } from '../hooks/useAudioRecorder';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ChatInputProps {
-  // Sửa chỗ này: Thay 'AUDIO' bằng 'VOICE'
-  onSend: (content: string, type?: 'TEXT' | 'IMAGE' | 'VOICE', file?: File) => void;
+  onSend: (text: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ onSend }) => {
+  const { theme } = useTheme();
   const [text, setText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-
-  const { isRecording, recordingTime, startRecording, stopRecording, cancelRecording } = useAudioRecorder();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -28,121 +26,66 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend }) => {
 
   const handleSend = () => {
     if (!text.trim()) return;
-    onSend(text, 'TEXT');
+    onSend(text);
     setText('');
     setShowEmojiPicker(false);
   };
 
-  const handleSendAudio = async () => {
-    const audioFile = await stopRecording();
-    if (audioFile) {
-       // SỬA DÒNG NÀY THÀNH 'VOICE'
-       onSend('[Voice Message]', 'VOICE', audioFile); 
-    }
-  };
-
-  const onEmojiClick = (emojiObject: any) => {
-    setText((prev) => prev + emojiObject.emoji);
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   return (
-    <div className="px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white to-transparent shrink-0 z-30 font-['Jua'] relative">
-      <div className="max-w-4xl mx-auto flex items-end gap-2 bg-neutral-100 border border-neutral-200 rounded-[26px] p-1.5 shadow-sm relative">
+    <div className="px-4 pb-6 pt-3 bg-white dark:bg-[#121212] border-t border-zinc-200 dark:border-white/5 shrink-0 z-30 transition-colors duration-300">
+      
+      {/* Khung Input Neo-Brutalism */}
+      <div className="max-w-4xl mx-auto flex items-end gap-3 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-[32px] p-1.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.7)] relative transition-all focus-within:translate-x-[2px] focus-within:translate-y-[2px] focus-within:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:focus-within:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.7)]">
         
-        {isRecording ? (
-            <div className="flex-1 flex items-center justify-between px-3 h-11">
-               <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-red-500 font-mono font-medium">{formatTime(recordingTime)}</span>
-                  <span className="text-neutral-500 text-sm ml-2 hidden sm:inline">Đang ghi âm...</span>
-               </div>
-               <div className="flex items-center gap-2">
-                  <button 
-                    onClick={cancelRecording}
-                    className="p-2 text-neutral-400 hover:text-red-500 hover:bg-neutral-200 rounded-full transition-colors"
-                    title="Hủy ghi âm"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={handleSendAudio}
-                    className="w-9 h-9 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors"
-                    title="Gửi ghi âm"
-                  >
-                    <Send className="w-4 h-4 ml-0.5" />
-                  </button>
-               </div>
-            </div>
-        ) : (
-            <>
-                <div className="relative" ref={emojiPickerRef}>
-                    {showEmojiPicker && (
-                        <div className="absolute bottom-14 left-0 z-50 shadow-xl rounded-2xl border border-neutral-200 overflow-hidden">
-                            <EmojiPicker 
-                              theme={Theme.LIGHT} 
-                              onEmojiClick={onEmojiClick}
-                              width={300}
-                              height={400}
-                              searchDisabled
-                              skinTonesDisabled
-                            />
-                        </div>
-                    )}
-                    <button 
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={cn(
-                          "p-2.5 transition-all rounded-full active:scale-90",
-                          showEmojiPicker 
-                            ? "text-yellow-600 bg-yellow-100" 
-                            : "text-neutral-400 hover:text-yellow-600 hover:bg-yellow-50"
-                      )}
-                      title="Biểu cảm"
-                    >
-                      <Smile className="w-6 h-6" />
-                    </button>
+        {/* Nút Emoji */}
+        <div className="relative" ref={emojiPickerRef}>
+            {showEmojiPicker && (
+                <div className="absolute bottom-16 left-0 z-50 shadow-2xl rounded-2xl border-2 border-black dark:border-white overflow-hidden">
+                    <EmojiPicker 
+                      theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} 
+                      onEmojiClick={(e) => setText(p => p + e.emoji)} 
+                      width={300} 
+                      height={400} 
+                      searchDisabled 
+                      skinTonesDisabled 
+                    />
                 </div>
+            )}
+            <button 
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
+              className={cn(
+                "p-3 rounded-full transition-transform active:scale-90", 
+                showEmojiPicker ? "text-orange-500 bg-orange-100 dark:bg-orange-500/20" : "text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+              )}
+            >
+              <Smile className="w-6 h-6" />
+            </button>
+        </div>
 
-                {/* Đã xóa nút Image ở đây */}
+        {/* Nhập text */}
+        <div className="flex-1 py-3 px-2">
+          <input 
+            value={text} 
+            onChange={(e) => setText(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+            placeholder="Aa..." 
+            className="w-full bg-transparent border-none outline-none text-black dark:text-white placeholder:text-zinc-400 text-lg leading-relaxed" 
+            style={{ fontFamily: '"Jua", sans-serif' }} 
+          />
+        </div>
 
-                {/* Nút Ghi Âm (Mic) */}
-                <button 
-                  onClick={startRecording}
-                  className="p-2.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-all rounded-full active:scale-90"
-                  title="Ghi âm"
-                >
-                  <Mic className="w-6 h-6" />
-                </button>
+        {/* Nút Gửi */}
+        <button 
+          onClick={handleSend} 
+          disabled={!text.trim()} 
+          className={cn(
+            "w-12 h-12 rounded-full transition-all duration-300 flex items-center justify-center mb-[2px]", 
+            text.trim() ? "bg-black text-white dark:bg-white dark:text-black hover:scale-105 shadow-md" : "bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed"
+          )}
+        >
+          <Send className={cn("w-5 h-5", text.trim() && "ml-1")} />
+        </button>
 
-                <div className="flex-1 py-3 px-1">
-                  <input 
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="Gửi tin nhắn..."
-                      className="w-full bg-transparent border-none outline-none text-black placeholder:text-neutral-400 text-[16px] font-normal leading-relaxed"
-                  />
-                </div>
-                
-                <button 
-                  onClick={() => handleSend()}
-                  disabled={!text.trim()}
-                  className={cn(
-                      "w-11 h-11 rounded-full transition-all duration-300 flex items-center justify-center mb-[1px]",
-                      text.trim() 
-                      ? "bg-black text-white hover:bg-zinc-800 hover:scale-105 shadow-md" 
-                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
-                  )}
-                >
-                  <Send className={cn("w-5 h-5", text.trim() && "ml-0.5")} />
-                </button>
-            </>
-        )}
       </div>
     </div>
   );

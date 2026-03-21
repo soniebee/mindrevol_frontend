@@ -24,7 +24,9 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   const pickerRef = useRef<HTMLDivElement>(null);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
 
-  // Đóng bảng Emoji khi bấm ra ngoài
+  // Lấy data của bài đăng đang hiển thị trên màn hình
+  const activePost = posts.find(p => p.id === activePostId) || posts[0];
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
@@ -80,24 +82,45 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   if (!posts || posts.length === 0) return null;
 
   return (
-    <div className="relative w-full h-full bg-zinc-50 dark:bg-black flex flex-col font-sans transition-colors duration-300">
+    <div className="relative w-full h-full bg-zinc-50 dark:bg-black flex flex-col font-sans transition-colors duration-300 overflow-hidden">
       
-      {/* [ĐÃ SỬA] VÙNG PORTAL CỐ ĐỊNH HEADER */}
-      {/* Thêm nền bg-zinc-50 dark:bg-black để làm một "bức tường" che khuất ảnh khi cuộn qua đường hr */}
-      <div 
-        className="absolute top-0 left-0 w-full z-[50] bg-zinc-50 dark:bg-black pt-16 md:pt-6 pb-2 pointer-events-none transition-colors duration-300"
-      >
+      {/* =======================================================
+          1. LỚP AMBIENT GLOW (CHỈ HIỂN THỊ KHI Ở CHẾ ĐỘ TỐI)
+          ======================================================= */}
+      {theme === 'dark' && activePost?.image && (
+        <div 
+          className="absolute top-0 left-0 w-full h-[60vh] z-0 pointer-events-none"
+          style={{
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)'
+          }}
+        >
+          <div 
+            className="absolute inset-0 opacity-50 dark:opacity-30 blur-[60px] scale-[1.5] transform-gpu transition-all duration-700 ease-in-out origin-top"
+            style={{
+              backgroundImage: `url(${activePost.image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
+        </div>
+      )}
+
+      {/* =======================================================
+          2. VÙNG PORTAL CỐ ĐỊNH HEADER
+          ======================================================= */}
+      <div className="absolute top-0 left-0 w-full z-20 pt-16 md:pt-6 pb-2 pointer-events-none">
         <div ref={setHeaderTarget}></div>
       </div>
 
-      {/* KHUNG CUỘN */}
+      {/* KHUNG CUỘN BÀI VIẾT */}
       <div className="flex-1 w-full h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar relative z-10">
         {posts.map(post => (
           <div 
             key={post.id} 
             data-post-id={post.id} 
-            // Thêm pt-24 để bức ảnh lùi xuống một chút, không bị cấn vào cái Header
-            className="snap-post-container snap-always snap-center h-full w-full flex flex-col items-center justify-center shrink-0 px-4 pt-24 pb-20"
+            // Vẫn giữ pb-12 để khung ảnh không bị đẩy lên cao
+            className="snap-post-container snap-always snap-center h-full w-full flex flex-col items-center justify-center shrink-0 px-4 pt-24 pb-12 md:pb-20"
           >
             <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] relative transition-all duration-300">
               <JourneyPostCard post={post} isActive={activePostId === post.id} headerTarget={headerTarget} />
@@ -107,12 +130,13 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
       </div>
 
       {/* THANH NHẬP LIỆU BÁM ĐÁY */}
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-20 pb-4 md:pb-6 px-4 z-[60] pointer-events-none transition-all duration-300">
+      {/* Vẫn giữ pt-8 pb-2 để sát với Bottom Nav */}
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-8 pb-2 md:pt-20 md:pb-6 px-4 z-30 pointer-events-none transition-all duration-300">
         <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col gap-3 pointer-events-auto relative">
             
             {/* Bảng Emoji Picker */}
             {showEmojiPicker && (
-              <div ref={pickerRef} className="absolute bottom-full left-0 mb-3 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
+              <div ref={pickerRef} className="absolute bottom-full left-0 mb-3 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
                 <EmojiPicker theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} onEmojiClick={handleSelectEmoji} lazyLoadEmojis={true} searchDisabled={true} skinTonesDisabled={true} height={350} />
               </div>
             )}

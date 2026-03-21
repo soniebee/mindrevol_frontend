@@ -2,16 +2,14 @@
 
 // 1. DTO cho User (dùng chung cho Auth và User module)
 export interface UserSummary {
-  id: number; // Lưu ý: Backend bạn trả về String (UUID), xem xét sửa lại type ở đây là string nếu cần
+  id: number; // Lưu ý: Backend trả về String (UUID) nếu cần có thể đổi sang string
   handle: string;
   fullname: string;
   avatarUrl: string;
   isOnline: boolean;
   
-  // --- THÊM MỚI ---
   hasPassword: boolean; 
   authProvider: string; 
-  // ----------------
 }
 
 // 2. DTO phản hồi khi Login/Register thành công
@@ -19,6 +17,7 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
+  isNewUser?: boolean; // [MỚI] Dùng để check tài khoản social vừa tạo
 }
 
 // 3. DTO gửi lên khi Register
@@ -46,4 +45,5 @@ export type AuthStep =
   | 'EMAIL_INPUT'       // Bước 1: Nhập Email
   | 'PASSWORD_LOGIN'    // Bước 2a: Nhập Pass (User cũ)
   | 'OTP_INPUT'         // Bước 2b: Nhập OTP (Quên pass hoặc login nhanh)
-  | 'REGISTER_WIZARD';  // Bước 2c: Đăng ký mới (User mới)
+  | 'REGISTER_WIZARD'   // Bước 2c: Đăng ký mới (User mới qua Email)
+  | 'SOCIAL_SETUP';     // [MỚI] Bước 2d: Setup thông tin cho User Social mới

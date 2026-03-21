@@ -4,12 +4,11 @@ import { chatService } from '../services/chat.service';
 
 interface ChatState {
   conversations: Conversation[];
-  activeConversationId: string | null; // Nên dùng string | null
+  activeConversationId: string | null; 
   messages: Record<string, Message[]>; 
   isSidebarOpen: boolean;
 
-  // Actions
-  fetchConversations: () => Promise<void>; // Thêm action này
+  fetchConversations: () => Promise<void>;
   setConversations: (list: Conversation[]) => void;
   openChat: (conversationId: string | null) => Promise<void>; 
   closeChat: () => void;
@@ -19,7 +18,6 @@ interface ChatState {
   addMessage: (msg: Message) => void; 
   markAsRead: (convId: string) => void;
   
-  // [FIX] status phải khớp với Message['status']
   updateMessageStatus: (clientSideId: string, status: 'SENDING' | 'SENT' | 'ERROR', realId?: string) => void;
 }
 
@@ -29,7 +27,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: {},
   isSidebarOpen: true,
 
-  // Action mới giúp ChatPage gọn hơn
   fetchConversations: async () => {
       try {
           const res = await chatService.getConversations();
@@ -41,7 +38,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setConversations: (list) => set({ conversations: list }),
 
+  // [ĐÃ SỬA] Đảm bảo cập nhật chính xác activeConversationId và reset unread
   openChat: async (id) => {
+    // Nếu click nút Back/Close (id = null)
+    if (!id) {
+        set({ activeConversationId: null });
+        return;
+    }
+
     set((state) => ({
       activeConversationId: id,
       conversations: state.conversations.map((c) => 
@@ -50,7 +54,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      if(id) await chatService.markAsRead(id);
+      await chatService.markAsRead(id);
     } catch (error) {
       console.error("Lỗi khi đánh dấu đã đọc:", error);
     }
@@ -66,13 +70,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   addMessage: (msg) => set((state) => {
     const currentMsgs = state.messages[msg.conversationId] || [];
     
-    // Check trùng tin nhắn
     if (currentMsgs.some(m => (m.id === msg.id && msg.id) || (m.clientSideId === msg.clientSideId && msg.clientSideId))) {
       return state;
     }
     const newMsgs = [...currentMsgs, msg];
 
-    // Đẩy hội thoại lên đầu
     const convIndex = state.conversations.findIndex(c => String(c.id) === String(msg.conversationId));
     let newConversations = [...state.conversations];
 
@@ -106,15 +108,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateMessageStatus: (clientSideId, status, realId) => set((state) => {
     const newMessages = { ...state.messages };
     
-    // Duyệt qua tất cả hội thoại (vì có thể không biết convId lúc này)
     Object.keys(newMessages).forEach(convId => {
         newMessages[convId] = newMessages[convId].map(m => {
-            // So sánh clientSideId hoặc id tạm thời
             if (m.clientSideId === clientSideId || m.id === clientSideId) {
                 return { 
                     ...m, 
                     id: realId || m.id, 
-                    status: status // Typescript OK vì param status đã định nghĩa đúng type
+                    status: status 
                 }; 
             }
             return m;

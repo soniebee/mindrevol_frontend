@@ -18,9 +18,6 @@ interface AuthFlowContextType {
   submitEmail: (email: string) => Promise<void>;
   login: (password: string) => Promise<void>;
   
-  // [ĐÃ XÓA] register: (finalData?: Partial<RegisterPayload>) => Promise<void>; 
-  // Lý do: Việc đăng ký giờ do useRegisterWizard đảm nhiệm riêng biệt
-  
   verifyOtp: (code: string) => Promise<void>;
   resendOtp: () => Promise<void>;
   
@@ -28,6 +25,10 @@ interface AuthFlowContextType {
   loginGoogle: (accessToken: string) => Promise<void>;
   loginFacebook: (accessToken: string) => Promise<void>;
   loginTikTok: (code: string, codeVerifier: string) => Promise<void>;
+
+  // [MỚI] Hỗ trợ luồng Social Setup
+  tempToken: { accessToken: string, refreshToken: string } | null;
+  completeSocialSetup: () => void;
 
   // Navigation
   resetFlow: () => void;
