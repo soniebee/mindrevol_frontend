@@ -2,7 +2,7 @@ export enum MessageType {
   TEXT = 'TEXT',
   IMAGE = 'IMAGE',
   VIDEO = 'VIDEO',
-  VOICE = 'VOICE' // <-- Thêm dòng này
+  SYSTEM = 'SYSTEM'
 }
 
 export interface UserSummary {
@@ -19,11 +19,10 @@ export interface Message {
   senderId: string;
   receiverId?: string;
   content: string;
-  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE'; // <-- Thêm 'VOICE' vào đây
+  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'SYSTEM';
   metadata?: any;
   createdAt: string;
   
-  // Field quan trọng cho Optimistic UI
   clientSideId?: string; 
   status?: 'SENDING' | 'SENT' | 'ERROR'; 
 }
@@ -36,12 +35,17 @@ export interface Conversation {
   lastSenderId: string;
   unreadCount: number;
   status: 'ACTIVE' | 'ARCHIVED' | 'BLOCKED';
+  
+  boxId?: string; 
+  boxName?: string;  
+  boxAvatar?: string; 
 }
 
 export interface SendMessageRequest {
-  receiverId: string;
+  receiverId?: string;       // Đổi thành không bắt buộc
+  conversationId?: string;   // [THÊM MỚI] Gửi ID cuộc trò chuyện
   content: string;
-  type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE'; // <-- Thêm 'VOICE' vào đây
+  type?: 'TEXT' | 'IMAGE';
   metadata?: any;
   clientSideId?: string;
 }

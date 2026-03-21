@@ -11,7 +11,6 @@ interface Props {
 
 export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
   
-  // 1. Helper: Map status
   const mapStatus = (status: string | CheckinStatus): PostProps['status'] => {
     const s = String(status).toUpperCase();
     if (s === 'COMEBACK' || s === CheckinStatus.COMEBACK) return 'comeback';
@@ -20,14 +19,12 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
     return 'completed'; 
   };
 
-  // 2. Helper: Map Emotion
   const mapEmotion = (emo?: string): Emotion => {
     if (!emo) return Emotion.NORMAL;
     const key = Object.keys(Emotion).find(k => k === emo.toUpperCase());
     return key ? (Emotion as any)[key] : Emotion.NORMAL;
   }
 
-  // 3. Helper: Lấy thông tin User an toàn
   const getUserInfo = (item: any) => {
       if (item.user) {
           const name = item.user.fullname || item.user.name || "Người dùng";
@@ -47,18 +44,17 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
 
   const userInfo = getUserInfo(checkin);
 
-  // 4. Tạo Post Data chuẩn cho Card (Đã fix lỗi ID)
   const postData: PostProps & { videoUrl?: string } = {
     type: 'POST', 
     id: checkin.id,
     userId: String(userInfo.id),
     user: {
-      id: String(userInfo.id), // <-- [ĐÃ FIX] Thêm ID vào user
+      id: String(userInfo.id), 
       name: userInfo.name,
       avatar: userInfo.avatar
     },
     image: checkin.imageUrl || checkin.thumbnailUrl,
-    videoUrl: checkin.videoUrl, // <-- [THÊM MỚI] Truyền videoUrl xuống Card
+    videoUrl: checkin.videoUrl, 
     caption: checkin.caption, 
     status: mapStatus(checkin.status),
     interactionType: InteractionType.GROUP_DISCUSS,
@@ -73,17 +69,18 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
       <button 
         onClick={onClose}
-        className="absolute top-4 right-4 z-[110] p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-all backdrop-blur-sm"
+        className="absolute top-4 right-4 z-[1000] p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-all backdrop-blur-sm"
       >
         <X className="w-8 h-8" />
       </button>
 
       <div className="absolute inset-0 z-0" onClick={onClose} />
 
-      <div className="w-full max-w-[450px] aspect-square flex items-center justify-center relative z-10 pointer-events-none">
+      {/* [ĐÃ SỬA]: Tăng width (max-w-[550px] md:max-w-[600px]) và loại bỏ aspect-square để bài đăng to và rõ hơn */}
+      <div className="w-full max-w-[550px] md:max-w-[600px] flex items-center justify-center relative z-10 pointer-events-none">
           <div className="pointer-events-auto w-full">
              <JourneyPostCard 
                 post={postData} 

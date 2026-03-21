@@ -3,7 +3,6 @@ import { X, Images } from 'lucide-react';
 import { UserActiveJourneyResponse } from '../types';
 import { Checkin } from '@/modules/checkin/types';
 
-// [THÊM MỚI] Import LivePhotoViewer
 import { LivePhotoViewer } from '@/components/ui/LivePhotoViewer';
 
 interface Props {
@@ -51,14 +50,16 @@ export const JourneyAlbumModal: React.FC<Props> = ({ journey, onClose, onCheckin
                                 onClick={() => onCheckinClick(checkin)}
                                 className="group relative aspect-square overflow-hidden cursor-pointer md:rounded-xl bg-zinc-900"
                             >
-                                {/* [ĐÃ SỬA] Dùng LivePhotoViewer */}
                                 <LivePhotoViewer 
                                     imageUrl={checkin.imageUrl} 
                                     videoUrl={checkin.videoUrl} 
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                 />
                                 
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none" />
+                                {/* [ĐÃ SỬA] Thêm lớp vô hình bọc lên trên cùng để bắt sự kiện CLICK dứt khoát */}
+                                <div className="absolute inset-0 z-10" />
+
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none z-20" />
                             </div>
                         ))}
                     </div>
