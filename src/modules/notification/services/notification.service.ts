@@ -11,6 +11,13 @@ export interface NotificationResponse {
     createdAt: string;
     senderId: string;
     senderName: string;
+
+    // --- BỔ SUNG SPRINT 2 (Giúp hết báo đỏ ở NotificationItem.tsx) ---
+    isSeen?: boolean;
+    messageKey?: string;
+    messageArgs?: string;
+    actionStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    actorsCount?: number;
 }
 
 interface PageResponse<T> {
@@ -40,12 +47,15 @@ export const notificationService = {
         await http.patch('/notifications/read-all');
     },
 
-    // [THÊM MỚI] Xóa 1 thông báo
+    // [THÊM MỚI SPRINT 2] Đánh dấu đã nhận (xóa số badge đỏ trên chuông)
+    markAllAsSeen: async (): Promise<void> => {
+        await http.patch('/notifications/seen-all');
+    },
+
     deleteNotification: async (id: string): Promise<void> => {
         await http.delete(`/notifications/${id}`);
     },
 
-    // [THÊM MỚI] Xóa tất cả thông báo
     deleteAllNotifications: async (): Promise<void> => {
         await http.delete('/notifications/all');
     }
