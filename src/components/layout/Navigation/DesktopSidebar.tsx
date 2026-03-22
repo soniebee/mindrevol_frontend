@@ -2,13 +2,9 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, Compass, Box, MessageCircle, Map as MapIcon, 
-  Bell, PlusSquare, User, 
-  LogOut, // [SỬA]: Đổi import Settings thành LogOut
-  ChevronLeft, ChevronRight
+  Bell, PlusSquare, User, Settings, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// [THÊM MỚI]: Import hook useAuth để lấy hàm đăng xuất
-import { useAuth } from '@/modules/auth/store/AuthContext'; 
 
 interface DesktopSidebarProps {
   onJourneyClick?: () => void;
@@ -33,9 +29,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   isNotificationOpen,
   onSettingsClick 
 }) => {
-  // [THÊM MỚI]: Lấy hàm logout từ Context
-  const { logout } = useAuth();
-
   return (
     <div className={cn(
       "fixed z-50 top-0 left-0 h-full transition-all duration-300 ease-in-out font-sans",
@@ -45,7 +38,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       "hidden md:flex" 
     )}>
       
-      {/* Nút Kéo ra / Thu vào (Tinh tế hơn) */}
       <button
         onClick={toggleSidebar}
         className="absolute -right-4 top-12 w-8 h-8 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 transition-all z-50 shadow-sm active:scale-95"
@@ -53,7 +45,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {isExpanded ? <ChevronLeft className="w-5 h-5 ml-0.5" /> : <ChevronRight className="w-5 h-5 ml-1" />}
       </button>
 
-      {/* 1. Tên nền tảng */}
       <div className={cn("mb-6 transition-all flex items-center", isExpanded ? "px-3 justify-start" : "justify-center")}>
         <span className="text-[28px] font-normal text-black dark:text-white tracking-wide select-none" style={{ fontFamily: '"Jua", sans-serif' }}>
           {isExpanded ? "MindRevol" : "M."}
@@ -62,13 +53,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
       <div className="w-full h-px bg-zinc-200 dark:bg-white/10 mb-6 shrink-0" />
 
-      {/* 2. Menu Items */}
       <div className="flex-1 flex flex-col gap-1.5">
         <DesktopNavItem to="/" icon={Home} label="Home" isExpanded={isExpanded} />
         
         <button 
           onClick={onJourneyClick}
-          title={!isExpanded ? "Journeys" : undefined}
           className={cn(
             "flex items-center rounded-[16px] transition-all group relative border border-transparent",
             isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
@@ -84,12 +73,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
         <DesktopNavItem to="/box" icon={Box} label="Box" isExpanded={isExpanded} />
         <DesktopNavItem to="/chat" icon={MessageCircle} label="Messages" badge={totalUnread} isExpanded={isExpanded} />
-        <DesktopNavItem to="/map" icon={MapIcon} label="Map" isExpanded={isExpanded} />
         
-        {/* Nút Thông báo */}
         <button 
           onClick={onNotificationClick}
-          title={!isExpanded ? "Notifications" : undefined}
           className={cn(
             "flex items-center rounded-[16px] transition-all relative group border",
             isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
@@ -105,7 +91,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {/* Nút Đăng bài */}
         <button 
             onClick={triggerUpload}
-            title={!isExpanded ? "Post" : undefined}
             className={cn(
                 "flex items-center rounded-[16px] transition-all group border border-transparent mt-1",
                 isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
@@ -119,31 +104,26 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         <DesktopNavItem to="/profile" icon={User} label="Profile" isExpanded={isExpanded} />
       </div>
 
-      {/* 3. NÚT ĐĂNG XUẤT */}
       <div className="mt-auto pt-4 shrink-0 border-t border-zinc-200 dark:border-white/10">
         <button 
-          onClick={logout} // [SỬA]: Gắn sự kiện logout vào đây
-          title={!isExpanded ? "Logout" : undefined} // [SỬA]: Đổi tooltip thành Logout
+          onClick={onSettingsClick}
           className={cn(
             "flex items-center rounded-[16px] transition-all relative group border border-transparent w-full",
             isExpanded ? "px-4 py-3 gap-4 justify-start" : "px-0 py-3 justify-center",
-            // [SỬA]: Đổi màu khi hover sang đỏ để cảnh báo đây là hành động đăng xuất
-            "text-zinc-500 dark:text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-[0.98]"
+            "text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-[0.98]"
           )}
         >
-          <LogOut className="w-6 h-6 transition-transform shrink-0 group-hover:scale-110" strokeWidth={2} />
-          {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>Logout</span>}
+          <Settings className="w-6 h-6 transition-transform shrink-0 group-hover:scale-110" strokeWidth={2} />
+          {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>Settings</span>}
         </button>
       </div>
     </div>
   );
 };
 
-// Component con: DesktopNavItem (Giữ nguyên)
 const DesktopNavItem = ({ to, icon: Icon, label, badge, isExpanded }: any) => (
     <NavLink 
       to={to} 
-      title={!isExpanded ? label : undefined}
       className={({ isActive }) => cn(
         "flex items-center rounded-[16px] transition-all relative group border",
         isExpanded ? "px-4 py-3 gap-4 justify-start" : "px-0 py-3 justify-center",

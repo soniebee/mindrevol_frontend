@@ -164,6 +164,11 @@ class UserService {
   async deleteAccount(): Promise<void> {
     await http.delete('/users/me');
   }
+
+  async updateFcmToken(token: string): Promise<void> {
+    // Gọi API PATCH /api/v1/users/fcm-token như Backend yêu cầu
+    await http.patch('/users/fcm-token', { token });
+  }
 }
 
 export const userService = new UserService();

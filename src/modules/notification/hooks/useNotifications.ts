@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { notificationService, NotificationResponse } from '../services/notification.service';
+import { boxService } from '@/modules/box/services/box.service';
+import { journeyService } from '@/modules/journey/services/journey.service';
 import { friendService } from '@/modules/user/services/friend.service';
 import { toast } from 'react-hot-toast';
 
 export const useNotifications = (isOpen: boolean) => {
+            const parseNumericReferenceId = (value: string) => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : null;
+            };
+
     const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
 
     useEffect(() => {
-        if (isOpen) {
-            fetchNotifications().then(() => {
-                // Đánh dấu Seen toàn bộ khi mở panel để mất số đỏ ở icon chuông
-                markAllAsSeen();
-            });
-        }
+        if (isOpen) fetchNotifications();
     }, [isOpen]);
 
     const fetchNotifications = async () => {
@@ -22,7 +24,7 @@ export const useNotifications = (isOpen: boolean) => {
         try {
             const data = await notificationService.getMyNotifications(0, 30);
             const normalizedData = (data.content || []).map((n: NotificationResponse & { read?: boolean }) => ({
-                ...n, 
+                ...n,
                 isRead: n.isRead ?? n.read ?? false
             }));
             setNotifications(normalizedData);
@@ -31,13 +33,6 @@ export const useNotifications = (isOpen: boolean) => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const markAllAsSeen = async () => {
-        try {
-            await notificationService.markAllAsSeen();
-            setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
-        } catch (e) { console.error(e); }
     };
 
     const markAsRead = async (id: string) => {
@@ -52,6 +47,15 @@ export const useNotifications = (isOpen: boolean) => {
             await notificationService.markAllAsRead();
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         } catch (e) { console.error(e); }
+    };
+
+    // [THÊM MỚI SPRINT 2] Cập nhật state isSeen và gọi API
+    const markAllAsSeen = async () => {
+        try {
+            // Optimistic UI: Update UI ngay lập tức cho mượt
+            setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
+            await notificationService.markAllAsSeen();
+        } catch (e) { console.error("Lỗi mark all as seen", e); }
     };
 
     const deleteNotification = async (id: string) => {
@@ -70,31 +74,37 @@ export const useNotifications = (isOpen: boolean) => {
         } catch (e) { console.error(e); }
     };
 
+    // ==========================================
+    // TRUNG TÂM XỬ LÝ HÀNH ĐỘNG (STRATEGY HUB)
+    // ==========================================
     const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => {
         try {
-            // FE-TASK-103: Handle actionable notifications
-            if (noti.type === 'FRIEND_REQUEST') {
+            if (noti.type === 'BOX_INVITE') {
+                if (action === 'ACCEPT') {
+                    await boxService.acceptInvite(noti.referenceId);
+                } else {
+                    await boxService.rejectInvite(noti.referenceId);
+                }
+            }
+            else if (noti.type === 'JOURNEY_INVITE') {
+                const invitationId = parseNumericReferenceId(noti.referenceId);
+                if (invitationId === null) {
+                    throw new Error('Journey invitation id is invalid');
+                }
+
+                if (action === 'ACCEPT') {
+                    await journeyService.acceptInvitation(invitationId);
+                } else {
+                    await journeyService.rejectInvitation(invitationId);
+                }
+            }
+            else if (noti.type === 'FRIEND_REQUEST') {
                 if (action === 'ACCEPT') {
                     await friendService.acceptRequest(noti.referenceId);
                 } else {
                     await friendService.declineRequest(noti.referenceId);
                 }
             }
-            // TODO: Implement BOX_INVITE and JOURNEY_INVITE when services are available
-            // else if (noti.type === 'BOX_INVITE') {
-            //     action === 'ACCEPT'
-            //         ? await boxService.acceptInvite(noti.referenceId)
-            //         : await boxService.rejectInvite(noti.referenceId);
-            // }
-            // else if (noti.type === 'JOURNEY_INVITE') {
-            //     const invitationId = parseNumericReferenceId(noti.referenceId);
-            //     if (invitationId === null) {
-            //         throw new Error('Journey invitation id is invalid');
-            //     }
-            //     action === 'ACCEPT'
-            //         ? await journeyService.acceptInvitation(invitationId)
-            //         : await journeyService.rejectInvitation(invitationId);
-            // }
 
             if (action === 'ACCEPT') toast.success("Đã chấp nhận thành công!");
             if (action === 'REJECT') toast.success("Đã từ chối!");
@@ -112,7 +122,7 @@ export const useNotifications = (isOpen: boolean) => {
 
             return true;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Yêu cầu đã hết hạn hoặc có lỗi xảy ra';
+            const message = error instanceof Error ? error.message : 'Yeu cau da het han hoac co loi xay ra';
             toast.error(message);
             return false;
         }
@@ -123,6 +133,8 @@ export const useNotifications = (isOpen: boolean) => {
     return {
         notifications: filteredNotifications,
         isLoading, filter, setFilter,
-        markAsRead, markAllAsRead, markAllAsSeen, deleteNotification, deleteAll, handleAction
+        markAsRead, markAllAsRead,
+        markAllAsSeen, // <-- Đã export hàm này ra để Panel dùng
+        deleteNotification, deleteAll, handleAction
     };
 };

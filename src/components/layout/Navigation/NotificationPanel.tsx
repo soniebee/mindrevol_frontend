@@ -1,111 +1,176 @@
-import React from 'react';
-import { X, Bell, CheckCheck, Loader2, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { useNotifications } from '@/modules/notification/hooks/useNotifications';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { Bell, Check, Settings } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
-import { NotificationResponse } from '@/modules/notification/services/notification.service';
+import { useNotifications } from '@/modules/notification/hooks/useNotifications';
+import { NotificationSettingsModal } from '@/modules/notification/components/NotificationSettingsModal';
 
-interface NotificationPanelProps {
+interface Props {
     isOpen: boolean;
     onClose: () => void;
 }
 
-export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose }) => {
-    const navigate = useNavigate();
-
+export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
+    const panelRef = useRef<HTMLDivElement>(null);
     const {
-        notifications, isLoading, filter, setFilter,
-        markAsRead, markAllAsRead, deleteNotification, deleteAll, handleAction
+        notifications,
+        isLoading,
+        markAsRead,
+        markAllAsRead,
+        markAllAsSeen,
+        deleteNotification,
+        handleAction
     } = useNotifications(isOpen);
 
-    const handleItemClick = (noti: NotificationResponse) => {
-        // [TASK-102] Click vào item thì mark as read (Mất chấm xanh)
-        if (!noti.isRead) markAsRead(noti.id);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [selectedNotificationId, setSelectedNotificationId] = useState<string | null>(null);
 
-        if (['CHECKIN', 'COMMENT', 'REACTION'].includes(noti.type)) {
-            // navigate(`/journey/checkin/${noti.referenceId}`);
-            onClose();
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            // [ĐÃ FIX BUG] Nếu modal cài đặt đang mở thì KHÔNG chạy logic click outside của Panel
+            if (isSettingsOpen) return;
+
+            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
         }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen, onClose, isSettingsOpen]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Mark as seen when panel opens to clear badge count.
+            markAllAsSeen();
+        }
+    }, [isOpen, markAllAsSeen]);
+
+    const selectedNotification = useMemo(() => {
+        if (notifications.length === 0) return null;
+        if (!selectedNotificationId) return notifications[0];
+        return notifications.find((item) => item.id === selectedNotificationId) ?? notifications[0];
+    }, [notifications, selectedNotificationId]);
+
+    const unreadCount = notifications.filter((notification) => !notification.isSeen).length;
+
+    const handleItemClick = async (notification: (typeof notifications)[number]) => {
+        await markAsRead(notification.id);
+        setSelectedNotificationId(notification.id);
     };
 
-    const handleItemAction = async (e: React.MouseEvent, action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => {
-        const success = await handleAction(action, noti);
-        if (success && action === 'ACCEPT' && noti.type === 'BOX_INVITE') {
-            navigate(`/box/${noti.referenceId}`);
-            onClose();
-        }
+    const handleDelete = (event: React.MouseEvent, id: string) => {
+        event.stopPropagation();
+        deleteNotification(id);
     };
 
+    const handleItemAction = async (
+        event: React.MouseEvent,
+        action: 'ACCEPT' | 'REJECT',
+        notification: (typeof notifications)[number]
+    ) => {
+        event.stopPropagation();
+        await handleAction(action, notification);
+    };
+
+    // Vẫn render Modal Settings cho dù NotificationPanel bị đóng
     return (
-        <div
-            className={cn(
-                "fixed top-0 bottom-0 left-[80px] md:left-[88px] w-[350px] bg-white dark:bg-[#121212] border-r border-zinc-200 dark:border-white/10 z-40 shadow-[20px_0_40px_rgba(0,0,0,0.05)] dark:shadow-[20px_0_40px_rgba(0,0,0,0.3)] transition-all duration-300 flex flex-col font-sans",
-                isOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
-            )}
-        >
-            <div className="p-6 pb-4 flex justify-between items-center shrink-0">
-                <h2 className="text-[26px] font-normal text-black dark:text-white" style={{ fontFamily: '"Jua", sans-serif' }}>
-                    Notifications
-                </h2>
-                <div className="flex items-center gap-1">
-                    <button onClick={markAllAsRead} className="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors rounded-full hover:bg-blue-50 dark:hover:bg-blue-500/10" title="Mark all as read">
-                        <CheckCheck size={20} />
-                    </button>
-                    <button onClick={deleteAll} className="text-red-500 hover:text-red-600 dark:hover:text-red-400 p-2 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-500/10" title="Clear all">
-                        <Trash2 size={18} />
-                    </button>
-                    <button onClick={onClose} className="p-2 rounded-full text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-            </div>
-
-            <div className="px-6 py-2 flex items-center gap-2 shrink-0">
-                <button
-                    onClick={() => setFilter('ALL')}
-                    className={cn(
-                        "px-4 py-1.5 rounded-[12px] text-[13px] font-bold transition-all",
-                        filter === 'ALL' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "bg-zinc-100 text-zinc-500 hover:text-black dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-white"
-                    )}
+        <>
+            {isOpen && (
+                <div
+                    ref={panelRef}
+                    className="absolute top-full right-0 mt-2 w-80 sm:w-[44rem] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
                 >
-                    All
-                </button>
-                <button
-                    onClick={() => setFilter('UNREAD')}
-                    className={cn(
-                        "px-4 py-1.5 rounded-[12px] text-[13px] font-bold transition-all",
-                        filter === 'UNREAD' ? "bg-black text-white dark:bg-white dark:text-black shadow-md" : "bg-zinc-100 text-zinc-500 hover:text-black dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-white"
-                    )}
-                >
-                    Unread
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto mt-2 custom-scrollbar">
-                {isLoading ? (
-                    <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-400" /></div>
-                ) : notifications.length === 0 ? (
-                    <div className="text-center py-12 text-zinc-400 flex flex-col items-center">
-                        <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-4 border border-zinc-100 dark:border-zinc-800">
-                            <Bell size={28} className="text-zinc-300 dark:text-zinc-600" />
+                    <div className="p-4 border-b border-zinc-100 dark:border-white/10 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-zinc-900 dark:text-white">Thông báo</h3>
+                            {unreadCount > 0 && (
+                                <span className="px-2 py-0.5 bg-indigo-500 text-white text-xs font-bold rounded-full">
+                  {unreadCount}
+                </span>
+                            )}
                         </div>
-                        <p style={{ fontFamily: '"Jua", sans-serif' }} className="text-lg">No notifications yet.</p>
+
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={markAllAsRead}
+                                className="p-2 text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-full transition-colors"
+                                title="Đánh dấu tất cả đã đọc"
+                            >
+                                <Check className="w-4 h-4" />
+                            </button>
+
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsSettingsOpen(true);
+                                }}
+                                className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
+                                title="Cài đặt thông báo"
+                            >
+                                <Settings className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
-                ) : (
-                    <div className="flex flex-col">
-                        {notifications.map((noti) => (
-                            <NotificationItem
-                                key={noti.id}
-                                noti={noti}
-                                onClick={handleItemClick}
-                                onDelete={async (e, id) => { e.stopPropagation(); deleteNotification(id); }}
-                                onAction={handleItemAction}
-                            />
-                        ))}
+
+                    <div className="max-h-[60vh] flex">
+                        <div className="flex-1 overflow-y-auto overscroll-contain border-r border-zinc-100 dark:border-white/10">
+                            {isLoading ? (
+                                <div className="p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                                    Đang tải thông báo...
+                                </div>
+                            ) : notifications.length > 0 ? (
+                                notifications.map((notification) => (
+                                    <NotificationItem
+                                        key={notification.id}
+                                        noti={notification}
+                                        onClick={handleItemClick}
+                                        onDelete={handleDelete}
+                                        onAction={handleItemAction}
+                                    />
+                                ))
+                            ) : (
+                                <div className="p-8 text-center flex flex-col items-center justify-center text-zinc-500 dark:text-zinc-400">
+                                    <Bell className="w-8 h-8 mb-3 opacity-20" />
+                                    <p className="text-sm">Bạn không có thông báo nào mới</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="hidden sm:block w-[20rem] p-4 bg-zinc-50/60 dark:bg-white/[0.03]">
+                            {selectedNotification ? (
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {selectedNotification.title}
+                                    </h4>
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                        {selectedNotification.message}
+                                    </p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 pt-1">
+                                        {new Date(selectedNotification.createdAt).toLocaleString('vi-VN')}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                    Chon mot thong bao de xem chi tiet ben canh.
+                                </p>
+                            )}
+                        </div>
                     </div>
-                )}
-            </div>
-        </div>
+                    <div className="p-2 border-t border-zinc-100 dark:border-white/10">
+                        <button className="w-full py-2 text-sm font-medium text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
+                            Xem tất cả thông báo
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Render ngoài logic if (!isOpen) để Modal không bị văng khi click bên trong */}
+            <NotificationSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+            />
+        </>
     );
 };
