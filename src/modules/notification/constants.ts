@@ -6,6 +6,9 @@ import {
   UserCheck,
   Package,
   MessageCircle,
+  MessageSquare,
+  Share2,
+  AlertCircle,
   LucideIcon,
 } from 'lucide-react';
 import { NotificationResponse } from './services/notification.service';
@@ -23,6 +26,7 @@ const DEFAULT_META: NotificationUiMeta = {
 };
 
 const META_BY_TYPE: Record<string, NotificationUiMeta> = {
+  // Friend & Connection Types
   FRIEND_REQUEST: {
     icon: UserPlus,
     iconClassName: 'text-blue-600 dark:text-blue-300',
@@ -33,6 +37,8 @@ const META_BY_TYPE: Record<string, NotificationUiMeta> = {
     iconClassName: 'text-emerald-600 dark:text-emerald-300',
     iconContainerClassName: 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/30',
   },
+
+  // Box Types
   BOX_INVITE: {
     icon: Package,
     iconClassName: 'text-violet-600 dark:text-violet-300',
@@ -43,11 +49,20 @@ const META_BY_TYPE: Record<string, NotificationUiMeta> = {
     iconClassName: 'text-rose-600 dark:text-rose-300',
     iconContainerClassName: 'bg-rose-50 dark:bg-rose-500/15 border-rose-200 dark:border-rose-500/30',
   },
+  BOX_MEMBER_REMOVED: {
+    icon: UserPlus,
+    iconClassName: 'text-orange-600 dark:text-orange-300',
+    iconContainerClassName: 'bg-orange-50 dark:bg-orange-500/15 border-orange-200 dark:border-orange-500/30',
+  },
+
+  // Journey Types
   JOURNEY_INVITE: {
     icon: MessageCircle,
     iconClassName: 'text-amber-600 dark:text-amber-300',
     iconContainerClassName: 'bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30',
   },
+
+  // Interaction Types
   CHECKIN_REACTED: {
     icon: Heart,
     iconClassName: 'text-pink-600 dark:text-pink-300',
@@ -58,10 +73,39 @@ const META_BY_TYPE: Record<string, NotificationUiMeta> = {
     iconClassName: 'text-pink-600 dark:text-pink-300',
     iconContainerClassName: 'bg-pink-50 dark:bg-pink-500/15 border-pink-200 dark:border-pink-500/30',
   },
+  POST_REACTION: {
+    icon: Heart,
+    iconClassName: 'text-red-600 dark:text-red-300',
+    iconContainerClassName: 'bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/30',
+  },
+
+  // Mention Types
   MOOD_MENTIONED: {
     icon: AtSign,
     iconClassName: 'text-indigo-600 dark:text-indigo-300',
     iconContainerClassName: 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30',
+  },
+  TAG_MENTIONED: {
+    icon: AtSign,
+    iconClassName: 'text-indigo-600 dark:text-indigo-300',
+    iconContainerClassName: 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30',
+  },
+  COMMENT_MENTIONED: {
+    icon: MessageSquare,
+    iconClassName: 'text-cyan-600 dark:text-cyan-300',
+    iconContainerClassName: 'bg-cyan-50 dark:bg-cyan-500/15 border-cyan-200 dark:border-cyan-500/30',
+  },
+
+  // System & Other Types
+  SYSTEM_ANNOUNCEMENT: {
+    icon: AlertCircle,
+    iconClassName: 'text-yellow-600 dark:text-yellow-300',
+    iconContainerClassName: 'bg-yellow-50 dark:bg-yellow-500/15 border-yellow-200 dark:border-yellow-500/30',
+  },
+  SHARED_WITH_YOU: {
+    icon: Share2,
+    iconClassName: 'text-teal-600 dark:text-teal-300',
+    iconContainerClassName: 'bg-teal-50 dark:bg-teal-500/15 border-teal-200 dark:border-teal-500/30',
   },
 };
 
@@ -81,20 +125,36 @@ export const resolveNotificationPath = (noti: NotificationResponse): string | nu
   const { type, referenceId, senderId } = noti;
 
   switch (type) {
+    // Friend Routes
     case 'FRIEND_REQUEST':
     case 'FRIEND_ACCEPTED':
       return senderId ? `/profile/${senderId}` : '/profile';
 
+    // Box Routes
     case 'BOX_INVITE':
+    case 'BOX_REMOVED':
+    case 'BOX_MEMBER_REMOVED':
       return referenceId ? `/box/${referenceId}` : '/box';
 
-    case 'BOX_REMOVED':
-      return '/box';
+    // Journey Routes
+    case 'JOURNEY_INVITE':
+      return referenceId ? `/journey/${referenceId}` : '/journey';
 
+    // Interaction & Mention Routes
     case 'MOOD_MENTIONED':
     case 'MOOD_REACTED':
     case 'CHECKIN_REACTED':
+    case 'POST_REACTION':
+    case 'TAG_MENTIONED':
       return referenceId ? `/?notificationRef=${referenceId}` : '/';
+
+    case 'COMMENT_MENTIONED':
+      return referenceId ? `/?commentRef=${referenceId}` : '/';
+
+    // System Routes
+    case 'SYSTEM_ANNOUNCEMENT':
+    case 'SHARED_WITH_YOU':
+      return null;
 
     default:
       return '/';

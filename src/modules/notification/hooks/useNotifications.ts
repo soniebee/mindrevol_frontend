@@ -5,12 +5,12 @@ import { journeyService } from '@/modules/journey/services/journey.service';
 import { friendService } from '@/modules/user/services/friend.service';
 import { toast } from 'react-hot-toast';
 
-export const useNotifications = (isOpen: boolean) => {
-            const parseNumericReferenceId = (value: string) => {
-                const parsed = Number(value);
-                return Number.isFinite(parsed) ? parsed : null;
-            };
+const parseNumericReferenceId = (value: string): number | null => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
 
+export const useNotifications = (isOpen: boolean) => {
     const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
@@ -39,30 +39,38 @@ export const useNotifications = (isOpen: boolean) => {
         try {
             await notificationService.markAsRead(id);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const markAllAsRead = async () => {
         try {
             await notificationService.markAllAsRead();
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
-    // [THÊM MỚI SPRINT 2] Cập nhật state isSeen và gọi API
+    // [SPRINT 2] Cập nhật state isSeen và gọi API
     const markAllAsSeen = async () => {
         try {
             // Optimistic UI: Update UI ngay lập tức cho mượt
             setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
             await notificationService.markAllAsSeen();
-        } catch (e) { console.error("Lỗi mark all as seen", e); }
+        } catch (e) {
+            console.error("Lỗi mark all as seen", e);
+        }
     };
 
     const deleteNotification = async (id: string) => {
         try {
             setNotifications(prev => prev.filter(n => n.id !== id));
             await notificationService.deleteNotification(id);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const deleteAll = async () => {
@@ -71,13 +79,15 @@ export const useNotifications = (isOpen: boolean) => {
             setNotifications([]);
             await notificationService.deleteAllNotifications();
             toast.success("Đã dọn sạch thông báo");
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     // ==========================================
     // TRUNG TÂM XỬ LÝ HÀNH ĐỘNG (STRATEGY HUB)
     // ==========================================
-    const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => {
+    const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse): Promise<boolean> => {
         try {
             if (noti.type === 'BOX_INVITE') {
                 if (action === 'ACCEPT') {
@@ -85,11 +95,10 @@ export const useNotifications = (isOpen: boolean) => {
                 } else {
                     await boxService.rejectInvite(noti.referenceId);
                 }
-            }
-            else if (noti.type === 'JOURNEY_INVITE') {
+            } else if (noti.type === 'JOURNEY_INVITE') {
                 const invitationId = parseNumericReferenceId(noti.referenceId);
                 if (invitationId === null) {
-                    throw new Error('Journey invitation id is invalid');
+                    throw new Error('ID lời mời hành trình không hợp lệ');
                 }
 
                 if (action === 'ACCEPT') {
@@ -97,8 +106,7 @@ export const useNotifications = (isOpen: boolean) => {
                 } else {
                     await journeyService.rejectInvitation(invitationId);
                 }
-            }
-            else if (noti.type === 'FRIEND_REQUEST') {
+            } else if (noti.type === 'FRIEND_REQUEST') {
                 if (action === 'ACCEPT') {
                     await friendService.acceptRequest(noti.referenceId);
                 } else {
@@ -106,8 +114,11 @@ export const useNotifications = (isOpen: boolean) => {
                 }
             }
 
-            if (action === 'ACCEPT') toast.success("Đã chấp nhận thành công!");
-            if (action === 'REJECT') toast.success("Đã từ chối!");
+            if (action === 'ACCEPT') {
+                toast.success("Đã chấp nhận thành công!");
+            } else {
+                toast.success("Đã từ chối!");
+            }
 
             await notificationService.markAsRead(noti.id);
             setNotifications((prev) => prev.map((item) => {
@@ -122,7 +133,7 @@ export const useNotifications = (isOpen: boolean) => {
 
             return true;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Yeu cau da het han hoac co loi xay ra';
+            const message = error instanceof Error ? error.message : 'Yêu cầu đã hết hạn hoặc có lỗi xảy ra';
             toast.error(message);
             return false;
         }
@@ -132,9 +143,14 @@ export const useNotifications = (isOpen: boolean) => {
 
     return {
         notifications: filteredNotifications,
-        isLoading, filter, setFilter,
-        markAsRead, markAllAsRead,
-        markAllAsSeen, // <-- Đã export hàm này ra để Panel dùng
-        deleteNotification, deleteAll, handleAction
+        isLoading,
+        filter,
+        setFilter,
+        markAsRead,
+        markAllAsRead,
+        markAllAsSeen,
+        deleteNotification,
+        deleteAll,
+        handleAction
     };
 };

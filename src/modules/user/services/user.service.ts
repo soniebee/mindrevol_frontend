@@ -34,12 +34,33 @@ export interface UserSummary {
 
 // 3. Interface cho Settings
 export interface NotificationSettings {
+  pushEnabled: boolean;           // Bật/tắt toàn bộ push
+  emailEnabled: boolean;          // Bật/tắt email
+  inAppEnabled: boolean;          // Bật/tắt thông báo trong ứng dụng (THÊM MỚI)
   emailDailyReminder: boolean;
   emailUpdates: boolean;
-  pushFriendRequest: boolean;
-  pushNewComment: boolean;
-  pushJourneyInvite: boolean;
-  pushReaction: boolean;
+  pushFriendRequest: boolean;     // Bạn bè
+  pushNewComment: boolean;        // Bình luận
+  pushJourneyInvite: boolean;     // Lời mời
+  pushReaction: boolean;          // Tương tác (Reaction)
+
+  // Optional fine-grained settings (task-201) - backend may rollout incrementally
+  pushMessage?: boolean;
+  inAppFriendRequest?: boolean;
+  inAppNewComment?: boolean;
+  inAppJourneyInvite?: boolean;
+  inAppReaction?: boolean;
+  inAppMessage?: boolean;
+  emailFriendRequest?: boolean;
+  emailNewComment?: boolean;
+  emailJourneyInvite?: boolean;
+  emailReaction?: boolean;
+  emailMessage?: boolean;
+
+  // DND Mode
+  dndEnabled: boolean;
+  dndStartHour: number;
+  dndEndHour: number;
 }
 
 export interface LinkedAccount {

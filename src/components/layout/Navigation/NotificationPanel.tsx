@@ -153,7 +153,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                                 </div>
                             ) : (
                                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                    Chon mot thong bao de xem chi tiet ben canh.
+                                    Chọn một thông báo để xem chi tiết bên cạnh.
                                 </p>
                             )}
                         </div>

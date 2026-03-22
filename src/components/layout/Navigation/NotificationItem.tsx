@@ -1,5 +1,5 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { NotificationResponse } from '@/modules/notification/services/notification.service';
@@ -16,7 +16,7 @@ interface Props {
 }
 
 const I18N_FALLBACK: Record<string, string> = {
-    'noti.and_others': 'va {{count}} nguoi khac'
+    'noti.and_others': 'và {{count}} người khác'
 };
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -43,6 +43,7 @@ const parseMessageArgs = (raw?: string): string[] => {
 };
 
 export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onAction }) => {
+    const [isLoading, setIsLoading] = useState(false);
     const meta = getNotificationMeta(noti.type);
     const requiresAction = isActionableNotification(noti);
     const isAggregated = (noti.actorsCount ?? 0) > 1;
@@ -50,6 +51,16 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
     const handleClick = () => {
         if (requiresAction) return;
         onClick(noti);
+    };
+
+    const handleActionClick = async (e: React.MouseEvent, action: 'ACCEPT' | 'REJECT') => {
+        e.stopPropagation();
+        setIsLoading(true);
+        try {
+            await onAction(e, action, noti);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const getActorLabel = (args: string[]) => {
@@ -135,16 +146,20 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
                 {requiresAction && (
                     <div className="flex gap-2 mt-3">
                         <button
-                            onClick={(e) => { e.stopPropagation(); onAction(e, 'ACCEPT', noti); }}
-                            className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-[10px] transition-colors shadow-sm"
+                            onClick={(e) => handleActionClick(e, 'ACCEPT')}
+                            disabled={isLoading}
+                            className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white text-xs font-bold rounded-[10px] transition-colors shadow-sm flex items-center justify-center gap-2 min-w-[80px]"
                         >
-                            Chap nhan
+                            {isLoading && <Loader2 size={14} className="animate-spin" />}
+                            <span>{isLoading ? 'Đang xử lý' : 'Chấp nhận'}</span>
                         </button>
                         <button
-                            onClick={(e) => { e.stopPropagation(); onAction(e, 'REJECT', noti); }}
-                            className="px-4 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 text-xs font-bold rounded-[10px] transition-colors border border-zinc-200 dark:border-zinc-700"
+                            onClick={(e) => handleActionClick(e, 'REJECT')}
+                            disabled={isLoading}
+                            className="px-4 py-1.5 bg-zinc-100 hover:bg-zinc-200 disabled:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:disabled:bg-zinc-800 dark:text-zinc-300 text-xs font-bold rounded-[10px] transition-colors border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-2 min-w-[70px]"
                         >
-                            Tu choi
+                            {isLoading && <Loader2 size={14} className="animate-spin" />}
+                            <span>{isLoading ? 'Xử lý' : 'Từ chối'}</span>
                         </button>
                     </div>
                 )}
