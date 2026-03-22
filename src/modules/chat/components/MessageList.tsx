@@ -1,3 +1,4 @@
+//src/components/MessageList
 import React, { useEffect, useRef } from 'react';
 import { Message } from '../types';
 import { MessageBubble } from './MessageBubble';
@@ -21,7 +22,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, currentUserI
 
   if (!messages || !Array.isArray(messages)) {
     return <div className="flex-1 flex items-center justify-center text-zinc-500">...</div>;
-  }
+}
 
   return (
     <div 

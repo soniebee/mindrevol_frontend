@@ -1,15 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, UserX, Ban, ChevronLeft, Users } from 'lucide-react'; 
+// IMPORT THÊM ICON PHONE TỪ LUCIDE-REACT
+import { MoreHorizontal, UserX, Ban, ChevronLeft, Users, Phone } from 'lucide-react'; 
 import { useChatStore } from '../store/useChatStore';
 import { Link } from 'react-router-dom'; 
 
+// 1. THÊM onStartCall VÀO INTERFACE PROPS
 interface Props {
   partner: any; 
   onBlock: () => void;
   onUnfriend: () => void;
+  onStartCall?: () => void; 
 }
 
-export const MobileChatHeader: React.FC<Props> = ({ partner, onBlock, onUnfriend }) => {
+export const MobileChatHeader: React.FC<Props> = ({ 
+  partner, 
+  onBlock, 
+  onUnfriend,
+  onStartCall // 2. HỨNG PROP Ở ĐÂY
+}) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { openChat, conversations, activeConversationId } = useChatStore(); 
@@ -74,24 +82,39 @@ export const MobileChatHeader: React.FC<Props> = ({ partner, onBlock, onUnfriend
         </div>
       </div>
 
+      {/* NHÓM NÚT BÊN PHẢI (GỌI ĐIỆN + MORE) */}
       {!isGroup && (
-          <div className="relative" ref={menuRef}>
-              <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full transition-all text-black hover:bg-black/5">
-                  <MoreHorizontal className="w-8 h-8" />
-              </button>
-              {showMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden z-50 animate-in fade-in zoom-in-95 origin-top-right">
-                      <div className="py-1">
-                        <button onClick={() => handleAction(onUnfriend, `Hủy kết bạn với ${partner?.fullname}?`)} className="w-full text-left px-4 py-3 text-sm text-black font-bold hover:bg-zinc-100 flex items-center gap-3 transition-colors">
-                            <UserX className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Hủy kết bạn</span>
-                        </button>
-                        <div className="h-[2px] bg-black mx-2 my-1" />
-                        <button onClick={() => handleAction(onBlock, `Chặn ${partner?.fullname}?`)} className="w-full text-left px-4 py-3 text-sm text-red-600 font-bold hover:bg-red-50 flex items-center gap-3 transition-colors">
-                            <Ban className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Chặn người này</span>
-                        </button>
-                      </div>
-                  </div>
+          <div className="flex items-center gap-1">
+              {/* 3. NÚT GỌI ĐIỆN */}
+              {onStartCall && (
+                  <button 
+                      onClick={onStartCall} 
+                      className="p-2 rounded-full transition-all text-black hover:bg-black/5 hover:text-green-600"
+                      title="Gọi điện"
+                  >
+                      <Phone className="w-6 h-6" />
+                  </button>
               )}
+
+              {/* NÚT MENU MORE (CŨ) */}
+              <div className="relative" ref={menuRef}>
+                  <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full transition-all text-black hover:bg-black/5">
+                      <MoreHorizontal className="w-8 h-8" />
+                  </button>
+                  {showMenu && (
+                      <div className="absolute right-0 top-full mt-2 w-52 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden z-50 animate-in fade-in zoom-in-95 origin-top-right">
+                          <div className="py-1">
+                            <button onClick={() => handleAction(onUnfriend, `Hủy kết bạn với ${partner?.fullname}?`)} className="w-full text-left px-4 py-3 text-sm text-black font-bold hover:bg-zinc-100 flex items-center gap-3 transition-colors">
+                                <UserX className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Hủy kết bạn</span>
+                            </button>
+                            <div className="h-[2px] bg-black mx-2 my-1" />
+                            <button onClick={() => handleAction(onBlock, `Chặn ${partner?.fullname}?`)} className="w-full text-left px-4 py-3 text-sm text-red-600 font-bold hover:bg-red-50 flex items-center gap-3 transition-colors">
+                                <Ban className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Chặn người này</span>
+                            </button>
+                          </div>
+                      </div>
+                  )}
+              </div>
           </div>
       )}
     </div>

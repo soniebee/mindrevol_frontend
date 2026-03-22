@@ -1,3 +1,4 @@
+//src/pages/ChatPage
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom'; 
 
@@ -10,6 +11,7 @@ import { MobileConversationList } from '../components/MobileConversationList';
 import { MobileChatWindow } from '../components/MobileChatWindow';
 
 import { chatService } from '../services/chat.service';
+import { useGlobalChatSocket } from '../hooks/useGlobalChatSocket';
 import { useChatStore } from '../store/useChatStore';
 import { useChatSocket } from '../hooks/useChatSocket'; 
 import MainLayout from '@/components/layout/MainLayout';
@@ -23,10 +25,12 @@ const ChatPage = () => {
     activeConversationId, 
     setConversations,
     fetchConversations,
-    openChat 
+    openChat,
   } = useChatStore();
   
   const [isLoading, setIsLoading] = useState(true);
+
+  useGlobalChatSocket();
 
   useChatSocket(activeConversationId); 
 

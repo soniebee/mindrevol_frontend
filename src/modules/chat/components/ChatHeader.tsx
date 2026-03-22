@@ -1,16 +1,19 @@
+//src/components/ChatHeader
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, UserX, Ban, ChevronLeft, Users } from 'lucide-react'; 
+import { MoreHorizontal, UserX, Ban, ChevronLeft, Users, Phone } from 'lucide-react'; 
 import { useChatStore } from '../store/useChatStore';
 import { Link } from 'react-router-dom'; 
 import { UserAvatarLink } from '@/components/ui/UserAvatarLink'; 
+import { UserSummary } from '../types'; // Đảm bảo đã import type này
 
 interface ChatHeaderProps {
   partner: any; 
   onBlock: () => void;
   onUnfriend: () => void;
+  onStartCall?: () => void;
 }
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfriend }) => {
+export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfriend, onStartCall }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { openChat, conversations, activeConversationId } = useChatStore(); 
@@ -99,40 +102,49 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfr
         </div>
       </div>
 
-      {/* Menu Dấu 3 chấm */}
-      {!isGroup && (
-          <div className="relative" ref={menuRef}>
-              <button 
-                  onClick={() => setShowMenu(!showMenu)} 
-                  className={`p-2 rounded-full transition-all ${showMenu ? 'bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white' : 'text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
-              >
-                  <MoreHorizontal className="w-8 h-8" />
-              </button>
+      <div className="flex items-center gap-2">
+        {/* NÚT GỌI THOẠI WEBRTC */}
+        {!isGroup && (
+            <button onClick={onStartCall} className="p-2 rounded-full text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" title="Gọi thoại">
+                <Phone className="w-6 h-6" fill="currentColor" />
+            </button>
+        )}
 
-              {showMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] overflow-hidden z-50 animate-in fade-in zoom-in-95 origin-top-right transition-colors">
-                      <div className="py-1">
-                        <button 
-                            onClick={() => handleAction(onUnfriend, `Hủy kết bạn với ${partner?.fullname}?`)} 
-                            className="w-full text-left px-4 py-3 text-sm text-black dark:text-white font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"
-                        >
-                            <UserX className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Hủy kết bạn</span>
-                        </button>
-                        
-                        {/* Đường kẻ ngang phân cách */}
-                        <div className="h-[2px] bg-black dark:bg-white mx-2 my-1 transition-colors" />
-                        
-                        <button 
-                            onClick={() => handleAction(onBlock, `Chặn ${partner?.fullname}?`)} 
-                            className="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-3 transition-colors"
-                        >
-                            <Ban className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Chặn người này</span>
-                        </button>
-                      </div>
-                  </div>
-              )}
-          </div>
-      )}
+        {/* Menu Dấu 3 chấm */}
+        {!isGroup && (
+            <div className="relative" ref={menuRef}>
+                <button 
+                    onClick={() => setShowMenu(!showMenu)} 
+                    className={`p-2 rounded-full transition-all ${showMenu ? 'bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white' : 'text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
+                >
+                    <MoreHorizontal className="w-8 h-8" />
+                </button>
+
+                {showMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] overflow-hidden z-50 animate-in fade-in zoom-in-95 origin-top-right transition-colors">
+                        <div className="py-1">
+                          <button 
+                              onClick={() => handleAction(onUnfriend, `Hủy kết bạn với ${partner?.fullname}?`)} 
+                              className="w-full text-left px-4 py-3 text-sm text-black dark:text-white font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"
+                          >
+                              <UserX className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Hủy kết bạn</span>
+                          </button>
+                          
+                          {/* Đường kẻ ngang phân cách */}
+                          <div className="h-[2px] bg-black dark:bg-white mx-2 my-1 transition-colors" />
+                          
+                          <button 
+                              onClick={() => handleAction(onBlock, `Chặn ${partner?.fullname}?`)} 
+                              className="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-3 transition-colors"
+                          >
+                              <Ban className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Chặn người này</span>
+                          </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+      </div>
     </div>
   );
 };
