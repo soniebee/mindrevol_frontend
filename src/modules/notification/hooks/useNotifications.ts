@@ -68,7 +68,7 @@ export const useNotifications = (isOpen: boolean) => {
             if (noti.type === 'BOX_INVITE') {
                 action === 'ACCEPT' 
                     // ? await boxService.acceptInvite(noti.referenceId)
-// : await boxService.rejectInvite(noti.referenceId);
+                    // : await boxService.rejectInvite(noti.referenceId);
             } 
             else if (noti.type === 'JOURNEY_INVITE') {
                 // action === 'ACCEPT' ? await journeyService.acceptInvitation(noti.referenceId) : ...

@@ -52,9 +52,9 @@ export default defineConfig({
     global: 'window',
   },
 
-  // esbuild: {
-  //   drop: ['console', 'debugger'] as any,
-  // },
+  esbuild: {
+    drop: ['console', 'debugger'] as any,
+  },
   
   build: {
     chunkSizeWarningLimit: 1000,
