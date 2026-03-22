@@ -1,3 +1,4 @@
+//src/hooks/useChat
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
@@ -8,7 +9,7 @@ import { useChatSocket } from './useChatSocket';
 import { Message } from '../types';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { http } from '@/lib/http';
+import { http } from '@/lib/http'; // <-- ĐÃ THÊM DÒNG NÀY ĐỂ FIX LỖI BÁO ĐỎ CHỮ http
 
 export const useChat = (conversationId: any, partnerId: any) => {
   const { user } = useAuth();
@@ -33,10 +34,16 @@ export const useChat = (conversationId: any, partnerId: any) => {
 
   useEffect(() => {
     const fetchMessages = async () => {
-      if (!conversationId || !partnerId) return;
+      // Bỏ qua nếu là ID giả (người chưa từng chat)
+      if (!conversationId) return;
+      if (conversationId.startsWith('friend_')) {
+          setMessages(conversationId, []); 
+          return;
+      }
+
       setIsLoading(true);
       try {
-        const data = await chatService.getMessages(partnerId);
+        const data = await chatService.getMessages(conversationId);
         const sortedMessages = [...data].reverse();
         setMessages(conversationId, sortedMessages);
       } catch (err) {
@@ -47,63 +54,47 @@ export const useChat = (conversationId: any, partnerId: any) => {
       }
     };
     fetchMessages();
-  }, [conversationId, partnerId, setMessages]);
+  }, [conversationId, setMessages]); 
 
   const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' = 'TEXT', file?: File) => {
     if (!content.trim() && type === 'TEXT') return;
-    if (!partnerId || !currentUserId) return;
+    if (!currentUserId || (!partnerId && !conversationId)) return;
 
     let finalContent = content;
 
-    // KHI CÓ FILE GHI ÂM (HOẶC ẢNH) THÌ PHẢI UPLOAD LÊN SERVER TRƯỚC
+    // UPLOAD FILE GHI ÂM LÊN BACKEND TRƯỚC KHI GỬI SOCKET
     if (file && type === 'VOICE') {
         try {
-            // Dùng FormData để gói file gửi lên Backend
             const formData = new FormData();
             formData.append('file', file);
-            
             const uploadRes = await http.post('/files/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-
-            // SỬA CHỖ NÀY: Lấy đúng chuỗi URL trả về từ FileController (uploadRes.data.data)
-            finalContent = uploadRes.data.data; 
-
+            finalContent = uploadRes.data.data; // Lấy link URL thật
         } catch (error) {
-            console.error("Lỗi upload file ghi âm:", error);
             toast.error("Không thể tải lên file ghi âm");
-            return; // Dừng luôn không gửi tin nhắn nếu upload lỗi
+            return; 
         }
     }
 
     const clientSideId = Date.now().toString(); 
     const optimisticMessage: Message = {
-      id: clientSideId, 
-      clientSideId: clientSideId,
-      conversationId: conversationId,
-      senderId: currentUserId,
-      content: finalContent, // Gửi link thật (đã upload) lên server
-      type: type as any, 
-      createdAt: new Date().toISOString(),
-    } as any;
+      id: clientSideId, clientSideId, conversationId, senderId: currentUserId,
+      content: finalContent, type: type as any, createdAt: new Date().toISOString(),
+    };
 
     addMessage(optimisticMessage);
 
     try {
-      const realMessage = await chatService.sendMessage({
-        receiverId: partnerId,
-        content: finalContent, // Đảm bảo content là URL thật dạng chuỗi
-        type,
-        clientSideId 
-      });
+      const realMessage = await chatService.sendMessage({ conversationId, receiverId: partnerId, content: finalContent, type, clientSideId });
       updateMessageStatus(clientSideId, 'SENT', realMessage.id);
     } catch (err) {
-      console.error("Send message failed", err);
       updateMessageStatus(clientSideId, 'ERROR');
       toast.error("Gửi tin nhắn thất bại");
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus]);
 
+  // Logic Chặn
   const blockUser = async () => { 
     if (!partnerId) return;
     try {
@@ -116,6 +107,7 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   };
 
+  // Logic Hủy kết bạn
   const unfriendUser = async () => { 
     if (!partnerId) return;
     try {
