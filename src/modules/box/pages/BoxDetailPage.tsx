@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react'; 
 import MainLayout from '@/components/layout/MainLayout';
@@ -11,7 +11,9 @@ import { useAuth } from '@/modules/auth/store/AuthContext';
 
 import { BoxHeader } from '../components/BoxHeader';
 import { BoxJourneyList } from '../components/BoxJourneyList';
-import { MoodBoard } from '@/modules/mood/components/MoodBoard';
+
+// [MỚI] Import trang BoxMoodPage mình vừa tạo
+import { BoxMoodPage } from '@/modules/mood/pages/BoxMoodPage'; 
 
 const BoxDetailPage: React.FC = () => {
     const { boxId } = useParams<{ boxId: string }>();
@@ -26,6 +28,9 @@ const BoxDetailPage: React.FC = () => {
         fetchBoxData, handleArchiveBox, handleDisbandBox
     } = useBoxDetail(boxId, user?.id);
 
+    // [MỚI] State quản lý việc mở trang Mood
+    const [isMoodPageOpen, setIsMoodPageOpen] = useState(false);
+
     if (loading) {
         return (
             <MainLayout>
@@ -37,6 +42,11 @@ const BoxDetailPage: React.FC = () => {
     }
     
     if (!box) return null;
+
+    // [MỚI] Trả về trang BoxMoodPage full màn hình nếu state được bật
+    if (isMoodPageOpen) {
+        return <BoxMoodPage boxId={box.id} onBack={() => setIsMoodPageOpen(false)} />;
+    }
 
     return (
         <MainLayout>
@@ -60,25 +70,23 @@ const BoxDetailPage: React.FC = () => {
                         setIsMembersModalOpen={setIsMembersModalOpen}
                     />
 
-                    {/* --- KHU VỰC MAP & MOOD (Đã bỏ height cố định, dùng Grid) --- */}
+                    {/* --- KHU VỰC MAP & MOOD --- */}
                     <div className="mt-8 md:mt-10 mb-10 md:mb-12 grid grid-cols-2 gap-4 md:gap-8">
                         
-                        {/* 1. BẢN ĐỒ KỶ NIỆM (CỘT 1) - Dùng aspect-square để ép thành hình vuông */}
+                        {/* 1. BẢN ĐỒ KỶ NIỆM (CỘT 1) */}
                         <div className="flex flex-col w-full aspect-square md:aspect-[4/3]">
                             <h2 className="text-black dark:text-white text-[18px] sm:text-[20px] md:text-2xl font-normal font-['Jua'] mb-2 md:mb-4 pl-1 shrink-0">
                                 Map
                             </h2>
-                            {/* min-h-0 quan trọng để ngăn Flexbox tràn viền */}
                             <div className="flex-1 min-h-0 w-full bg-slate-50 dark:bg-zinc-900 rounded-[20px] md:rounded-3xl shadow-[0px_4px_4px_1px_rgba(0,0,0,0.10)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 p-2 md:p-3 relative flex flex-col">
                                 <div className="w-full h-full rounded-[12px] md:rounded-[20px] overflow-hidden relative">
-                                    {/* GHI ĐÈ CLASS ĐỂ XÓA min-h-[250px] CỦA MAP */}
                                     <JourneyMap 
                                         boxId={box.id} 
                                         className="w-full h-full rounded-[inherit] overflow-hidden relative z-0" 
+                                        
                                     />
                                 </div>
 
-                                {/* Nút Mở rộng bản đồ */}
                                 <button 
                                     onClick={() => navigate(`/map?boxId=${box.id}`)}
                                     className="absolute top-4 right-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 flex items-center justify-center rounded-[10px] md:rounded-[12px] text-zinc-700 dark:text-zinc-300 hover:text-blue-600 hover:bg-white transition-all shadow-sm border border-zinc-200/50 dark:border-zinc-700/50 z-10 group"
@@ -89,16 +97,24 @@ const BoxDetailPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* 2. MOOD BUBBLE (CỘT 2) - Dùng aspect-square để ép thành hình vuông */}
+                        {/* 2. MOOD BUBBLE (CỘT 2) - Nút để mở trang Mood */}
                         <div className="flex flex-col w-full aspect-square md:aspect-[4/3]">
                             <h2 className="text-black dark:text-white text-[18px] sm:text-[20px] md:text-2xl font-normal font-['Jua'] mb-2 md:mb-4 pl-1 truncate shrink-0">
                                 Mood Bubble
                             </h2>
-                            {/* min-h-0 quan trọng để thanh cuộn hoạt động thay vì đẩy viền */}
-                            <div className="flex-1 min-h-0 w-full bg-amber-50/50 dark:bg-[#1f1a14] rounded-[20px] md:rounded-3xl shadow-[0px_4px_4px_1px_rgba(0,0,0,0.05)] dark:shadow-none overflow-hidden border border-amber-100 dark:border-amber-900/30 p-2 sm:p-3 md:p-5 flex flex-col">
-                                <div className="flex-1 overflow-y-auto custom-scrollbar flex justify-start content-start">
-                                    <MoodBoard boxId={box.id} />
-                                </div>
+                            {/* [SỬA ĐỔI] Thay bằng khối nhấn (Card) mở MoodPage, sử dụng ảnh tạm */}
+                            <div 
+                                onClick={() => setIsMoodPageOpen(true)}
+                                className="flex-1 min-h-0 w-full bg-[#e6f7f4] dark:bg-zinc-900 rounded-[20px] md:rounded-3xl shadow-[0px_4px_4px_1px_rgba(0,0,0,0.05)] dark:shadow-none overflow-hidden border border-[#bce8df] dark:border-zinc-800 cursor-pointer hover:-translate-y-1 transition-transform group relative p-0"
+                            >
+                                {/* [SỬA ĐỔI] Thêm ảnh tạm, ảnh sẽ full kích thước ô */}
+                                <img 
+                                    src="https://via.placeholder.com/400" 
+                                    alt="Current mood preview or add status" 
+                                    className="w-full h-full object-cover rounded-inherit"
+                                />
+                                {/* [TÙY CHỌN] Thêm một vệt overlay nhẹ khi hover để trông xịn hơn */}
+                                <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors" />
                             </div>
                         </div>
 
