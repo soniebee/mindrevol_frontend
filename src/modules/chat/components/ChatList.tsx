@@ -1,3 +1,4 @@
+//src/components/ChatList
 import React, { useState } from 'react';
 import { Search, Edit } from 'lucide-react';
 import { Conversation } from '../types';

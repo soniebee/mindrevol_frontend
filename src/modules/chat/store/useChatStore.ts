@@ -1,15 +1,15 @@
+//src/store/useChatStore
 import { create } from 'zustand';
 import { Conversation, Message } from '../types';
 import { chatService } from '../services/chat.service';
 
 interface ChatState {
   conversations: Conversation[];
-  activeConversationId: string | null; // Nên dùng string | null
+  activeConversationId: string | null; 
   messages: Record<string, Message[]>; 
   isSidebarOpen: boolean;
 
-  // Actions
-  fetchConversations: () => Promise<void>; // Thêm action này
+  fetchConversations: () => Promise<void>;
   setConversations: (list: Conversation[]) => void;
   openChat: (conversationId: string | null) => Promise<void>; 
   closeChat: () => void;
@@ -19,7 +19,6 @@ interface ChatState {
   addMessage: (msg: Message) => void; 
   markAsRead: (convId: string) => void;
   
-  // [FIX] status phải khớp với Message['status']
   updateMessageStatus: (clientSideId: string, status: 'SENDING' | 'SENT' | 'ERROR', realId?: string) => void;
 }
 
@@ -29,7 +28,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: {},
   isSidebarOpen: true,
 
-  // Action mới giúp ChatPage gọn hơn
   fetchConversations: async () => {
       try {
           const res = await chatService.getConversations();
@@ -41,7 +39,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setConversations: (list) => set({ conversations: list }),
 
+  // [ĐÃ SỬA] Đảm bảo cập nhật chính xác activeConversationId và reset unread
   openChat: async (id) => {
+    // Nếu click nút Back/Close (id = null)
+    if (!id) {
+        set({ activeConversationId: null });
+        return;
+    }
+
     set((state) => ({
       activeConversationId: id,
       conversations: state.conversations.map((c) => 
@@ -50,7 +55,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      if(id) await chatService.markAsRead(id);
+      await chatService.markAsRead(id);
     } catch (error) {
       console.error("Lỗi khi đánh dấu đã đọc:", error);
     }
@@ -63,38 +68,49 @@ export const useChatStore = create<ChatState>((set, get) => ({
     messages: { ...state.messages, [convId]: msgs }
   })),
 
-  addMessage: (msg) => set((state) => {
+  addMessage: (msg) => {
+    const state = get(); // Lấy state hiện tại
     const currentMsgs = state.messages[msg.conversationId] || [];
     
-    // Check trùng tin nhắn
+    // Nếu tin nhắn đã tồn tại rồi thì bỏ qua (tránh duplicate)
     if (currentMsgs.some(m => (m.id === msg.id && msg.id) || (m.clientSideId === msg.clientSideId && msg.clientSideId))) {
-      return state;
+      return;
     }
-    const newMsgs = [...currentMsgs, msg];
 
-    // Đẩy hội thoại lên đầu
     const convIndex = state.conversations.findIndex(c => String(c.id) === String(msg.conversationId));
-    let newConversations = [...state.conversations];
 
-    if (convIndex > -1) {
-      const updatedConv = { ...newConversations[convIndex] };
-      updatedConv.lastMessageContent = msg.type === 'IMAGE' ? '[Hình ảnh]' : msg.content;
-      updatedConv.lastMessageAt = new Date().toISOString(); 
-      updatedConv.lastSenderId = msg.senderId;
-      
-      if (String(state.activeConversationId) !== String(msg.conversationId)) {
-         updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
-      }
+    // NẾU CÓ NGƯỜI LẠ NHẮN (chưa có trong list), GỌI API FETCH LẠI LIST TỪ SERVER
+    if (convIndex === -1) {
+      state.fetchConversations();
+    }
 
-      newConversations.splice(convIndex, 1);
-      newConversations.unshift(updatedConv);
-    } 
+    // Cập nhật State
+    set((state) => {
+      const newMsgs = [...(state.messages[msg.conversationId] || []), msg];
+      let newConversations = [...state.conversations];
 
-    return { 
-      messages: { ...state.messages, [msg.conversationId]: newMsgs },
-      conversations: newConversations
-    };
-  }),
+      if (convIndex > -1) {
+        const updatedConv = { ...newConversations[convIndex] };
+        updatedConv.lastMessageContent = msg.type === 'IMAGE' ? '[Hình ảnh]' : msg.content;
+        updatedConv.lastMessageAt = new Date().toISOString(); 
+        updatedConv.lastSenderId = msg.senderId;
+        
+        // Nếu không phải đoạn chat đang mở thì tăng số tin nhắn chưa đọc
+        if (String(state.activeConversationId) !== String(msg.conversationId)) {
+           updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
+        }
+
+        // Đẩy lên đầu danh sách
+        newConversations.splice(convIndex, 1);
+        newConversations.unshift(updatedConv);
+      } 
+
+      return { 
+        messages: { ...state.messages, [msg.conversationId]: newMsgs },
+        conversations: newConversations
+      };
+    });
+  },
 
   markAsRead: (convId) => set((state) => {
     const newConvs = state.conversations.map(c => 
@@ -106,15 +122,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateMessageStatus: (clientSideId, status, realId) => set((state) => {
     const newMessages = { ...state.messages };
     
-    // Duyệt qua tất cả hội thoại (vì có thể không biết convId lúc này)
     Object.keys(newMessages).forEach(convId => {
         newMessages[convId] = newMessages[convId].map(m => {
-            // So sánh clientSideId hoặc id tạm thời
             if (m.clientSideId === clientSideId || m.id === clientSideId) {
                 return { 
                     ...m, 
                     id: realId || m.id, 
-                    status: status // Typescript OK vì param status đã định nghĩa đúng type
+                    status: status 
                 }; 
             }
             return m;

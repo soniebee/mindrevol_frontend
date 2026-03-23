@@ -14,43 +14,40 @@ export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
   const { form, onSubmit } = useStepBasicInfo(onNext);
   const { register, formState: { errors } } = form;
 
-  // ĐÃ XÓA LOGIC CHECK EMAIL Ở ĐÂY
-
   return (
     <motion.div 
       initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}
       className="space-y-6"
     >
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold">Giới thiệu bản thân</h2>
-        <p className="text-muted text-sm">Chúng tôi cần một chút thông tin cơ bản.</p>
+      <div className="space-y-1">
+        <h2 className="text-3xl font-bold font-['Baloo_2'] text-blue-950">Giới thiệu bản thân</h2>
+        <p className="text-stone-600 font-['Nunito'] font-semibold text-base">Một vài thông tin cơ bản để bắt đầu.</p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        {/* Tên */}
+      <form onSubmit={onSubmit} className="space-y-5">
         <Input 
           label="Tên hiển thị"
           placeholder="Ví dụ: Minh Developer"
           {...register('fullname')} 
           error={errors.fullname?.message} 
           autoFocus
+          className="h-14 rounded-[20px] bg-neutral-100/70 border-none shadow-inner text-lg focus:ring-2 focus:ring-blue-400 font-['Nunito'] font-semibold text-stone-800"
         />
 
-        {/* Ngày sinh */}
         <Input 
           label="Ngày sinh"
           type="date"
           {...register('dateOfBirth')} 
           error={errors.dateOfBirth?.message} 
+          className="h-14 rounded-[20px] bg-neutral-100/70 border-none shadow-inner text-lg focus:ring-2 focus:ring-blue-400 font-['Nunito'] font-semibold text-stone-800"
         />
 
-        {/* Giới tính */}
-        <div className="w-full space-y-1.5">
-          <label className="text-xs font-semibold text-muted ml-1 uppercase">Giới tính</label>
+        <div className="w-full space-y-2">
+          <label className="text-base font-semibold font-['Nunito'] text-red-950 ml-2">Giới tính</label>
           <div className="relative">
             <select
               {...register('gender')}
-              className={`w-full bg-surface border-2 border-transparent rounded-2xl px-5 py-3.5 text-foreground outline-none transition-all font-medium appearance-none cursor-pointer focus:border-primary focus:bg-background ${errors.gender ? 'border-destructive/50 bg-destructive/5' : ''}`}
+              className={`w-full h-14 rounded-[20px] bg-neutral-100/70 border-none shadow-inner px-5 text-lg font-['Nunito'] font-semibold outline-none transition-all cursor-pointer focus:ring-2 focus:ring-blue-400 text-stone-800 appearance-none ${errors.gender ? 'ring-2 ring-red-400 bg-red-50' : ''}`}
               defaultValue="" 
             >
               <option value="" disabled>Chọn giới tính...</option>
@@ -60,12 +57,14 @@ export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
               <option value="PREFER_NOT_TO_SAY">Không muốn tiết lộ</option>
             </select>
           </div>
-          {errors.gender && <span className="text-xs text-destructive font-bold ml-1">{errors.gender.message}</span>}
+          {errors.gender && <span className="text-sm text-red-600 font-['Nunito'] font-bold ml-2">{errors.gender.message}</span>}
         </div>
         
-        <div className="flex gap-3 mt-6">
-          <Button type="button" variant="ghost" onClick={onBack} className="w-1/3">Quay lại</Button>
-          <Button type="submit" className="w-2/3">Tiếp theo</Button>
+        <div className="flex gap-3 mt-8">
+          <Button type="button" variant="ghost" onClick={onBack} className="w-1/3 h-14 rounded-[20px] text-lg font-['Baloo_2'] bg-stone-100 hover:bg-stone-200 text-stone-700">Quay lại</Button>
+          <Button type="submit" className="w-2/3 h-14 text-xl font-bold font-['Baloo_2'] bg-blue-800/90 hover:bg-blue-800 text-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]">
+            Tiếp theo
+          </Button>
         </div>
       </form>
     </motion.div>

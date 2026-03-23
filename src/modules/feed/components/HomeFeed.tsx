@@ -87,14 +87,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
   return (
     <div className="w-full h-full flex flex-col relative bg-transparent">
         
-      {/* Bộ lọc thành viên (nếu có) */}
+      {/* [ĐÃ SỬA] Đặt pointer-events-none ở thẻ cha và pointer-events-auto ở thẻ con để vùng trống không chắn click chuột */}
       {feedMembers.length > 0 && (
-        <div className="absolute top-2 left-0 right-0 z-[60] flex justify-center pointer-events-auto">
-            <MemberFilter members={feedMembers} currentUser={user} selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} />
+        <div className="absolute top-2 left-0 right-0 z-30 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+               <MemberFilter members={feedMembers} currentUser={user} selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} />
+            </div>
         </div>
       )}
 
-      {/* Vùng Locket (Đã xóa FeedHeader tĩnh) */}
       <div className="flex-1 w-full relative overflow-hidden">
         <LocketFeedViewer posts={actualPostsForLocket} />
       </div>

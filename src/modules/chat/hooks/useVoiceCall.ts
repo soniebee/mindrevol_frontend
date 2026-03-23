@@ -3,43 +3,44 @@ import { socket } from '@/lib/socket';
 
 const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 
-export const useVoiceCall = (currentUserId: string) => {
+export const useVoiceCall = (currentUserId: string, remoteAudioRef: React.RefObject<HTMLAudioElement | null>) => {
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const [outgoingCall, setOutgoingCall] = useState<any>(null);
   const [isInCall, setIsInCall] = useState(false);
   
   const pc = useRef<RTCPeerConnection | null>(null);
   const localStream = useRef<MediaStream | null>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const sendSignal = useCallback((payload: any) => {
     socket.send('/app/chat/webrtc', payload);
   }, []);
 
-  // SỬA CHỖ NÀY: Bắt buộc truyền targetId vào
   const initWebRTC = async (targetId: string) => {
     pc.current = new RTCPeerConnection(servers);
+    
     try {
       localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       localStream.current.getTracks().forEach(track => {
         if (localStream.current && pc.current) pc.current.addTrack(track, localStream.current);
       });
     } catch (error) {
-      console.error("Lỗi Mic:", error);
+      console.error("Lỗi truy cập Micro:", error);
       return false;
     }
 
+    // LẮNG NGHE LUỒNG ÂM THANH TỪ BÊN KIA
     pc.current.ontrack = (event) => {
-      console.log("📥 Đã bắt được luồng âm thanh từ bên kia");
+      console.log("📥 Đã nhận luồng âm thanh từ đối phương");
       if (remoteAudioRef.current && event.streams[0]) {
         remoteAudioRef.current.srcObject = event.streams[0];
+        // Đảm bảo audio phát được (đôi khi trình duyệt chặn autoPlay)
+        remoteAudioRef.current.play().catch(e => console.error("Lỗi phát audio:", e));
       }
     };
 
     pc.current.onicecandidate = (event) => {
       if (event.candidate) {
-        // LUÔN GỬI ICE CHO ĐÚNG NGƯỜI
-        sendSignal({ type: 'ice-candidate', targetId: targetId, senderId: currentUserId, candidate: event.candidate });
+        sendSignal({ type: 'ice-candidate', targetId, senderId: currentUserId, candidate: event.candidate });
       }
     };
     return true;
@@ -49,10 +50,11 @@ export const useVoiceCall = (currentUserId: string) => {
     if (!pc.current) return;
     const offer = await pc.current.createOffer();
     await pc.current.setLocalDescription(offer);
-    sendSignal({ type: 'offer', targetId: targetId, senderId: currentUserId, sdp: JSON.stringify(offer) });
+    sendSignal({ type: 'offer', targetId, senderId: currentUserId, sdp: JSON.stringify(offer) });
   };
 
   const handleOffer = async (data: any) => {
+    if (!pc.current) await initWebRTC(data.senderId);
     if (!pc.current) return;
     const offer = JSON.parse(data.sdp);
     await pc.current.setRemoteDescription(new RTCSessionDescription(offer));
@@ -90,9 +92,8 @@ export const useVoiceCall = (currentUserId: string) => {
     const sub = socket.subscribe(`/topic/webrtc.${currentUserId}`, async (data: any) => {
       switch (data.type) {
         case 'call-request': setIncomingCall(data); break;
-        case 'call-reject': alert("Người kia đã từ chối"); endCall(); break;
+        case 'call-reject': endCall(); break;
         case 'call-accept':
-          // SỬA CHỖ NÀY: Truyền ID người nhận vào initWebRTC
           const isReady = await initWebRTC(data.senderId);
           if (isReady) { await createOffer(data.senderId); setIsInCall(true); }
           break;
@@ -102,8 +103,8 @@ export const useVoiceCall = (currentUserId: string) => {
         case 'end-call': endCall(); break;
       }
     });
-    return () => { if (sub && typeof sub.unsubscribe === 'function') sub.unsubscribe(); };
-  }, [currentUserId]);
+    return () => { if (sub) sub.unsubscribe(); };
+  }, [currentUserId, initWebRTC]);
 
-  return { startCall, endCall, incomingCall, outgoingCall, isInCall, setIsInCall, initWebRTC, sendSignal, remoteAudioRef };
+  return { startCall, endCall, incomingCall, outgoingCall, isInCall, setIsInCall, initWebRTC, sendSignal };
 };

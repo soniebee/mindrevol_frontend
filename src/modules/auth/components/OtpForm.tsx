@@ -3,29 +3,18 @@ import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 import { useOtpForm } from '../hooks/useOtpForm';
 
-// [QUAN TRỌNG]: Khai báo prop initialCountdown ở đây để tránh lỗi đỏ
 interface Props {
   onBack?: () => void;
   customVerify?: (email: string, otp: string) => Promise<any>;
   onResend?: (email: string) => Promise<any>;
-  initialCountdown?: number; // <-- Dòng này cực kỳ quan trọng
+  initialCountdown?: number;
 }
 
 export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initialCountdown }) => {
   const {
-    otp,
-    inputRefs,
-    email,
-    isLoading,
-    error,
-    isComplete,
-    countdown,
-    handleChange,
-    handleKeyDown,
-    handlePaste,
-    handleSubmit,
-    handleResend,
-    goToLogin
+    otp, inputRefs, email, isLoading, error, isComplete,
+    countdown, handleChange, handleKeyDown, handlePaste,
+    handleSubmit, handleResend, goToLogin
   } = useOtpForm({ customVerify, onResend, initialCountdown });
 
   return (
@@ -33,14 +22,14 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
       initial={{ opacity: 0, x: 20 }} 
       animate={{ opacity: 1, x: 0 }} 
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full space-y-6"
     >
       <div className="flex-1 space-y-8">
         <div className="text-center space-y-2">
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm font-sans text-stone-500">
             Mã xác thực 6 số đã được gửi đến:
           </p>
-          <p className="text-base font-bold text-white tracking-wide">
+          <p className="text-lg font-normal text-blue-950 tracking-wide bg-blue-50 py-2 px-4 rounded-2xl inline-block">
             {email || 'your-email@example.com'}
           </p>
         </div>
@@ -59,19 +48,18 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
               onPaste={handlePaste}
               disabled={isLoading}
               className={`
-                w-10 h-12 sm:w-12 sm:h-14 
-                text-center text-xl font-bold rounded-xl 
-                bg-[#18181b] border 
+                w-12 h-14 sm:w-14 sm:h-16 
+                text-center text-2xl font-sans font-bold rounded-[20px] 
                 transition-all duration-200 outline-none
-                ${digit ? 'border-[#FFF5C0] text-[#FFF5C0]' : 'border-zinc-800 text-white'}
-                focus:border-[#FFF5C0] focus:ring-1 focus:ring-[#FFF5C0] focus:bg-zinc-900
+                ${digit ? 'bg-white shadow-[0px_2px_4px_0px_rgba(0,0,0,0.1)] text-blue-950' : 'bg-neutral-100/70 shadow-inner text-stone-800'}
+                focus:ring-2 focus:ring-blue-300 focus:bg-white
               `}
             />
           ))}
         </div>
 
         {error && (
-           <p className="text-red-500 text-sm text-center font-medium animate-pulse">
+           <p className="text-red-500 text-sm text-center font-sans font-medium animate-pulse">
              {error}
            </p>
         )}
@@ -80,21 +68,20 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
           onClick={handleSubmit} 
           isLoading={isLoading} 
           disabled={!isComplete}
-          className="w-full h-12 text-base font-bold"
+          className="w-full h-14 text-xl font-normal bg-blue-800/80 hover:bg-blue-800 text-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] transition-all"
         >
           Xác thực ngay
         </Button>
 
-        {/* Nút Gửi lại mã */}
         <div className="text-center">
            <button 
              type="button" 
              onClick={handleResend}
              disabled={countdown > 0 || isLoading}
-             className={`text-xs transition-colors underline underline-offset-4 ${
+             className={`text-sm font-sans transition-colors underline underline-offset-4 ${
                countdown > 0 
-                   ? 'text-zinc-500 cursor-not-allowed' // Màu khi đang đếm
-                   : 'text-blue-400 hover:text-blue-300' // Màu khi được nhấn (làm nổi bật lên)
+                   ? 'text-stone-400 cursor-not-allowed' 
+                   : 'text-blue-600 hover:text-blue-800'
              }`}
            >
              {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã'}
@@ -102,23 +89,21 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
         </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-zinc-800/50 flex flex-col gap-3">
-        {/* Logic phân biệt: Nếu KHÔNG phải đăng ký (không có customVerify) thì hiện nút Login Pass */}
+      <div className="mt-8 pt-6 border-t border-red-950/10 flex flex-col gap-3">
         {!customVerify && (
             <Button
-              variant="secondary"
-              className="w-full h-12 font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300"
+              variant="outline"
+              className="w-full h-14 text-lg font-normal bg-rose-50/50 hover:bg-rose-100 border-none text-red-950 rounded-[20px] shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05)]"
               onClick={goToLogin}
             >
               Đăng nhập bằng mật khẩu
             </Button>
         )}
 
-        {/* Nếu LÀ đăng ký (có nút Back) */}
         {onBack && (
             <button 
                 onClick={onBack}
-                className="text-xs text-zinc-500 hover:text-white transition-colors py-2"
+                className="text-sm font-sans text-stone-500 hover:text-red-950 transition-colors py-2"
             >
                 Quay lại bước trước
             </button>

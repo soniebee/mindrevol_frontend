@@ -1,3 +1,4 @@
+//src/hooks/useChatSocket
 import { useEffect } from 'react';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { socket } from '@/lib/socket'; 

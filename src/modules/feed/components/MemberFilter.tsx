@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, Users, ChevronRight } from 'lucide-react';
 import { FilterMember, MemberStatus } from '../hooks/useFeedData';
 
 // --- HELPER FUNCTION: Xử lý màu viền Avatar ---
 const getStatusColor = (status?: MemberStatus, isSelected?: boolean) => {
-  // [ĐÃ SỬA] Viền đen (Light) hoặc Viền trắng (Dark) khi được chọn
   if (isSelected) return "border-zinc-900 dark:border-white shadow-md dark:shadow-[0_0_8px_rgba(255,255,255,0.6)] scale-110";
   
   switch (status) {
@@ -39,7 +38,6 @@ const MemberListItem = ({
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <span className={cn(
             "text-[13px] transition-colors truncate drop-shadow-sm dark:drop-shadow-md", 
-            // [ĐÃ SỬA] Màu chữ thay đổi Sáng / Tối
             isSelected ? "text-foreground font-bold" : "text-muted font-medium group-hover:text-foreground"
         )}>
             {isMe ? "Tôi" : member.name}
@@ -67,24 +65,41 @@ export const MemberFilter: React.FC<Props> = ({ members, currentUser, selectedUs
   const myMemberInfo = members.find(m => String(m.id) === String(currentUser?.id));
   const myPresence = myMemberInfo?.presenceRate || 0;
   
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() => {
+      if (typeof window !== 'undefined') {
+          return window.innerWidth >= 768;
+      }
+      return true;
+  });
 
   if (!members || members.length === 0) return null;
 
   return (
     <div className={cn(
         "fixed top-4 right-4 md:right-6 z-[60] flex flex-col transition-all duration-500 ease-in-out",
+        // Thu nhỏ tối đa khi đóng trên mobile
         isExpanded ? "w-[180px] md:w-[200px]" : "w-[40px]"
     )}>
-        <div className="flex flex-col max-h-[80vh] bg-transparent">
+        <div className={cn(
+            "flex flex-col max-h-[80vh] transition-all duration-300",
+            // [ĐÃ SỬA]: Chuyển điều kiện kiểm tra isExpanded vào đây. Chỉ hiện nền mờ khi ĐANG MỞ (isExpanded = true)
+            isExpanded ? "max-md:bg-white/85 max-md:dark:bg-black/85 max-md:backdrop-blur-xl max-md:rounded-[20px] max-md:shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-md:border max-md:border-zinc-200/50 max-md:dark:border-white/10 max-md:p-3" : "max-md:p-1 max-md:items-center"
+        )}>
             
             {/* Tiêu đề & Nút Thu/Phóng */}
             <button 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center justify-between py-2 px-1 bg-transparent group"
+                className={cn(
+                    "flex items-center py-2 px-1 bg-transparent group w-full outline-none",
+                    isExpanded ? "justify-between" : "justify-center"
+                )}
             >
                 <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-blue-500 shrink-0 drop-shadow-sm transition-transform group-hover:scale-110" />
+                    {/* [ĐÃ SỬA]: Thêm drop-shadow-md để icon nổi bật khi không có nền */}
+                    <Users className={cn(
+                        "text-zinc-900 dark:text-white shrink-0 drop-shadow-md transition-transform group-hover:scale-110",
+                        isExpanded ? "w-5 h-5" : "w-6 h-6 md:w-5 md:h-5" // Icon to hơn một chút khi thu gọn trên mobile
+                    )} />
                     {isExpanded && <span className="text-sm font-bold text-foreground whitespace-nowrap drop-shadow-sm">Thành viên</span>}
                 </div>
                 {isExpanded && <ChevronRight className="w-4 h-4 text-muted transition-transform rotate-90" />}
@@ -97,7 +112,7 @@ export const MemberFilter: React.FC<Props> = ({ members, currentUser, selectedUs
 
             {/* Danh sách thành viên */}
             {isExpanded && (
-                <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar pb-4 mt-1">
+                <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar pb-2 mt-1">
                     
                     {/* Nút "Tất cả mọi người" */}
                     <button 
