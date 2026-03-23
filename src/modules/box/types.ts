@@ -1,15 +1,41 @@
+// Dành cho trang BoxList (Giữ nguyên các trường FE đang dùng bằng dấu ? để không lỗi TypeScript)
 export interface BoxResponse {
     id: string;
     name: string;
-    description: string;
+    description?: string;
     avatar: string;
-    themeSlug?: string;     // Thêm dòng này để nhận dữ liệu từ BE
-    textPosition?: string;  // [THÊM MỚI]
-    avatarPosition?: string; // [THÊM MỚI]
-    ownerId: string;
-    isArchived: boolean;
+    themeSlug?: string;
+    textPosition?: string;
+    avatarPosition?: string;
+    ownerId?: string;
+    isArchived?: boolean;
     memberCount: number;
-    createdAt: string;
+    createdAt?: string;
+    lastActivityAt?: string; // BE trả về cái này thay vì createdAt
+}
+
+// Khai báo type Journey để hứng cục data BE trả kèm trong Chi tiết Box
+export interface JourneyResponse {
+    id: string;
+    name: string;
+    status: string;
+}
+
+// Dành riêng cho trang Chi tiết Box (Hứng toàn bộ map, mood, và 2 list hành trình từ BE)
+export interface BoxDetailResponse {
+    id: string;
+    name: string;
+    description: string;
+    themeSlug: string;
+    avatar: string;
+    textPosition: string;
+    avatarPosition?: string;
+    memberCount: number;
+    myRole: string; // 'ADMIN' | 'MEMBER'
+    ongoingJourneys: JourneyResponse[];
+    endedJourneys: JourneyResponse[];
+    mapData?: any;
+    moodBubbleData?: any;
 }
 
 export interface BoxMemberResponse {
@@ -39,11 +65,18 @@ export interface CreateBoxRequest {
     name: string;
     description?: string;
     avatar?: string;
-    themeSlug: string;      // BE chỉ cần cái này
-    textPosition?: string;  // BE có trường này nên mình cứ để
+    themeSlug: string;
+    textPosition?: string;
+    inviteUserIds?: string[];
 }
 
-export interface UpdateBoxRequest extends CreateBoxRequest {}
+export interface UpdateBoxRequest {
+    name?: string;
+    description?: string;
+    themeSlug?: string;
+    avatar?: string;
+    textPosition?: string;
+}
 
 export interface BoxInvitationResponse {
     id: string;

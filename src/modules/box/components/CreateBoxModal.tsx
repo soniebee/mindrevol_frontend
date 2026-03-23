@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, ImagePlus, Users, BookOpen, Moon, Waves, Leaf } from 'lucide-react';
+import { Loader2, ImagePlus, Users, BookOpen, Moon, Waves, Leaf, Search, X } from 'lucide-react';
 import { boxService } from '../services/box.service';
+import { friendService } from '@/modules/user/services/friend.service'; // Thêm import friendService
 import { cn } from '@/lib/utils';
+import { toast } from 'react-hot-toast';
 
 interface CreateBoxModalProps {
     isOpen: boolean;
@@ -22,9 +24,13 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
     const [name, setName] = useState('');
     const [selectedTheme, setSelectedTheme] = useState(BOX_THEMES[0]);
     const [avatarImage, setAvatarImage] = useState<string | null>(null); 
-    const [inviteEmail, setInviteEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // STATES CHO PHẦN INVITE FRIENDS
+    const [friends, setFriends] = useState<any[]>([]);
+    const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,10 +39,40 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
             setName('');
             setSelectedTheme(BOX_THEMES[0]);
             setAvatarImage(null);
-            setInviteEmail('');
+            setSearchQuery('');
+            setSelectedFriends([]);
             setError('');
+            fetchFriends(); // Tải danh sách bạn bè khi mở modal
         }
     }, [isOpen]);
+
+    const fetchFriends = async () => {
+        try {
+            const res = await friendService.getMyFriends();
+            setFriends((res || []).map((item: any) => item.friend));
+        } catch (e) {
+            console.error("Lỗi tải danh sách bạn bè", e);
+        }
+    };
+
+    // Lọc danh sách bạn bè để hiển thị (loại bỏ những người đã được chọn)
+    const filteredFriends = useMemo(() => {
+        const unselected = friends.filter(f => !selectedFriends.some(s => s.id === f.id));
+        if (!searchQuery.trim()) return unselected; // Hiện tất cả (hoặc có thể để trống nếu không muốn hiện hết)
+        return unselected.filter(f => 
+            f.fullname.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (f.handle && f.handle.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    }, [friends, selectedFriends, searchQuery]);
+
+    const handleAddFriend = (friend: any) => {
+        setSelectedFriends(prev => [...prev, friend]);
+        setSearchQuery(''); // Xóa thanh search sau khi chọn
+    };
+
+    const handleRemoveFriend = (friendId: string) => {
+        setSelectedFriends(prev => prev.filter(f => f.id !== friendId));
+    };
 
     if (!isOpen) return null;
 
@@ -51,15 +87,17 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
         try {
             setIsLoading(true);
             
-            // ĐÃ SỬA: Chỉ gửi những trường mà Entity Backend thực sự cần
+            // Gửi dữ liệu tạo Box kèm mảng inviteUserIds
             await boxService.createBox({ 
                 name: name.trim(), 
                 description: "", 
-                themeSlug: selectedTheme.id, // Bắt buộc phải có để map với @Column(name = "theme_slug")
+                themeSlug: selectedTheme.id, 
                 avatar: avatarImage || "📦",
-                textPosition: `${selectedTheme.textPos.x.toFixed(2)},${selectedTheme.textPos.y.toFixed(2)}`
+                textPosition: `${selectedTheme.textPos.x.toFixed(2)},${selectedTheme.textPos.y.toFixed(2)}`,
+                inviteUserIds: selectedFriends.map(f => f.id) // 🔥 Đẩy mảng ID bạn bè lên BE
             });
             
+            toast.success("Box created successfully!");
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -198,25 +236,64 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
                             </div>
                         </div>
 
-                        {/* PHẦN INVITE FRIENDS */}
+                        {/* PHẦN INVITE FRIENDS MỚI */}
                         <div className="w-full bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-[31px] p-5 shadow-sm relative">
                             <h3 className="text-blue-950 dark:text-blue-200 text-xl font-normal flex items-center gap-2">
                                 <Users size={20} /> Invite Friends
                             </h3>
-                            <p className="text-[10px] text-blue-900/60 dark:text-blue-200/60 mb-3 font-sans font-medium">Optional - Add members via email</p>
+                            <p className="text-[10px] text-blue-900/60 dark:text-blue-200/60 mb-3 font-sans font-medium">Select friends to join this box</p>
                             
-                            <div className="flex gap-2">
+                            {/* Hiển thị những bạn bè đã chọn (Chips) */}
+                            {selectedFriends.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {selectedFriends.map(f => (
+                                        <div key={f.id} className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-3 py-1.5 rounded-full text-xs font-bold font-sans animate-in zoom-in-95">
+                                            {f.fullname}
+                                            <button onClick={() => handleRemoveFriend(f.id)} className="hover:text-red-500 transition-colors">
+                                                <X size={14}/>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Ô Search */}
+                            <div className="relative">
+                                <Search className="absolute left-3.5 top-3 text-zinc-400" size={18} />
                                 <input 
-                                    type="email"
-                                    value={inviteEmail}
-                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                    className="flex-1 h-11 bg-white dark:bg-zinc-800 rounded-xl px-4 text-zinc-800 dark:text-white placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-blue-400 font-sans shadow-sm text-sm" 
-                                    placeholder="friend@example.com" 
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full h-11 bg-white dark:bg-zinc-800 rounded-xl pl-10 pr-4 text-zinc-800 dark:text-white placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-blue-400 font-sans shadow-sm text-sm transition-all" 
+                                    placeholder="Search by name or @handle..." 
                                 />
-                                <button type="button" className="h-11 px-4 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-xl font-sans font-medium hover:bg-blue-200 transition-colors">
-                                    Add
-                                </button>
                             </div>
+
+                            {/* Kết quả tìm kiếm / Gợi ý */}
+                            {searchQuery.trim() && filteredFriends.length > 0 && (
+                                <div className="mt-2 max-h-32 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 shadow-md p-1 animate-in slide-in-from-top-2">
+                                    {filteredFriends.map(f => (
+                                        <div 
+                                            key={f.id} 
+                                            onClick={() => handleAddFriend(f)} 
+                                            className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer transition-colors"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden shrink-0">
+                                                {f.avatarUrl ? <img src={f.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs font-bold">{f.fullname?.charAt(0).toUpperCase()}</div>}
+                                            </div>
+                                            <div className="flex flex-col font-sans">
+                                                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{f.fullname}</span>
+                                                <span className="text-[10px] text-zinc-500">@{f.handle}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {searchQuery.trim() && filteredFriends.length === 0 && (
+                                <div className="mt-2 text-center text-xs text-zinc-500 font-sans py-2">
+                                    No friends found.
+                                </div>
+                            )}
                         </div>
 
                     </div>
@@ -238,7 +315,7 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
                             Create Box
                         </button>
                         <p className="text-stone-500 dark:text-stone-400 text-xs font-sans mt-3">
-                            We’ll send an invite link after creating ✨
+                            Invitations will be sent automatically ✨
                         </p>
                     </div>
                 </div>

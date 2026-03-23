@@ -2,6 +2,7 @@ import { http } from "@/lib/http";
 import { 
     BoxPageResponse, 
     BoxResponse, 
+    BoxDetailResponse,
     CreateBoxRequest, 
     UpdateBoxRequest, 
     BoxMemberPageResponse,
@@ -16,7 +17,7 @@ export const boxService = {
     },
 
     // 2. Lấy chi tiết Box
-    getBoxDetails: async (boxId: string): Promise<BoxResponse> => {
+    getBoxDetails: async (boxId: string): Promise<BoxDetailResponse> => {
         const response = await http.get(`/boxes/${boxId}`);
         return response.data.data;
     },
@@ -36,19 +37,19 @@ export const boxService = {
     // 5. Xóa Box (Tương đương giải tán)
     disbandBox: async (boxId: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}`);
-        return response.data?.message || "Đã xóa Box";
+        return response.data?.message || "Box deleted";
     },
 
     // 6. Rời khỏi Box (Khớp với @DeleteMapping("/{boxId}/leave"))
     leaveBox: async (boxId: string, myUserId?: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}/leave`);
-        return response.data?.message || "Đã rời Box";
+        return response.data?.message || "Left Box";
     },
 
     // 7. Chuyển nhượng Box
     transferOwnership: async (boxId: string, newOwnerId: string): Promise<string> => {
         const response = await http.put(`/boxes/${boxId}/transfer-ownership/${newOwnerId}`);
-        return response.data?.message || "Đã chuyển nhượng";
+        return response.data?.message || "Ownership transferred";
     },
 
     // ==========================================
@@ -58,25 +59,25 @@ export const boxService = {
     // 8. Mời thành viên (Khớp với @PostMapping("/{boxId}/invites"))
     inviteMember: async (boxId: string, targetUserId: string): Promise<string> => {
         const response = await http.post(`/boxes/${boxId}/invites`, { inviteeId: targetUserId });
-        return response.data?.message || "Đã gửi lời mời";
+        return response.data?.message || "Invitation sent";
     },
 
     // 9. Chấp nhận lời mời (Khớp với @PostMapping("/invitations/{invitationId}?accept=true"))
     acceptInvite: async (invitationId: string): Promise<string> => {
         const response = await http.post(`/boxes/invitations/${invitationId}?accept=true`);
-        return response.data?.message || "Đã chấp nhận lời mời";
+        return response.data?.message || "Invitation accepted";
     },
 
     // 10. Từ chối lời mời (Khớp với @PostMapping("/invitations/{invitationId}?accept=false"))
     rejectInvite: async (invitationId: string): Promise<string> => {
         const response = await http.post(`/boxes/invitations/${invitationId}?accept=false`);
-        return response.data?.message || "Đã từ chối lời mời";
+        return response.data?.message || "Invitation declined";
     },
 
     // 11. Kick thành viên (Khớp với @DeleteMapping("/{boxId}/members/{memberId}"))
     removeMember: async (boxId: string, targetUserId: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}/members/${targetUserId}`);
-        return response.data?.message || "Đã xóa thành viên";
+        return response.data?.message || "Member removed";
     },
 
     // ==========================================
@@ -89,7 +90,7 @@ export const boxService = {
             const response = await http.get(`/boxes/invitations/me`);
             return response.data?.data || [];
         } catch (error) {
-            console.warn("Backend chưa có API GET /boxes/invitations/me");
+            console.warn("Backend does not have API GET /boxes/invitations/me");
             return []; 
         }
     },

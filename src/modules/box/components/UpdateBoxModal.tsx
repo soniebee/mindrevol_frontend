@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, ImagePlus, UserPlus, Move } from 'lucide-react';
 import { boxService } from '../services/box.service';
-import { BoxResponse, UpdateBoxRequest } from '../types';
+import { BoxDetailResponse, UpdateBoxRequest } from '../types';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,7 @@ interface UpdateBoxModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    boxData: BoxResponse;
+    boxData: BoxDetailResponse;
 }
 
 const BOX_THEMES = [
@@ -35,10 +35,13 @@ const parsePosition = (posStr?: string, defaultX = 50, defaultY = 30) => {
 
 export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose, onSuccess, boxData }) => {
     const [name, setName] = useState('');
+    
+    // Đã sửa: Dùng themeSlug để tìm image thay vì coverImage
     const [selectedTheme, setSelectedTheme] = useState({ 
-    id: 'current', 
-    image: boxData?.coverImage || BOX_THEMES[0].image 
-});
+        id: boxData?.themeSlug || 'theme-1', 
+        image: BOX_THEMES.find(t => t.id === boxData?.themeSlug)?.image || BOX_THEMES[0].image 
+    });
+    
     const [avatarImage, setAvatarImage] = useState<string | null>(null); 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -114,7 +117,10 @@ export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose,
     useEffect(() => {
         if (isOpen && boxData) {
             setName(boxData.name);
-            setSelectedTheme({ id: 'current', image: boxData.coverImage || BOX_THEMES[0].image });
+            
+            // Đã sửa: Dùng themeSlug để đối chiếu thay vì coverImage
+            const currentTheme = BOX_THEMES.find(t => t.id === boxData.themeSlug) || BOX_THEMES[0];
+            setSelectedTheme({ id: currentTheme.id, image: currentTheme.image });
             
             const isAvatarUrl = boxData.avatar?.includes('/') || boxData.avatar?.startsWith('http');
             setAvatarImage(isAvatarUrl ? boxData.avatar! : null);
@@ -142,22 +148,22 @@ export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose,
         if (!name.trim()) return setError('Please enter a box name.');
         try {
             setIsLoading(true);
+            
+            // Đã sửa: Xóa coverImage, themeColor, avatarPosition để khớp với UpdateBoxRequest
             const payload: UpdateBoxRequest = { 
                 name: name.trim(), 
-                description: boxData.description || "", // Giữ lại description cũ nếu có
-                coverImage: selectedTheme.image, 
-                themeColor: boxData.themeColor || "#f4f9e8", 
+                description: boxData.description || "", 
+                themeSlug: selectedTheme.id, 
                 avatar: avatarImage || boxData.avatar || "📦",
-                textPosition: `${textPos.x.toFixed(2)},${textPos.y.toFixed(2)}`,
-                avatarPosition: `${avatarPos.x.toFixed(2)},${avatarPos.y.toFixed(2)}`
+                textPosition: `${textPos.x.toFixed(2)},${textPos.y.toFixed(2)}`
             };
             
             await boxService.updateBox(boxData.id, payload);
-            toast.success('Cập nhật Không gian thành công!');
+            toast.success('Box updated successfully!');
             onSuccess();
             onClose();
         } catch (err: any) {
-            setError(err?.response?.data?.message || 'Lỗi khi cập nhật Không gian.');
+            setError(err?.response?.data?.message || 'Failed to update Box.');
         } finally {
             setIsLoading(false);
         }
@@ -200,7 +206,7 @@ export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose,
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="text-red-950 dark:text-lime-100 text-xl font-normal">Preview</h3>
                                 <p className="text-[10px] text-zinc-500 flex items-center gap-1 font-sans bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md">
-                                    <Move className="w-3 h-3" /> Kéo thả
+                                    <Move className="w-3 h-3" /> Drag & Drop
                                 </p>
                             </div>
 
@@ -235,7 +241,7 @@ export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose,
                                         className="text-white font-normal tracking-wide whitespace-nowrap pointer-events-none" 
                                         style={{ fontFamily: '"Jua", sans-serif', fontSize: '6.5cqw' }}
                                     >
-                                        {name.trim() || 'Tên Box...'}
+                                        {name.trim() || 'Box Name...'}
                                     </span>
                                 </div>
 
@@ -299,7 +305,7 @@ export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose,
                                     className="w-16 h-16 shrink-0 rounded-2xl border-2 border-dashed border-rose-300 dark:border-rose-800 bg-white/50 dark:bg-black/20 hover:bg-white flex flex-col items-center justify-center cursor-pointer transition-all shadow-sm"
                                 >
                                     <ImagePlus className="w-5 h-5 text-rose-400 mb-1" />
-                                    <span className="text-[9px] font-bold text-rose-500 uppercase font-sans">Nền</span>
+                                    <span className="text-[9px] font-bold text-rose-500 uppercase font-sans">Cover</span>
                                     <input type="file" accept="image/*" className="hidden" ref={themeFileInputRef} onChange={handleCustomThemeUpload} />
                                 </div>
 

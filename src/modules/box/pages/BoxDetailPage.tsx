@@ -116,7 +116,7 @@ const BoxDetailPage: React.FC = () => {
                 </div>
             </div>
 
-            {box && <BoxMembersModal isOpen={isMembersModalOpen} onClose={() => setIsMembersModalOpen(false)} boxId={box.id} ownerId={box.ownerId} onMemberChange={() => fetchBoxData(box.id)} />}
+            {box && <BoxMembersModal isOpen={isMembersModalOpen} onClose={() => setIsMembersModalOpen(false)} boxId={box.id} ownerId={isOwner ? (user?.id || '') : ''} onMemberChange={() => fetchBoxData(box.id)} />}
             {box && <CreateJourneyModal isOpen={isCreateJourneyModalOpen} onClose={() => setIsCreateJourneyModalOpen(false)} onSuccess={() => fetchBoxData(box.id)} defaultBoxId={box.id} />}
             {box && <UpdateBoxModal isOpen={isUpdateBoxModalOpen} onClose={() => setIsUpdateBoxModalOpen(false)} onSuccess={() => fetchBoxData(box.id)} boxData={box} />}
         </MainLayout>

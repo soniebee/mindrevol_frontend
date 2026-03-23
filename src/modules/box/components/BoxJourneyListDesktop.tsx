@@ -27,9 +27,9 @@ export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
                         <div className="w-12 h-12 rounded-[18px] bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
                             <BookOpen size={24} strokeWidth={2} />
                         </div>
-                        Các giai đoạn
+                        Milestones
                     </h2>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-base mt-2 font-medium">Dấu chân thời gian của "{boxName}"</p>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-base mt-2 font-medium">Footprints of "{boxName}"</p>
                 </div>
                 
                 <div className="flex flex-col items-end gap-5">
@@ -47,13 +47,13 @@ export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
                             onClick={() => setViewMode('timeline')}
                             className={cn("px-5 py-2 rounded-2xl transition-all flex items-center gap-2 text-lg font-normal font-['Jua']", viewMode === 'timeline' ? "bg-white dark:bg-zinc-800 text-amber-700 dark:text-amber-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400")}
                         >
-                            <ListTree size={18} /> Dòng thời gian
+                            <ListTree size={18} /> Timeline
                         </button>
                         <button 
                             onClick={() => setViewMode('grid')}
                             className={cn("px-5 py-2 rounded-2xl transition-all flex items-center gap-2 text-lg font-normal font-['Jua']", viewMode === 'grid' ? "bg-white dark:bg-zinc-800 text-amber-700 dark:text-amber-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400")}
                         >
-                            <LayoutGrid size={18} /> Danh sách
+                            <LayoutGrid size={18} /> Grid
                         </button>
                     </div>
                 </div>
@@ -65,8 +65,8 @@ export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
                     <div className="w-20 h-20 bg-blue-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
                         <BookOpen className="text-blue-500 dark:text-zinc-400 w-10 h-10" strokeWidth={1.5} />
                     </div>
-                    <h3 className="text-2xl font-normal text-zinc-900 dark:text-zinc-300 mb-2" style={{ fontFamily: '"Jua", sans-serif' }}>Trang giấy còn trống</h3>
-                    <p className="text-zinc-500 text-center max-w-md mb-8 text-base font-medium leading-relaxed">Mỗi không gian là một cuốn sách. Hãy bắt đầu lưu giữ những chương đầu tiên của bạn.</p>
+                    <h3 className="text-2xl font-normal text-zinc-900 dark:text-zinc-300 mb-2" style={{ fontFamily: '"Jua", sans-serif' }}>A blank page</h3>
+                    <p className="text-zinc-500 text-center max-w-md mb-8 text-base font-medium leading-relaxed">Every box is a story. Start capturing your first moments.</p>
                     <button 
                         onClick={() => setIsCreateJourneyModalOpen(true)} 
                         className="text-green-900 dark:text-green-400 text-2xl font-normal font-['Jua'] hover:opacity-70 transition-opacity"
@@ -90,7 +90,7 @@ export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
                                 
                                 {activeJourneys.length === 0 ? (
                                     <div className="w-full h-32 bg-white/50 dark:bg-zinc-900/50 rounded-[24px] flex items-center justify-center border border-dashed border-orange-200 dark:border-orange-900/50 text-orange-900/50 dark:text-orange-200/50 font-['Jua'] text-xl">
-                                        Chưa có hành trình
+                                        No ongoing journeys
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -134,7 +134,7 @@ export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
                                     
                                     {endedJourneys.length === 0 ? (
                                         <div className="w-full h-32 bg-white/50 dark:bg-zinc-900/50 rounded-[24px] flex items-center justify-center border border-dashed border-indigo-200 dark:border-indigo-900/50 text-indigo-900/50 dark:text-indigo-300/50 font-['Jua'] text-xl">
-                                            Trống
+                                            Empty
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -210,7 +210,7 @@ export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
                                 <div className="relative flex flex-col w-[150px] shrink-0 snap-start">
                                     <div className="text-xs text-transparent mb-4">.</div>
                                     <div className="w-3 h-3 rounded-full bg-zinc-200 dark:bg-zinc-700 ring-4 ring-white dark:ring-[#121212] z-10 relative mb-8 mt-0.5"></div>
-                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Khởi nguồn</span>
+                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">The Beginning</span>
                                 </div>
                             </div>
                         </div>

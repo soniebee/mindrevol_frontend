@@ -31,7 +31,7 @@ export const BoxJourneyListMobile: React.FC<BoxJourneyListMobileProps> = ({
                 
                 {activeJourneys.length === 0 ? (
                     <div className="w-full h-24 bg-white/50 dark:bg-zinc-900/50 rounded-2xl flex items-center justify-center border border-dashed border-orange-200 dark:border-orange-900/50 text-orange-900/50 dark:text-orange-200/50 font-['Jua'] text-lg">
-                        Chưa có hành trình
+                        No ongoing journeys
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
@@ -66,7 +66,7 @@ export const BoxJourneyListMobile: React.FC<BoxJourneyListMobileProps> = ({
                 
                 {endedJourneys.length === 0 ? (
                     <div className="w-full h-24 bg-white/50 dark:bg-zinc-900/50 rounded-2xl flex items-center justify-center border border-dashed border-indigo-200 dark:border-indigo-900/50 text-indigo-900/50 dark:text-indigo-300/50 font-['Jua'] text-lg">
-                        Trống
+                        Empty
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">

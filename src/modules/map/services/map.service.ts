@@ -7,10 +7,16 @@ export const mapService = {
     return response.data.data || response.data;
   },
 
-  getBoxMarkers: async (boxId: string): Promise<MapMarkerResponse[]> => {
-    const response = await http.get<any>(`/checkins/map/box/${boxId}`);
-    return response.data.data || response.data;
-  },
+  // Trong map.service.ts
+getBoxMarkers: async (boxId: string) => {
+  try {
+      const response = await http.get(`/checkins/map/box/${boxId}`);
+      return response.data?.data || [];
+  } catch (error) {
+      console.error("Map API error:", error);
+      return []; // Trả về mảng rỗng để bản đồ hiện trống chứ không báo lỗi 500 sập web
+  }
+},
 
   // [THÊM MỚI] Lấy tất cả ảnh của chính mình
   getMyMarkers: async (): Promise<MapMarkerResponse[]> => {
