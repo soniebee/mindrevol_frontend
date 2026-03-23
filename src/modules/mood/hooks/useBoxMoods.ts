@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { moodService } from '../services/mood.service';
+// Bây giờ nó sẽ tìm thấy moodService từ file bên trên!
+import { moodService } from '../services/mood.service'; 
 import { MoodResponse, MoodRequest } from '../types';
 import { toast } from 'react-hot-toast';
-// [THÊM IMPORT CHAT SERVICE]
-import { chatService } from '../../chat/services/chat.service'; 
+import { chatService } from '@/modules/chat/services/chat.service'; 
 
 export const useBoxMoods = (boxId: string | undefined, currentUserId: string | undefined) => {
     const [moods, setMoods] = useState<MoodResponse[]>([]);
@@ -16,7 +16,7 @@ export const useBoxMoods = (boxId: string | undefined, currentUserId: string | u
             const data = await moodService.getActiveMoods(boxId);
             setMoods(data);
         } catch (error) {
-            console.error('Lỗi tải Moods:', error);
+            console.error('Failed to load moods:', error);
         } finally {
             setIsLoading(false);
         }
@@ -29,39 +29,28 @@ export const useBoxMoods = (boxId: string | undefined, currentUserId: string | u
     const handleSetMood = async (data: MoodRequest) => {
         if (!boxId) return;
         try {
-            // 1. Lưu trạng thái Mood lên Server
             await moodService.setMood(boxId, data);
-            toast.success('Đã cập nhật trạng thái!');
-            fetchMoods(); // Reload danh sách mood
+            toast.success('Status updated!');
+            fetchMoods(); 
 
-            // ==========================================
-            // 2. TỰ ĐỘNG BẮN TIN NHẮN VÀO BOX CHAT
-            // ==========================================
             try {
-                // Lấy thông tin Conversation tương ứng với Box này để lấy đúng ID
                 const conv = await chatService.getBoxConversation(boxId);
-                
                 if (conv && conv.id) {
-                    // Tạo nội dung tin nhắn. VD: "😎 Đang code dạo..."
                     const moodContent = data.message ? `${data.icon} ${data.message}` : `${data.icon}`;
-                    
-                    // Gọi API gửi tin nhắn
                     await chatService.sendMessage({
                         conversationId: conv.id,
-                        receiverId: conv.id, // Trong ngữ cảnh Box/Group thì receiverId có thể là ID của Box luôn (tuỳ logic backend của bro)
-                        content: `Vừa cập nhật trạng thái: ${moodContent}`,
+                        receiverId: conv.id, 
+                        content: `Just updated status: ${moodContent}`,
                         type: 'TEXT' as any,
                         clientSideId: Date.now().toString()
                     } as any);
                 }
             } catch (chatError) {
-                console.error("Lỗi khi tự động gửi tin nhắn mood vào box:", chatError);
-                // Lỗi gửi tin nhắn thì cứ kệ nó, không cần báo lỗi cho user vì mood đã lưu thành công rồi
+                console.error("Error sending automated mood message to box:", chatError);
             }
-            // ==========================================
 
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi đăng trạng thái');
+            toast.error(error.response?.data?.message || 'Failed to update status');
             throw error;
         }
     };
@@ -70,19 +59,20 @@ export const useBoxMoods = (boxId: string | undefined, currentUserId: string | u
         if (!boxId) return;
         try {
             await moodService.deleteMood(boxId);
-            toast.success('Đã gỡ trạng thái!');
+            toast.success('Status removed!');
             setMoods(prev => prev.filter(m => m.userId !== currentUserId));
         } catch (error: any) {
-            toast.error('Lỗi khi gỡ trạng thái');
+            toast.error('Failed to remove status');
         }
     };
 
     const handleReact = async (moodId: string, emoji: string) => {
+        if (!boxId) return;
         try {
-            await moodService.reactToMood(moodId, emoji);
+            await moodService.reactToMood(boxId, moodId, emoji);
             fetchMoods(); 
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi thả cảm xúc');
+            toast.error(error.response?.data?.message || 'Failed to react');
         }
     };
 
