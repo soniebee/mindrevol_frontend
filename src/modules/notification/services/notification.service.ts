@@ -15,9 +15,11 @@ export interface NotificationResponse {
     // --- BỔ SUNG SPRINT 2 (Giúp hết báo đỏ ở NotificationItem.tsx) ---
     isSeen?: boolean;
     messageKey?: string;
-    messageArgs?: string;
+    messageArgs?: string | string[];
     actionStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
     actorsCount?: number;
+    actorNames?: string[];
+    actorAvatars?: string[];
 }
 
 interface PageResponse<T> {
@@ -31,12 +33,12 @@ interface PageResponse<T> {
 export const notificationService = {
     getMyNotifications: async (page = 0, size = 30): Promise<PageResponse<NotificationResponse>> => {
         const response = await http.get(`/notifications?page=${page}&size=${size}`);
-        return response.data.data;
+        return response.data?.data ?? response.data;
     },
 
     getUnreadCount: async (): Promise<number> => {
         const response = await http.get('/notifications/unread-count');
-        return response.data.data;
+        return response.data?.data ?? response.data;
     },
 
     markAsRead: async (id: string): Promise<void> => {

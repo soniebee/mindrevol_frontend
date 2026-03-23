@@ -3,6 +3,7 @@ import { Bell, Check, Settings } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
 import { useNotifications } from '@/modules/notification/hooks/useNotifications';
 import { NotificationSettingsModal } from '@/modules/notification/components/NotificationSettingsModal';
+import { getNotificationDisplayText } from '@/modules/notification/utils/notificationText';
 
 interface Props {
     isOpen: boolean;
@@ -53,6 +54,8 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
         return notifications.find((item) => item.id === selectedNotificationId) ?? notifications[0];
     }, [notifications, selectedNotificationId]);
 
+    const selectedNotificationText = selectedNotification ? getNotificationDisplayText(selectedNotification) : '';
+
     const unreadCount = notifications.filter((notification) => !notification.isSeen).length;
 
     const handleItemClick = async (notification: (typeof notifications)[number]) => {
@@ -80,7 +83,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
             {isOpen && (
                 <div
                     ref={panelRef}
-                    className="absolute top-full right-0 mt-2 w-80 sm:w-[44rem] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    className="fixed top-20 right-2 left-2 sm:left-auto sm:right-6 sm:w-[44rem] bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[10000]"
                 >
                     <div className="p-4 border-b border-zinc-100 dark:border-white/10 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -145,7 +148,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                                         {selectedNotification.title}
                                     </h4>
                                     <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                                        {selectedNotification.message}
+                                        {selectedNotificationText}
                                     </p>
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 pt-1">
                                         {new Date(selectedNotification.createdAt).toLocaleString('vi-VN')}

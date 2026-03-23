@@ -19,6 +19,34 @@ interface NotificationUiMeta {
   iconContainerClassName: string;
 }
 
+export type NotificationCategory = 'COMMENT' | 'REACTION' | 'MESSAGE' | 'JOURNEY' | 'FRIEND' | 'OTHER';
+
+export const CATEGORY_SETTINGS_KEYS: Record<Exclude<NotificationCategory, 'OTHER'>, readonly (keyof NotificationSettingsLike)[]> = {
+  COMMENT: ['pushNewComment', 'inAppNewComment', 'emailNewComment'],
+  REACTION: ['pushReaction', 'inAppReaction', 'emailReaction'],
+  MESSAGE: ['pushMessage', 'inAppMessage', 'emailMessage'],
+  JOURNEY: ['pushJourneyInvite', 'inAppJourneyInvite', 'emailJourneyInvite'],
+  FRIEND: ['pushFriendRequest', 'inAppFriendRequest', 'emailFriendRequest'],
+};
+
+interface NotificationSettingsLike {
+  pushNewComment?: boolean;
+  inAppNewComment?: boolean;
+  emailNewComment?: boolean;
+  pushReaction?: boolean;
+  inAppReaction?: boolean;
+  emailReaction?: boolean;
+  pushMessage?: boolean;
+  inAppMessage?: boolean;
+  emailMessage?: boolean;
+  pushJourneyInvite?: boolean;
+  inAppJourneyInvite?: boolean;
+  emailJourneyInvite?: boolean;
+  pushFriendRequest?: boolean;
+  inAppFriendRequest?: boolean;
+  emailFriendRequest?: boolean;
+}
+
 const DEFAULT_META: NotificationUiMeta = {
   icon: Bell,
   iconClassName: 'text-zinc-500 dark:text-zinc-300',
@@ -119,6 +147,38 @@ export const isActionableNotification = (noti: NotificationResponse): boolean =>
   if (!ACTIONABLE_TYPES.has(noti.type)) return false;
   if (noti.actionStatus && noti.actionStatus !== 'PENDING') return false;
   return !noti.isRead;
+};
+
+export const resolveNotificationCategory = (type: string): NotificationCategory => {
+  if (!type) return 'OTHER';
+
+  if (type.startsWith('FRIEND_')) return 'FRIEND';
+
+  if (
+    type === 'JOURNEY_INVITE' ||
+    type.startsWith('BOX_') ||
+    type === 'SHARED_WITH_YOU'
+  ) {
+    return 'JOURNEY';
+  }
+
+  if (
+    type === 'CHECKIN_REACTED' ||
+    type === 'MOOD_REACTED' ||
+    type === 'POST_REACTION'
+  ) {
+    return 'REACTION';
+  }
+
+  if (type === 'COMMENT_MENTIONED' || type === 'MOOD_MENTIONED' || type === 'TAG_MENTIONED') {
+    return 'COMMENT';
+  }
+
+  if (type.includes('MESSAGE') || type.includes('CHAT')) {
+    return 'MESSAGE';
+  }
+
+  return 'OTHER';
 };
 
 export const resolveNotificationPath = (noti: NotificationResponse): string | null => {

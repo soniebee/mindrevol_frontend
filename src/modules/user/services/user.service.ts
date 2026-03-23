@@ -154,12 +154,14 @@ class UserService {
   // --- SETTINGS API ---
   async getNotificationSettings(): Promise<NotificationSettings> {
     const response = await http.get<{ data: NotificationSettings }>('/users/settings/notifications');
-    return response.data.data;
+    const payload = response.data as unknown as { data?: NotificationSettings } | NotificationSettings;
+    return 'data' in payload && payload.data ? payload.data : (payload as NotificationSettings);
   }
 
   async updateNotificationSettings(data: Partial<NotificationSettings>): Promise<NotificationSettings> {
     const response = await http.put<{ data: NotificationSettings }>('/users/settings/notifications', data);
-    return response.data.data;
+    const payload = response.data as unknown as { data?: NotificationSettings } | NotificationSettings;
+    return 'data' in payload && payload.data ? payload.data : (payload as NotificationSettings);
   }
 
   // --- SOCIAL ACCOUNTS ---

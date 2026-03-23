@@ -7,6 +7,7 @@ import {
     getNotificationMeta,
     isActionableNotification
 } from '@/modules/notification/constants';
+import { getNotificationDisplayText } from '@/modules/notification/utils/notificationText';
 
 interface Props {
     noti: NotificationResponse;
@@ -15,33 +16,6 @@ interface Props {
     onAction: (e: React.MouseEvent, action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => void;
 }
 
-const I18N_FALLBACK: Record<string, string> = {
-    'noti.and_others': 'và {{count}} người khác'
-};
-
-const t = (key: string, params?: Record<string, string | number>) => {
-    const template = I18N_FALLBACK[key] ?? key;
-    if (!params) return template;
-    return Object.entries(params).reduce(
-        (text, [name, value]) => text.replace(new RegExp(`{{\\s*${name}\\s*}}`, 'g'), String(value)),
-        template
-    );
-};
-
-const parseMessageArgs = (raw?: string): string[] => {
-    if (!raw) return [];
-
-    try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-            return parsed.map((value) => String(value)).filter(Boolean);
-        }
-        return [];
-    } catch {
-        return [];
-    }
-};
-
 export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onAction }) => {
     const [isLoading, setIsLoading] = useState(false);
     const meta = getNotificationMeta(noti.type);
@@ -49,7 +23,6 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
     const isAggregated = (noti.actorsCount ?? 0) > 1;
 
     const handleClick = () => {
-        if (requiresAction) return;
         onClick(noti);
     };
 
@@ -63,47 +36,9 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
         }
     };
 
-    const getActorLabel = (args: string[]) => {
-        const actorCandidates = args.filter(Boolean);
-        const fallbackActors = [noti.senderName].filter(Boolean);
-        const actors = actorCandidates.length > 0 ? actorCandidates : fallbackActors;
-        const shownActors = actors.slice(0, 2);
-
-        const totalActors = noti.actorsCount ?? actors.length;
-        const otherCount = Math.max(totalActors - shownActors.length, 0);
-
-        if (shownActors.length === 0) return '';
-        if (otherCount <= 0) return shownActors.join(', ');
-
-        return `${shownActors.join(', ')} ${t('noti.and_others', { count: otherCount })}`;
-    };
-
-    const getDisplayText = () => {
-        try {
-            const args = parseMessageArgs(noti.messageArgs);
-            const actorLabel = getActorLabel(args);
-
-            if (noti.messageKey) {
-                const firstArg = args[0] || noti.senderName || '';
-                const text = t(noti.messageKey, {
-                    name: isAggregated && actorLabel ? actorLabel : firstArg,
-                    count: Math.max((noti.actorsCount ?? 1) - 1, 0)
-                });
-                return text;
-            }
-
-            if (isAggregated && actorLabel) {
-                if (noti.senderName && noti.message.includes(noti.senderName)) {
-                    return noti.message.replace(noti.senderName, actorLabel);
-                }
-                return `${actorLabel} ${noti.message}`;
-            }
-
-            return noti.message;
-        } catch {
-            return noti.message;
-        }
-    };
+    const displayText = getNotificationDisplayText(noti);
+    const avatarUrls = (noti.actorAvatars ?? []).filter((url) => url.startsWith('http')).slice(0, 2);
+    const shouldRenderAvatarStack = isAggregated && avatarUrls.length > 0;
 
     return (
         <div
@@ -119,7 +54,21 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
                 'w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-xl overflow-hidden border relative',
                 meta.iconContainerClassName
             )}>
-                {noti.imageUrl ? (
+                {shouldRenderAvatarStack ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                        {avatarUrls.map((avatar, index) => (
+                            <img
+                                key={`${avatar}-${index}`}
+                                src={avatar}
+                                alt=""
+                                className={cn(
+                                    'w-7 h-7 rounded-full object-cover border-2 border-white dark:border-[#18181b] absolute',
+                                    index === 0 ? 'left-1.5' : 'right-1.5'
+                                )}
+                            />
+                        ))}
+                    </div>
+                ) : noti.imageUrl ? (
                     noti.imageUrl.startsWith('http') ? <img src={noti.imageUrl} alt="" className="w-full h-full object-cover" /> : noti.imageUrl
                 ) : (
                     <meta.icon size={20} className={meta.iconClassName} />
@@ -137,7 +86,7 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
                     {noti.title}
                 </h4>
                 <p className={cn("text-[14px] leading-snug pr-4", !noti.isRead ? "text-zinc-800 dark:text-zinc-200 font-medium" : "text-zinc-500 dark:text-zinc-400")}>
-                    {getDisplayText()}
+                    {displayText}
                 </p>
                 <p className="text-[11px] text-blue-500 dark:text-blue-400 font-bold mt-1.5 uppercase tracking-wider">
                     {formatDistanceToNow(new Date(noti.createdAt), { addSuffix: true })}

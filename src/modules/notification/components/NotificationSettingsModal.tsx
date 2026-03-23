@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Bell, Clock, Loader2 } from 'lucide-react';
+import { X, Bell, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/Switch';
 import { userService } from '@/modules/user/services/user.service';
 import type { NotificationSettings } from '@/modules/user/services/user.service';
+import {
+  CATEGORY_SETTINGS_KEYS,
+  type NotificationCategory,
+} from '@/modules/notification/constants';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  onUpdated?: () => Promise<void> | void;
 }
 
 const DEFAULT_SETTINGS: NotificationSettings = {
@@ -72,44 +77,68 @@ const normalizeNotificationSettings = (
 };
 
 type CategoryRow = {
+  category: Exclude<NotificationCategory, 'OTHER'>;
   label: string;
   description: string;
-  keys: Array<keyof NotificationSettings>;
 };
 
 const CATEGORY_ROWS: CategoryRow[] = [
   {
+    category: 'COMMENT',
     label: 'Comment',
-    description: 'Khi co nguoi binh luan vao noi dung cua ban',
-    keys: ['pushNewComment', 'inAppNewComment', 'emailNewComment'],
+    description: 'Thong bao binh luan va mention trong binh luan',
   },
   {
+    category: 'REACTION',
     label: 'Reaction',
-    description: 'Khi co nguoi tha cam xuc vao bai viet/check-in',
-    keys: ['pushReaction', 'inAppReaction', 'emailReaction'],
+    description: 'Thong bao tha cam xuc vao bai viet/check-in/mood',
   },
   {
+    category: 'MESSAGE',
     label: 'Tin nhan',
-    description: 'Khi co tin nhan moi trong chat/box chat',
-    keys: ['pushMessage', 'inAppMessage', 'emailMessage'],
+    description: 'Thong bao tin nhan moi trong chat/box chat',
   },
   {
+    category: 'JOURNEY',
     label: 'Hanh trinh',
-    description: 'Loi moi tham gia Journey/Box',
-    keys: ['pushJourneyInvite', 'inAppJourneyInvite', 'emailJourneyInvite'],
+    description: 'Thong bao loi moi Journey/Box va su kien lien quan',
   },
   {
+    category: 'FRIEND',
     label: 'Ket ban',
-    description: 'Loi moi ket ban va cap nhat lien quan',
-    keys: ['pushFriendRequest', 'inAppFriendRequest', 'emailFriendRequest'],
+    description: 'Thong bao loi moi ket ban va chap nhan ket ban',
   },
 ];
 
-export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
+const getCategoryEnabled = (
+  settings: NotificationSettings,
+  category: Exclude<NotificationCategory, 'OTHER'>
+) => {
+  const keys = CATEGORY_SETTINGS_KEYS[category];
+  return keys.some((key) => Boolean(settings[key]));
+};
+
+const buildCategoryPayload = (
+  category: Exclude<NotificationCategory, 'OTHER'>,
+  checked: boolean,
+  current: NotificationSettings
+): Partial<NotificationSettings> => {
+  const payload: Partial<NotificationSettings> = {
+    ...current,
+  };
+
+  CATEGORY_SETTINGS_KEYS[category].forEach((key) => {
+    payload[key] = checked;
+  });
+
+  return payload;
+};
+
+export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose, onUpdated }) => {
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -128,7 +157,7 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
       } catch (error) {
         if (!isCancelled) {
           setErrorMessage('Khong the tai cai dat thong bao. Dang hien thi cau hinh mac dinh.');
-          setSettings((prev) => normalizeNotificationSettings(prev));
+          setSettings(normalizeNotificationSettings(DEFAULT_SETTINGS));
         }
         console.error('Load notification settings failed', error);
       } finally {
@@ -138,31 +167,38 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
       }
     };
 
-    fetchSettings();
+    void fetchSettings();
 
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, reloadKey]);
+  }, [isOpen]);
 
-  const updateManySettings = async (payload: Partial<NotificationSettings>) => {
+  const updateSettings = async (payload: Partial<NotificationSettings>) => {
     const previousSettings = settings;
-    setSettings((prev) => normalizeNotificationSettings({ ...prev, ...payload }));
+    setSettings(normalizeNotificationSettings({ ...settings, ...payload }));
 
     try {
-      setIsLoading(true);
+      setIsSaving(true);
       const updated = await userService.updateNotificationSettings(payload);
       setSettings((prev) => normalizeNotificationSettings({ ...prev, ...updated }));
+      if (onUpdated) {
+        await onUpdated();
+      }
     } catch (error) {
       setSettings(previousSettings);
       console.error('Update notification settings failed', error);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const updateSingleSetting = async (key: keyof NotificationSettings, value: boolean | number) => {
-    await updateManySettings({ [key]: value });
+  const handleCategoryToggle = async (
+    category: Exclude<NotificationCategory, 'OTHER'>,
+    checked: boolean
+  ) => {
+    const payload = buildCategoryPayload(category, checked, settings);
+    await updateSettings(payload);
   };
 
   if (!isOpen) return null;
@@ -177,7 +213,7 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-white/10">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Cài đặt thông báo</h2>
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Quan ly thong bao</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
@@ -187,97 +223,38 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
           </button>
         </div>
 
-        <div className="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-white/5 rounded-lg px-3 py-2">
+            Tat danh muc chi ngan thong bao moi. Thong bao cu va tin nhan trong hoi thoai van duoc giu nguyen.
+          </div>
+
           {errorMessage && (
-            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200 flex items-center justify-between gap-3">
-              <span>{errorMessage}</span>
-              <button
-                onClick={() => setReloadKey((prev) => prev + 1)}
-                className="px-2 py-1 rounded-md bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-100"
-              >
-                Thu lai
-              </button>
+            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">
+              {errorMessage}
             </div>
           )}
 
-          <section className="pb-4 border-b border-zinc-100 dark:border-white/10">
+          <section>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
               <Bell size={14} className="text-yellow-500" /> Danh muc thong bao
             </h3>
             <div className="space-y-2">
               {CATEGORY_ROWS.map((row) => (
                 <ToggleRow
-                  key={row.label}
+                  key={row.category}
                   label={row.label}
                   description={row.description}
-                  checked={row.keys.some((key) => Boolean(settings[key]))}
-                  disabled={isLoading}
+                  checked={getCategoryEnabled(settings, row.category)}
+                  disabled={isLoading || isSaving}
                   onChange={(checked) => {
-                    const payload: Partial<NotificationSettings> = {
-                      pushEnabled: checked ? true : settings.pushEnabled,
-                      inAppEnabled: checked ? true : settings.inAppEnabled,
-                      emailEnabled: checked ? true : settings.emailEnabled,
-                    };
-
-                    row.keys.forEach((key) => {
-                      payload[key] = checked as never;
-                    });
-
-                    void updateManySettings(payload);
+                    void handleCategoryToggle(row.category, checked);
                   }}
                 />
               ))}
             </div>
           </section>
 
-          <section>
-            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Clock size={14} className="text-emerald-500" /> Khong lam phien (DND)
-            </h3>
-            <div className="space-y-1">
-              <ToggleRow
-                label="Bat DND"
-                description="Tam dung push trong khung gio chi dinh"
-                checked={settings.dndEnabled}
-                disabled={isLoading || !settings.pushEnabled}
-                onChange={(checked) => updateSingleSetting('dndEnabled', checked)}
-              />
-
-              {settings.dndEnabled && (
-                <div className="flex gap-4 items-center mt-2 bg-zinc-50 dark:bg-white/5 p-3 rounded-lg">
-                  <div className="flex flex-col">
-                    <label className="text-xs text-zinc-500">Tu (gio)</label>
-                    <select
-                      value={settings.dndStartHour}
-                      onChange={(e) => updateSingleSetting('dndStartHour', parseInt(e.target.value, 10))}
-                      className="bg-transparent text-sm dark:text-white outline-none"
-                      disabled={isLoading}
-                    >
-                      {Array.from({ length: 24 }).map((_, i) => (
-                        <option key={i} value={i} className="text-black">{i}:00</option>
-                      ))}
-                    </select>
-                  </div>
-                  <span className="text-zinc-400">-</span>
-                  <div className="flex flex-col">
-                    <label className="text-xs text-zinc-500">Den (gio)</label>
-                    <select
-                      value={settings.dndEndHour}
-                      onChange={(e) => updateSingleSetting('dndEndHour', parseInt(e.target.value, 10))}
-                      className="bg-transparent text-sm dark:text-white outline-none"
-                      disabled={isLoading}
-                    >
-                      {Array.from({ length: 24 }).map((_, i) => (
-                        <option key={i} value={i} className="text-black">{i}:00</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {isLoading && (
+          {(isLoading || isSaving) && (
             <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
               <Loader2 size={14} className="animate-spin" /> Dang dong bo cai dat thong bao...
             </div>

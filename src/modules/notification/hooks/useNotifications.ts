@@ -10,23 +10,76 @@ const parseNumericReferenceId = (value: string): number | null => {
     return Number.isFinite(parsed) ? parsed : null;
 };
 
+const asStringArray = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+
+        try {
+            const parsed = JSON.parse(trimmed) as unknown;
+            return asStringArray(parsed);
+        } catch {
+            return [trimmed];
+        }
+    }
+
+    return [];
+};
+
+type NotificationPayload = NotificationResponse & {
+    read?: boolean;
+    actorCount?: number;
+    actorNames?: string[] | string;
+    actors?: string[] | string;
+    actorAvatars?: string[] | string;
+    actorAvatarUrls?: string[] | string;
+};
+
+const normalizeNotification = (item: NotificationPayload): NotificationResponse => {
+    const actorNames = [
+        ...asStringArray(item.actorNames),
+        ...asStringArray(item.actors)
+    ];
+
+    const actorAvatars = [
+        ...asStringArray(item.actorAvatars),
+        ...asStringArray(item.actorAvatarUrls)
+    ];
+
+    const normalizedMessageArgs = Array.isArray(item.messageArgs)
+        ? item.messageArgs.map((value) => String(value))
+        : item.messageArgs;
+
+    return {
+        ...item,
+        isRead: item.isRead ?? item.read ?? false,
+        actorsCount: item.actorsCount ?? item.actorCount ?? (actorNames.length > 0 ? actorNames.length : undefined),
+        actorNames: actorNames.length > 0 ? Array.from(new Set(actorNames)) : undefined,
+        actorAvatars: actorAvatars.length > 0 ? Array.from(new Set(actorAvatars)) : undefined,
+        messageArgs: normalizedMessageArgs
+    };
+};
+
 export const useNotifications = (isOpen: boolean) => {
     const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
 
     useEffect(() => {
-        if (isOpen) fetchNotifications();
+        if (isOpen) {
+            void fetchNotifications();
+        }
     }, [isOpen]);
 
     const fetchNotifications = async () => {
         setIsLoading(true);
         try {
             const data = await notificationService.getMyNotifications(0, 30);
-            const normalizedData = (data.content || []).map((n: NotificationResponse & { read?: boolean }) => ({
-                ...n,
-                isRead: n.isRead ?? n.read ?? false
-            }));
+            const normalizedData = (data.content || []).map((item: NotificationPayload) => normalizeNotification(item));
             setNotifications(normalizedData);
         } catch (error) {
             console.error("Lỗi tải thông báo", error);

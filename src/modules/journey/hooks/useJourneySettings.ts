@@ -31,7 +31,7 @@ export const useJourneySettings = (journey: JourneyResponse | null, onUpdateSucc
         visibility: journey.visibility as any,
         themeColor: journey.themeColor || '#3b82f6',
         avatar: journey.avatar || '🚀',
-        boxId: journey.boxId || '' // [THÊM MỚI]
+        boxId: (journey as JourneyResponse & { boxId?: string }).boxId || '' // [THÊM MỚI]
       });
     }
   }, [journey]);
