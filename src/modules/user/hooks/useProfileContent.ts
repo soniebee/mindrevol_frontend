@@ -14,11 +14,13 @@ export const useProfileContent = (currentProfileId: string | undefined, isMe: bo
     const idStr = String(currentProfileId);
     try {
       const publicRes = await journeyService.getUserPublicJourneys(idStr).catch(() => []);
-      setPublicJourneys(publicRes || []);
+      // [FIX LỖI] Ép cứng isProfileVisible = true cho tất cả hành trình tải từ tab Công khai
+      setPublicJourneys((publicRes || []).map(j => ({ ...j, isProfileVisible: true })));
 
       if (isMe) {
           const privateRes = await journeyService.getUserPrivateJourneys(idStr).catch(() => []);
-          setPrivateJourneys(privateRes || []);
+          // [FIX LỖI] Ép cứng isProfileVisible = false cho tất cả hành trình tải từ tab Riêng tư
+          setPrivateJourneys((privateRes || []).map(j => ({ ...j, isProfileVisible: false })));
       } else {
           setPrivateJourneys([]);
       }
@@ -39,7 +41,7 @@ export const useProfileContent = (currentProfileId: string | undefined, isMe: bo
     }
   }, [activeTab, isMe, savedCheckins.length]);
 
-  // [THÊM MỚI] Hàm luân chuyển Hành trình giữa Công khai <-> Riêng tư ngay lập tức
+  // Hàm luân chuyển Hành trình giữa Công khai <-> Riêng tư ngay lập tức
   const toggleLocalVisibility = (journeyId: string, currentVisibility: boolean) => {
     if (currentVisibility) {
         // Đang Công khai -> Ném qua Riêng tư

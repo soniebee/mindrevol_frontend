@@ -23,6 +23,8 @@ export enum CheckinStatus {
   REJECTED = 'REJECTED'
 }
 
+
+
 // 2. Data Models (API Response)
 export interface ReactionDetail {
   id: string;

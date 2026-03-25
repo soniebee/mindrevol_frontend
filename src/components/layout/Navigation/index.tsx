@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStore } from '@/modules/chat/store/useChatStore';
 import { journeyService } from "@/modules/journey/services/journey.service";
@@ -9,7 +9,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationPanel } from './NotificationPanel';
 
 interface NavigationProps {
-  onCheckinClick: (file: File) => void;
+  onCheckinClick: (file: File | null) => void; // Cho phép truyền null để mở Camera
   onJourneyClick: () => void;
   onSettingsClick?: () => void; 
   refreshTrigger?: number;
@@ -31,8 +31,6 @@ export const Navigation: React.FC<NavigationProps> = ({
   hideBottomNav = false 
 }) => {
   
-  // [QUAN TRỌNG] Đây là Ref duy nhất cho Input file
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
 
@@ -58,34 +56,9 @@ export const Navigation: React.FC<NavigationProps> = ({
     return () => clearInterval(interval);
   }, [refreshTrigger]);
 
-  // HÀM XỬ LÝ FILE (Nhận cả Ảnh và Video)
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-
-    if (isImage || isVideo) {
-        // Kiểm tra dung lượng video (dưới 10MB)
-        if (isVideo && file.size > 10 * 1024 * 1024) {
-            toast.error("Video quá lớn. Vui lòng chọn clip dưới 10MB (khoảng 3-5 giây).");
-            e.target.value = '';
-            return;
-        }
-        // Gửi file lên MainLayout
-        onCheckinClick(file);
-    } else {
-        toast.error("Vui lòng chọn định dạng ảnh hoặc video phù hợp.");
-    }
-    
-    // Reset để có thể chọn lại file cũ nếu muốn
-    e.target.value = ''; 
-  };
-
-  // Hàm "nhấn hộ" vào thẻ input ẩn
+  // [ĐÃ SỬA] Khi nhấn dấu Cộng (+) -> Chỉ cần gọi onCheckinClick(null) để báo mở Camera
   const triggerUpload = () => {
-      fileInputRef.current?.click();
+      onCheckinClick(null);
   };
 
   const handleNotificationClick = () => {
@@ -116,7 +89,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   const viewProps = {
     onJourneyClick,
-    triggerUpload, // Truyền cái búa xuống
+    triggerUpload, 
     totalUnread,
     hasJourneyAlerts,
     onSettingsClick 
@@ -124,14 +97,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <>
-      {/* THẺ INPUT ẨN DUY NHẤT Ở ĐÂY */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        className="hidden" 
-        accept="image/*,video/*" 
-        onChange={handleFileChange} 
-      />
+      {/* Đã xóa thẻ <input type="file"> ở đây */}
       
       {!hideBottomNav && (
           <MobileBottomNav {...viewProps} />

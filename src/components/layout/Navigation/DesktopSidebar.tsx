@@ -2,7 +2,8 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, Compass, Box, MessageCircle, Map as MapIcon, 
-  Bell, PlusSquare, User, Settings, ChevronLeft, ChevronRight
+  Bell, PlusSquare, User, Settings, ChevronLeft, ChevronRight,
+  Flame // <--- IMPORT THÊM FLAME
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +71,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
             <span className={cn("absolute bg-red-500 rounded-full", isExpanded ? "right-4 w-2.5 h-2.5" : "top-2.5 right-[12px] w-2.5 h-2.5")} />
           )}
         </button>
+
+        {/* THÊM MEMORY TIMELINE PAGE VÀO ĐÂY */}
+        <DesktopNavItem to="/streak" icon={Flame} label="Streaks" isExpanded={isExpanded} />
 
         <DesktopNavItem to="/box" icon={Box} label="Box" isExpanded={isExpanded} />
         <DesktopNavItem to="/chat" icon={MessageCircle} label="Messages" badge={totalUnread} isExpanded={isExpanded} />
