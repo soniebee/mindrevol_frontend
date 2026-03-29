@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Bell, Loader2 } from 'lucide-react';
+import { X, Bell } from 'lucide-react';
 import { Switch } from '@/components/ui/Switch';
 import { userService } from '@/modules/user/services/user.service';
 import type { NotificationSettings } from '@/modules/user/services/user.service';
 import {
-  CATEGORY_SETTINGS_KEYS,
+  resolveNotificationCategory,
   type NotificationCategory,
 } from '@/modules/notification/constants';
 
@@ -110,96 +110,124 @@ const CATEGORY_ROWS: CategoryRow[] = [
   },
 ];
 
-const getCategoryEnabled = (
-  settings: NotificationSettings,
-  category: Exclude<NotificationCategory, 'OTHER'>
-) => {
-  const keys = CATEGORY_SETTINGS_KEYS[category];
-  return keys.some((key) => Boolean(settings[key]));
-};
 
-const buildCategoryPayload = (
-  category: Exclude<NotificationCategory, 'OTHER'>,
-  checked: boolean,
-  current: NotificationSettings
-): Partial<NotificationSettings> => {
-  const payload: Partial<NotificationSettings> = {
-    ...current,
+// Chỉ lưu trạng thái bật/tắt từng danh mục (không push/email/in-app)
+type CategorySettings = Record<Exclude<NotificationCategory, 'OTHER'>, boolean>;
+const CATEGORY_KEYS: Exclude<NotificationCategory, 'OTHER'>[] = [
+  'COMMENT', 'REACTION', 'MESSAGE', 'JOURNEY', 'FRIEND'
+];
+
+const getCategorySettingsFromStorage = (): CategorySettings => {
+  try {
+    const raw = localStorage.getItem('notification_category_settings');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {
+    COMMENT: true,
+    REACTION: true,
+    MESSAGE: true,
+    JOURNEY: true,
+    FRIEND: true,
   };
-
-  CATEGORY_SETTINGS_KEYS[category].forEach((key) => {
-    payload[key] = checked;
-  });
-
-  return payload;
 };
 
-export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose, onUpdated }) => {
-  const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+const setCategorySettingsToStorage = (settings: CategorySettings) => {
+  localStorage.setItem('notification_category_settings', JSON.stringify(settings));
+};
+
+export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
+  const [categorySettings, setCategorySettings] = useState<CategorySettings>(getCategorySettingsFromStorage());
+  const [dndSettings, setDndSettings] = useState<{ enabled: boolean; startHour: number; endHour: number }>({ enabled: false, startHour: 22, endHour: 6 });
+  const [isDndLoading, setIsDndLoading] = useState(false);
+  const [dndError, setDndError] = useState<string | null>(null);
+  const [pendingDnd, setPendingDnd] = useState<{ enabled: boolean; startHour: number; endHour: number } | null>(null);
+  const [lastStableDnd, setLastStableDnd] = useState<{ enabled: boolean; startHour: number; endHour: number }>({ enabled: false, startHour: 22, endHour: 6 });
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    let isCancelled = false;
-
-    const fetchSettings = async () => {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const data = await userService.getNotificationSettings();
-        if (!isCancelled) {
-          setSettings(normalizeNotificationSettings(data));
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setErrorMessage('Khong the tai cai dat thong bao. Dang hien thi cau hinh mac dinh.');
-          setSettings(normalizeNotificationSettings(DEFAULT_SETTINGS));
-        }
-        console.error('Load notification settings failed', error);
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchSettings();
-
-    return () => {
-      isCancelled = true;
-    };
+    let cancelled = false;
+    if (isOpen) {
+      setCategorySettings(getCategorySettingsFromStorage());
+      setIsDndLoading(true);
+      setDndError(null);
+      setPendingDnd(null);
+      userService.getNotificationSettings()
+        .then((data) => {
+          if (cancelled) return;
+          const dnd = {
+            enabled: Boolean(data?.dndEnabled),
+            startHour: typeof data?.dndStartHour === 'number' ? data.dndStartHour : 22,
+            endHour: typeof data?.dndEndHour === 'number' ? data.dndEndHour : 6,
+          };
+          setDndSettings(dnd);
+          setLastStableDnd(dnd);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setDndError('Không thể tải cấu hình Không làm phiền.');
+        })
+        .finally(() => { if (!cancelled) setIsDndLoading(false); });
+    }
+    return () => { cancelled = true; };
   }, [isOpen]);
 
-  const updateSettings = async (payload: Partial<NotificationSettings>) => {
-    const previousSettings = settings;
-    setSettings(normalizeNotificationSettings({ ...settings, ...payload }));
+  const handleCategoryToggle = (category: Exclude<NotificationCategory, 'OTHER'>, checked: boolean) => {
+    const newSettings = { ...categorySettings, [category]: checked };
+    setCategorySettings(newSettings);
+    setCategorySettingsToStorage(newSettings);
+  };
 
+  // Validate giờ (0-23), chỉ nhận số nguyên
+  const clampHour = (v: number) => Math.max(0, Math.min(23, Number.isFinite(v) ? Math.floor(v) : 0));
+  const safeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Chỉ cho nhập số, không ký tự lạ
+    const val = e.target.value.replace(/[^\d]/g, '');
+    return val === '' ? '' : String(clampHour(Number(val)));
+  };
+
+  // Không cập nhật UI trước khi API thành công, revert nếu lỗi
+  const updateDnd = async (patch: Partial<{ enabled: boolean; startHour: number; endHour: number }>) => {
+    if (isDndLoading) return;
+    setIsDndLoading(true);
+    setDndError(null);
+    const next = { ...dndSettings, ...patch };
+    setPendingDnd(next);
     try {
-      setIsSaving(true);
-      const updated = await userService.updateNotificationSettings(payload);
-      setSettings((prev) => normalizeNotificationSettings({ ...prev, ...updated }));
-      if (onUpdated) {
-        await onUpdated();
-      }
-    } catch (error) {
-      setSettings(previousSettings);
-      console.error('Update notification settings failed', error);
+      await userService.updateNotificationSettings({
+        dndEnabled: next.enabled,
+        dndStartHour: clampHour(next.startHour),
+        dndEndHour: clampHour(next.endHour),
+      });
+      setDndSettings({
+        enabled: next.enabled,
+        startHour: clampHour(next.startHour),
+        endHour: clampHour(next.endHour),
+      });
+      setLastStableDnd({
+        enabled: next.enabled,
+        startHour: clampHour(next.startHour),
+        endHour: clampHour(next.endHour),
+      });
+      setPendingDnd(null);
+    } catch (e) {
+      setDndError('Cập nhật Không làm phiền thất bại.');
+      setPendingDnd(null);
+      setDndSettings(lastStableDnd); // revert về trạng thái ổn định cuối cùng
     } finally {
-      setIsSaving(false);
+      setIsDndLoading(false);
     }
   };
 
-  const handleCategoryToggle = async (
-    category: Exclude<NotificationCategory, 'OTHER'>,
-    checked: boolean
-  ) => {
-    const payload = buildCategoryPayload(category, checked, settings);
-    await updateSettings(payload);
+  const handleDndToggle = (checked: boolean) => {
+    updateDnd({ enabled: checked });
   };
+  const handleDndHourChange = (key: 'startHour' | 'endHour', e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = safeInput(e);
+    if (val === '') return; // không gửi API nếu rỗng
+    updateDnd({ [key]: Number(val) });
+  };
+
+  // Hiển thị giá trị đang pending nếu có, ưu tiên pending
+  const dndDisplay = pendingDnd || dndSettings;
 
   if (!isOpen) return null;
 
@@ -213,7 +241,7 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose, on
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-white/10">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Quan ly thong bao</h2>
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Quản lý thông báo</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
@@ -225,18 +253,12 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose, on
 
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-white/5 rounded-lg px-3 py-2">
-            Tat danh muc chi ngan thong bao moi. Thong bao cu va tin nhan trong hoi thoai van duoc giu nguyen.
+            Tắt danh mục chỉ ngăn thông báo mới. Thông báo cũ và tin nhắn trong hội thoại vẫn được giữ nguyên.
           </div>
-
-          {errorMessage && (
-            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200">
-              {errorMessage}
-            </div>
-          )}
 
           <section>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Bell size={14} className="text-yellow-500" /> Danh muc thong bao
+              <Bell size={14} className="text-yellow-500" /> Danh mục thông báo
             </h3>
             <div className="space-y-2">
               {CATEGORY_ROWS.map((row) => (
@@ -244,21 +266,61 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose, on
                   key={row.category}
                   label={row.label}
                   description={row.description}
-                  checked={getCategoryEnabled(settings, row.category)}
-                  disabled={isLoading || isSaving}
-                  onChange={(checked) => {
-                    void handleCategoryToggle(row.category, checked);
-                  }}
+                  checked={categorySettings[row.category]}
+                  disabled={false}
+                  onChange={(checked) => handleCategoryToggle(row.category, checked)}
                 />
               ))}
             </div>
           </section>
 
-          {(isLoading || isSaving) && (
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-              <Loader2 size={14} className="animate-spin" /> Dang dong bo cai dat thong bao...
+          {/* DND section */}
+          <section className="mt-6">
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Bell size={14} className="text-yellow-500" /> Không làm phiền (DND)
+            </h3>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Bật chế độ không làm phiền</span>
+              <Switch checked={dndDisplay.enabled} onChange={handleDndToggle} disabled={isDndLoading} />
             </div>
-          )}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Từ</span>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={dndDisplay.startHour}
+                onChange={e => handleDndHourChange('startHour', e)}
+                className="w-14 px-2 py-1 border rounded text-sm bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                disabled={!dndDisplay.enabled || isDndLoading}
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">giờ</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">đến</span>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={dndDisplay.endHour}
+                onChange={e => handleDndHourChange('endHour', e)}
+                className="w-14 px-2 py-1 border rounded text-sm bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                disabled={!dndDisplay.enabled || isDndLoading}
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">giờ</span>
+            </div>
+            {isDndLoading && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Đang đồng bộ với máy chủ...</div>
+            )}
+            {dndError && (
+              <div className="text-xs text-red-500 mt-1">{dndError}</div>
+            )}
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Khi bật, bạn sẽ không nhận được thông báo push trong khung giờ đã chọn.
+            </div>
+          </section>
         </div>
       </div>
     </div>,

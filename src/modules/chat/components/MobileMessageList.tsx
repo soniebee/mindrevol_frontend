@@ -1,3 +1,4 @@
+//src/components/MobileMessageList
 import React, { useEffect, useRef } from 'react';
 import { Message } from '../types';
 import { MobileMessageBubble } from './MobileMessageBubble';

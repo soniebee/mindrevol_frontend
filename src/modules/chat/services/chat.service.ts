@@ -1,3 +1,4 @@
+//src/services/chat.service
 import { http } from "@/lib/http";
 import { Message, Conversation, SendMessageRequest } from "../types";
 
@@ -5,7 +6,7 @@ export const chatService = {
   sendMessage: async (data: SendMessageRequest): Promise<Message> => {
     const response = await http.post<any>("/chat/send", data);
     return response.data.data || response.data;
-  },
+},
 
   getConversations: async (): Promise<Conversation[]> => {
     const response = await http.get<any>("/chat/conversations");
@@ -47,19 +48,31 @@ export const chatService = {
     return response.data.data || response.data;
   },
 
-  sharePostToChat: async (receiverId: string, postId: string, postImage: string, userMessage?: string): Promise<Message> => {
+ sharePostToChat: async (targetId: string, postId: string, postImage: string, userMessage?: string, isBox: boolean = false): Promise<Message> => {
     const finalContent = userMessage?.trim() || "Đã chia sẻ một bài viết";
-    const payload: SendMessageRequest = {
-      receiverId: receiverId,
+    
+    const payload: any = {
       content: finalContent,
-      type: 'TEXT' as any, 
+      type: 'TEXT',
       clientSideId: Date.now().toString(),
       metadata: {
         replyToPostId: postId,
-        replyToImage: postImage, 
-        type: 'SHARE'
+        replyToImage: postImage,
+        type: 'SHARE',
+        contentType: 'SHARE_POST',
+        sharedPostId: postId
       }
     };
+
+    // ĐÚNG CHUẨN BACKEND CỦA BRO Ở ĐÂY:
+    if (isBox) {
+      // Nhóm đã có sẵn hội thoại, truyền thẳng conversationId
+      payload.conversationId = targetId; 
+    } else {
+      // Bạn bè thì truyền receiverId để Backend tìm/tạo hội thoại mới
+      payload.receiverId = targetId; 
+    }
+
     return chatService.sendMessage(payload);
   }
 };

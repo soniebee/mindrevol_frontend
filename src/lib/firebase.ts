@@ -14,20 +14,16 @@ const firebaseConfig = {
 
 // Khởi tạo Firebase
 const app = initializeApp(firebaseConfig);
-
-// Khởi tạo Messaging
 export const messaging = typeof window !== "undefined" ? getMessaging(app) : null;
 
 // Hàm lấy FCM Token
 export const requestFirebaseToken = async () => {
   if (!messaging) return null;
-
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      // VAPID Key lấy ở: Firebase Console -> Project Settings -> Cloud Messaging -> Web configuration -> Key pair
       const token = await getToken(messaging, { 
-        vapidKey: "BPlufBgKlwm-QecDlmtEXI3io41kNwK1ZiQKl5LnaSXjACF_TtsXuZbNCjosJoFoiltv3uiDYEJqw_uiOVakfuk" 
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY 
       });
       return token;
     } else {
@@ -40,11 +36,8 @@ export const requestFirebaseToken = async () => {
   }
 };
 
-// Hàm lắng nghe thông báo khi đang mở web (Foreground)
 export const onMessageListener = () =>
   new Promise((resolve) => {
     if (!messaging) return;
-    onMessage(messaging, (payload) => {
-      resolve(payload);
-    });
+    onMessage(messaging, (payload) => resolve(payload));
   });

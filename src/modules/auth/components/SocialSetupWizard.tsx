@@ -5,7 +5,7 @@ import { StepHandle } from './registration/StepHandle';
 import { useAuthFlow } from '../store/AuthFlowContext';
 import { StepBasicInfoValues } from '../schemas/auth.schema';
 import { toast } from 'react-hot-toast';
-import { http } from '@/lib/http'; // Thay thế bằng instance axios của bạn nếu import khác
+import { http } from '@/lib/http';
 
 export const SocialSetupWizard = () => {
   const { tempToken, completeSocialSetup, resetFlow } = useAuthFlow();
@@ -27,15 +27,18 @@ export const SocialSetupWizard = () => {
     setError(null);
 
     try {
-      // Vì chưa login chính thức nên ta dùng tempToken để làm Authorization header
-      await http.put('/api/users/profile', {
-        fullname: basicInfo?.fullname,
-        dateOfBirth: basicInfo?.dateOfBirth,
-        gender: basicInfo?.gender,
-        handle: handle
-      }, {
+      // [ĐÃ SỬA]: Chuyển sang dùng FormData vì Backend hiện tại yêu cầu Multipart-form-data
+      const formData = new FormData();
+      if (basicInfo?.fullname) formData.append('fullname', basicInfo.fullname);
+      if (basicInfo?.dateOfBirth) formData.append('dateOfBirth', basicInfo.dateOfBirth);
+      if (basicInfo?.gender) formData.append('gender', basicInfo.gender);
+      formData.append('handle', handle);
+
+      // [ĐÃ SỬA]: URL chuẩn là /users/me và đính kèm header Content-Type
+      await http.put('/users/me', formData, {
         headers: {
-          Authorization: `Bearer ${tempToken.accessToken}`
+          Authorization: `Bearer ${tempToken.accessToken}`,
+          'Content-Type': 'multipart/form-data'
         }
       });
 

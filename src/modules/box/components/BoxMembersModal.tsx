@@ -66,39 +66,39 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
         try {
             setInvitedIds(prev => new Set(prev).add(friendId));
             await boxService.inviteMember(boxId, friendId); 
-            toast.success("Đã gửi lời mời tham gia Không gian!");
+            toast.success("Invitation sent!");
         } catch (err: any) {
             setInvitedIds(prev => {
                 const next = new Set(prev);
                 next.delete(friendId);
                 return next;
             });
-            toast.error(err?.response?.data?.message || "Không thể gửi lời mời.");
+            toast.error(err?.response?.data?.message || "Failed to send invitation.");
         }
     };
 
     const handleRemoveMember = async (userIdToRemove: string) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xóa người này khỏi Không gian?")) return;
+        if (!window.confirm("Are you sure you want to remove this member from the Box?")) return;
         try {
             await boxService.removeMember(boxId, userIdToRemove);
             await fetchData();
             onMemberChange();
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Lỗi khi xóa thành viên.");
+            toast.error(err?.response?.data?.message || "Failed to remove member.");
         }
     };
 
     // [THÊM MỚI] Hàm chuyển quyền sở hữu
     const handleTransferOwnership = async (newOwnerId: string, newOwnerName: string) => {
-        if (!window.confirm(`Bạn có chắc chắn muốn chuyển quyền Chủ phòng cho ${newOwnerName}? Bạn sẽ trở thành thành viên thường.`)) return;
+        if (!window.confirm(`Are you sure you want to transfer ownership to ${newOwnerName}? You will become a regular member.`)) return;
         
         try {
             await boxService.transferOwnership(boxId, newOwnerId);
-            toast.success(`Đã chuyển quyền cho ${newOwnerName}`);
+            toast.success(`Ownership transferred to ${newOwnerName}`);
             onClose(); // Đóng modal
             onMemberChange(); // Reload trang cha để cập nhật giao diện
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Lỗi khi chuyển quyền.");
+            toast.error(err?.response?.data?.message || "Failed to transfer ownership.");
         }
     };
 
@@ -114,7 +114,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
 
             <div className="bg-[#18181b] w-full max-w-md rounded-3xl border border-white/10 shadow-2xl flex flex-col h-[600px] max-h-[85vh] overflow-hidden">
                 <div className="p-5 border-b border-white/5 flex justify-between items-center shrink-0">
-                    <h2 className="text-lg font-bold text-white">Quản lý thành viên</h2>
+                    <h2 className="text-lg font-bold text-white">Manage Members</h2>
                     <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors p-1 bg-white/5 hover:bg-white/10 rounded-full"><X size={20} /></button>
                 </div>
 
@@ -124,7 +124,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                             <Search className="absolute left-3.5 top-3 text-zinc-500" size={18} />
                             <input 
                                 type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Tìm kiếm bạn bè để mời..."
+                                placeholder="Search friends to invite..."
                                 className="w-full bg-zinc-900 border border-white/5 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-500"
                             />
                         </div>
@@ -140,7 +140,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                             {/* KHỐI GỢI Ý MỜI (Giữ nguyên code cũ) */}
                             {isOwner && filteredFriends.length > 0 && (
                                 <div>
-                                    <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-3 block px-2">{searchQuery ? 'Kết quả tìm kiếm' : 'Gợi ý bạn bè'}</label>
+                                    <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-3 block px-2">{searchQuery ? 'Search results' : 'Suggested friends'}</label>
                                     <div className="space-y-1">
                                         {filteredFriends.map((friend) => {
                                             const isInvited = invitedIds.has(friend.id);
@@ -153,7 +153,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                                                         <div className="flex flex-col"><span className="text-sm font-bold text-white">{friend.fullname}</span><span className="text-[11px] text-zinc-500">@{friend.handle}</span></div>
                                                     </div>
                                                     <button onClick={() => handleInvite(friend.id)} disabled={isInvited} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${isInvited ? 'bg-zinc-800 text-zinc-400' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}>
-                                                        {isInvited ? <><Check size={14} /> Đã gửi</> : 'Mời'}
+                                                        {isInvited ? <><Check size={14} /> Sent</> : 'Invite'}
                                                     </button>
                                                 </div>
                                             );
@@ -166,7 +166,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
 
                             {/* KHỐI THÀNH VIÊN HIỆN TẠI (Đã thêm nút Transfer Ownership) */}
                             <div>
-                                <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-3 block px-2">Thành viên trong Không gian ({members.length})</label>
+                                <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-3 block px-2">Box Members ({members.length})</label>
                                 <div className="space-y-1">
                                     {members.map((member) => (
                                         <div key={member.userId} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 transition-colors group">
@@ -179,7 +179,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                                                         <span className="text-sm font-bold text-white truncate">{member.fullname}</span>
                                                         {member.role === 'ADMIN' && <Shield size={12} className="text-yellow-500 shrink-0" />}
                                                     </div>
-                                                    <span className="text-[11px] text-zinc-500">{member.userId === user?.id ? 'Là bạn' : 'Đã tham gia'}</span>
+                                                    <span className="text-[11px] text-zinc-500">{member.userId === user?.id ? 'You' : 'Joined'}</span>
                                                 </div>
                                             </div>
 
@@ -190,7 +190,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                                                     <button 
                                                         onClick={() => handleTransferOwnership(member.userId, member.fullname)}
                                                         className="p-2 text-zinc-600 hover:text-yellow-500 hover:bg-yellow-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Chuyển quyền chủ phòng"
+                                                        title="Transfer Ownership"
                                                     >
                                                         <Crown size={16} />
                                                     </button>
@@ -201,7 +201,7 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                                                     <button 
                                                         onClick={() => handleRemoveMember(member.userId)}
                                                         className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Xóa khỏi Không gian"
+                                                        title="Remove from Box"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>

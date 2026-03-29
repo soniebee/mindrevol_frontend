@@ -3,7 +3,6 @@ import { checkinService } from '@/modules/checkin/services/checkin.service';
 import { journeyService } from '@/modules/journey/services/journey.service'; 
 import { UserActiveJourneyResponse } from '@/modules/journey/types'; 
 import imageCompression from 'browser-image-compression';
-import { Emotion } from '@/modules/checkin/types';
 import { trackEvent } from '@/lib/analytics';
 import { toast } from 'react-hot-toast'; 
 import exifr from 'exifr'; 
@@ -22,15 +21,9 @@ const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<File | n
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
-
   canvas.width = pixelCrop.width;
   canvas.height = pixelCrop.height;
-
-  ctx.drawImage(
-    image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
-    0, 0, pixelCrop.width, pixelCrop.height
-  );
-
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
   return new Promise((resolve) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(new File([blob], 'cropped_image.jpg', { type: 'image/jpeg' }));
@@ -43,21 +36,20 @@ export enum UIActivityType {
   LEARNING = 'LEARNING', WORKING = 'WORKING', EXERCISING = 'EXERCISING',
   CHILLING = 'CHILLING', EATING = 'EATING', DATING = 'DATING',
   GAMING = 'GAMING', TRAVELING = 'TRAVELING', READING = 'READING',
-  CREATING = 'CREATING', CUSTOM = 'CUSTOM'
+  CREATING = 'CREATING', CUSTOM = 'CUSTOM', DEFAULT = 'DEFAULT'
 }
 
 export const ACTIVITY_PRESETS = [
-  { type: UIActivityType.LEARNING, label: 'Học bài', emoji: '📚', color: 'bg-blue-600' },
-  { type: UIActivityType.WORKING, label: 'Làm việc', emoji: '💼', color: 'bg-slate-600' },
-  { type: UIActivityType.EXERCISING, label: 'Tập gym', emoji: '💪', color: 'bg-orange-600' },
-  { type: UIActivityType.CHILLING, label: 'Chill', emoji: '🌿', color: 'bg-emerald-600' },
-  { type: UIActivityType.EATING, label: 'Ăn uống', emoji: '🍜', color: 'bg-yellow-600' },
-  { type: UIActivityType.DATING, label: 'Hẹn hò', emoji: '💕', color: 'bg-pink-600' },
-  { type: UIActivityType.GAMING, label: 'Game', emoji: '🎮', color: 'bg-purple-600' },
-  { type: UIActivityType.TRAVELING, label: 'Du lịch', emoji: '✈️', color: 'bg-sky-500' },
+  { type: UIActivityType.DEFAULT, label: 'Bỏ chọn', emoji: '✖️' },
+  { type: UIActivityType.LEARNING, label: 'Học bài', emoji: '📚' },
+  { type: UIActivityType.WORKING, label: 'Làm việc', emoji: '💼' },
+  { type: UIActivityType.EXERCISING, label: 'Tập gym', emoji: '💪' },
+  { type: UIActivityType.CHILLING, label: 'Chill', emoji: '🌿' },
+  { type: UIActivityType.EATING, label: 'Ăn uống', emoji: '🍜' },
+  { type: UIActivityType.DATING, label: 'Hẹn hò', emoji: '💕' },
+  { type: UIActivityType.GAMING, label: 'Game', emoji: '🎮' },
+  { type: UIActivityType.TRAVELING, label: 'Du lịch', emoji: '✈️' },
 ];
-
-const mapEmojiToEmotion = (emoji: string): Emotion => "NORMAL";
 
 interface UseCheckinModalProps {
   file: File | null;
@@ -70,13 +62,11 @@ const fetchLocationName = async (lat: number, lng: number): Promise<string> => {
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`);
         const data = await response.json();
-        
         if (data.address) {
             const addr = data.address;
             const landmark = addr.amenity || addr.tourism || addr.historic || addr.leisure || addr.building || data.name;
             const localArea = addr.road || addr.suburb || addr.town || addr.village;
             const city = addr.city || addr.state || addr.province;
-
             if (landmark && city) return `${landmark}, ${city}`;
             if (landmark) return landmark;
             if (localArea && city) return `${localArea}, ${city}`;
@@ -91,9 +81,8 @@ const fetchLocationName = async (lat: number, lng: number): Promise<string> => {
 export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseCheckinModalProps) => {
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
-  const [selectedActivity, setSelectedActivity] = useState(ACTIVITY_PRESETS[0]);
+  const [selectedActivity, setSelectedActivity] = useState(ACTIVITY_PRESETS[0]); 
   const [customContext, setCustomContext] = useState('');
-  const [moodEmoji, setMoodEmoji] = useState('✨');
 
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -105,10 +94,14 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
   const [isVideo, setIsVideo] = useState(false);
   
+  // [THÊM MỚI] States cho Timeline cắt Video
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [startTime, setStartTime] = useState(0);
+  
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiTarget, setEmojiTarget] = useState<'caption' | 'activity'>('caption');
 
   const [activeJourneys, setActiveJourneys] = useState<UserActiveJourneyResponse[]>([]);
   const [selectedJourneyId, setSelectedJourneyId] = useState<string>(journeyId);
@@ -129,9 +122,7 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
         const journeys = await journeyService.getUserActiveJourneys('me');
         setActiveJourneys(journeys);
         if (!selectedJourneyId && journeys.length > 0) setSelectedJourneyId(journeys[0].id);
-      } catch (error) {
-        console.error("Lỗi tải danh sách hành trình:", error);
-      }
+      } catch (error) {}
     };
     fetchJourneys();
   }, []);
@@ -140,11 +131,17 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     if (file) {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      
       const isVideoFile = file.type.startsWith('video/');
       setIsVideo(isVideoFile);
 
-      if (!isVideoFile) {
+      if (isVideoFile) {
+          // [THÊM MỚI] Lấy độ dài (duration) của video để làm thanh trượt
+          const videoElement = document.createElement('video');
+          videoElement.src = url;
+          videoElement.onloadedmetadata = () => {
+              setVideoDuration(videoElement.duration);
+          };
+      } else {
           const extractExifLocation = async () => {
               setIsLocating(true);
               try {
@@ -156,11 +153,8 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
                       setLocation(locName);
                       toast.success("Đã tìm thấy vị trí gốc của ảnh!");
                   }
-              } catch (error) {
-                  // Ignore
-              } finally {
-                  setIsLocating(false);
-              }
+              } catch (error) {} 
+              finally { setIsLocating(false); }
           };
           extractExifLocation();
       }
@@ -185,13 +179,9 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
   const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
       setLocation(val);
-
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
       if (!val.trim()) {
-          setLocationSuggestions([]);
-          setLatitude(null);
-          setLongitude(null);
-          return;
+          setLocationSuggestions([]); setLatitude(null); setLongitude(null); return;
       }
       searchTimeoutRef.current = setTimeout(async () => {
           setIsSearchingLocation(true);
@@ -199,11 +189,8 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
               const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(val)}&limit=5&accept-language=vi`);
               const data = await res.json();
               setLocationSuggestions(data);
-          } catch (error) {
-              console.error("Lỗi tìm kiếm địa điểm", error);
-          } finally {
-              setIsSearchingLocation(false);
-          }
+          } catch (error) {} 
+          finally { setIsSearchingLocation(false); }
       }, 500);
   };
 
@@ -216,28 +203,27 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
   };
 
   const handleAutoLocate = () => {
-    if (!navigator.geolocation) {
-        toast.error("Trình duyệt không hỗ trợ định vị");
-        return;
-    }
+    if (!navigator.geolocation) { toast.error("Trình duyệt không hỗ trợ"); return; }
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
         async (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            setLatitude(lat);
-            setLongitude(lng);
+            const lat = position.coords.latitude; const lng = position.coords.longitude;
+            setLatitude(lat); setLongitude(lng);
             const locName = await fetchLocationName(lat, lng);
-            setLocation(locName);
-            toast.success("Đã lấy vị trí hiện tại!");
-            setIsLocating(false);
+            setLocation(locName); toast.success("Đã lấy vị trí hiện tại!"); setIsLocating(false);
         },
-        (error) => {
-            setIsLocating(false);
-            toast.error("Không thể lấy vị trí hiện tại.");
-        },
+        () => { setIsLocating(false); toast.error("Không thể lấy vị trí"); },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  const handleEmojiSelect = (emojiObj: any) => {
+      if (emojiTarget === 'caption') {
+          setCaption(prev => prev + emojiObj.emoji);
+      } else {
+          setCustomContext(prev => prev + emojiObj.emoji);
+      }
+      setShowEmojiPicker(false);
   };
 
   const handleSubmit = async () => {
@@ -246,7 +232,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     
     try {
       setIsSubmitting(true);
-      
       let fileToUpload = file;
       
       if (!isVideo) {
@@ -254,36 +239,43 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
               const croppedImage = await getCroppedImg(previewUrl, croppedAreaPixels);
               if (croppedImage) fileToUpload = croppedImage;
           }
-
           const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, fileType: 'image/jpeg' };
           if (fileToUpload.size > 1024 * 1024) {
-            try { fileToUpload = await imageCompression(fileToUpload, options); } catch (e) { console.warn(e); }
+            try { fileToUpload = await imageCompression(fileToUpload, options); } catch (e) {}
           }
       }
 
       const isCustom = !!customContext;
+      let finalActivityName = null;
+      if (isCustom) finalActivityName = customContext;
+      else if (selectedActivity.type !== UIActivityType.DEFAULT) {
+          finalActivityName = `${selectedActivity.emoji} ${selectedActivity.label}`;
+      }
+
       const payload: any = {
         file: fileToUpload,
         journeyId: selectedJourneyId, 
         caption, locationName: location,
-        emotion: mapEmojiToEmotion(moodEmoji),
         activityType: isCustom ? UIActivityType.CUSTOM : selectedActivity.type,
-        activityName: isCustom ? customContext : selectedActivity.label,
+        activityName: finalActivityName,
         statusRequest: 'NORMAL'
       };
 
+      // Gửi kèm tham số Cắt Video (để Backend/ImageKit xử lý cắt nếu cần)
+      if (isVideo) {
+          payload.videoStartTime = startTime;
+          payload.videoDuration = 3; // Mặc định live photo 3 giây
+      }
+
       if (latitude !== null && longitude !== null) {
-          payload.latitude = latitude;
-          payload.longitude = longitude;
+          payload.latitude = latitude; payload.longitude = longitude;
       }
 
       await checkinService.createCheckin(payload);
-      
       trackEvent('checkin_completed', { journey_id: selectedJourneyId, is_video: isVideo });
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error(error);
       toast.error(error.response?.data?.message || "Lỗi khi đăng bài");
     } finally {
       setIsSubmitting(false);
@@ -292,14 +284,14 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   return {
     caption, setCaption, location, setLocation, selectedActivity, setSelectedActivity,
-    customContext, setCustomContext, moodEmoji, setMoodEmoji, previewUrl, isSubmitting,
-    showEmojiPicker, setShowEmojiPicker, pickerRef, handleSubmit,
-    crop, setCrop, zoom, setZoom, aspect, setAspect, onCropComplete,
+    customContext, setCustomContext, previewUrl, isSubmitting,
+    showEmojiPicker, setShowEmojiPicker, pickerRef, emojiTarget, setEmojiTarget, handleEmojiSelect,
+    handleSubmit, crop, setCrop, zoom, setZoom, aspect, setAspect, onCropComplete,
     activeJourneys, selectedJourneyId, setSelectedJourneyId, 
     isJourneyDropdownOpen, setIsJourneyDropdownOpen, journeyDropdownRef,
-    latitude, isLocating, handleAutoLocate,
-    locationSearch: location, handleLocationInputChange, locationSuggestions, 
-    isSearchingLocation, handleSelectSuggestion, locationContainerRef,
-    isVideo
+    latitude, isLocating, handleAutoLocate, locationSearch: location, 
+    handleLocationInputChange, locationSuggestions, isSearchingLocation, handleSelectSuggestion, locationContainerRef,
+    isVideo,
+    videoDuration, startTime, setStartTime // Trả ra thêm 3 biến này
   };
 };

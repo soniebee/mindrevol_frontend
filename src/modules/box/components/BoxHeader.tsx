@@ -1,9 +1,9 @@
 import React from 'react';
 import { MessageCircle, MoreVertical, Edit, Archive, Trash2, Users } from 'lucide-react';
-import { BoxResponse } from '../types';
+import { BoxDetailResponse } from '../types';
 
 interface BoxHeaderProps {
-    box: BoxResponse;
+    box: BoxDetailResponse;// <-- Trả về lại BoxResponse
     isOwner: boolean;
     navigate: (path: string) => void;
     menuRef: React.RefObject<HTMLDivElement | null>;
@@ -67,14 +67,14 @@ export const BoxHeader: React.FC<BoxHeaderProps> = ({
                         {isMenuOpen && (
                             <div className="absolute top-12 right-0 w-48 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[20px] shadow-xl overflow-hidden animate-in fade-in zoom-in-95 z-50 p-1.5">
                                 <button onClick={() => { setIsUpdateBoxModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-3 transition-colors">
-                                    <Edit size={16} /> Chỉnh sửa
+                                    <Edit size={16} /> Edit
                                 </button>
                                 <button onClick={handleArchiveBox} className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-3 transition-colors">
-                                    <Archive size={16} /> Lưu trữ
+                                    <Archive size={16} /> Archive
                                 </button>
                                 <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1 mx-2" />
                                 <button onClick={handleDisbandBox} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl flex items-center gap-3 transition-colors">
-                                    <Trash2 size={16} /> Giải tán
+                                    <Trash2 size={16} /> Disband
                                 </button>
                             </div>
                         )}

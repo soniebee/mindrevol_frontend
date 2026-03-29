@@ -1,3 +1,4 @@
+//src/components/ConversationList
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,7 +70,7 @@ export const ConversationList = () => {
       await openChat(item.conversationId); 
     } else {
       try {
-        const newConv = await chatService.getOrCreateConversation(item.userId);
+const newConv = await chatService.getOrCreateConversation(item.userId);
         if (newConv?.id) { await fetchConversations(); await openChat(newConv.id); }
       } catch (error) { console.error(error); }
     }
@@ -117,7 +118,7 @@ export const ConversationList = () => {
                   isActive ? "bg-zinc-100 dark:bg-zinc-800" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:scale-95"
                 )}
               >
-                <div className="relative shrink-0">
+<div className="relative shrink-0">
                   {item.isGroup ? (
                       <div className={cn(
                         "w-14 h-14 rounded-2xl flex items-center justify-center border-[3px] bg-zinc-100 dark:bg-zinc-800 overflow-hidden transition-all",
@@ -145,7 +146,7 @@ export const ConversationList = () => {
                   <div className="flex items-center justify-between mt-0.5">
                       <p className={cn("truncate text-[14px] max-w-[200px] transition-colors", isUnread ? "text-black dark:text-white font-semibold" : "text-zinc-500 dark:text-zinc-400 font-medium")} style={{ fontFamily: isUnread ? '"Jua", sans-serif' : 'inherit' }}>{messagePreview}</p>
                       {isUnread && <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0 ml-2"><span className="text-[10px] font-bold text-white">{item.unreadCount > 9 ? '9+' : item.unreadCount}</span></div>}
-                  </div>
+</div>
                 </div>
               </button>
             );

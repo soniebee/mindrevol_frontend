@@ -12,13 +12,15 @@ export interface UserProfile {
   fullname: string;
   avatarUrl: string;
   bio: string;
-  coverUrl?: string; // Nếu có
+  coverUrl?: string;
   
   // Stats
   friendCount: number;
   journeyCount?: number;
+  currentStreak?: number; // <--- THÊM DÒNG NÀY
+  createdAt?: string;      // <--- Lấy mốc thời gian bắt đầu
+  totalCheckins?: number;  // <--- Tổng số bài đã đăng
 
-  // New fields for Public Profile logic
   friendshipStatus: FriendshipStatus;
   isBlockedByMe: boolean;
   isBlockedByThem: boolean;

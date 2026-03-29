@@ -1,4 +1,20 @@
 import { useState, useEffect } from 'react';
+import { resolveNotificationCategory } from '../constants';
+// Lấy trạng thái bật/tắt từng danh mục từ localStorage
+type CategorySettings = Record<'COMMENT' | 'REACTION' | 'MESSAGE' | 'JOURNEY' | 'FRIEND', boolean>;
+const getCategorySettingsFromStorage = (): CategorySettings => {
+  try {
+    const raw = localStorage.getItem('notification_category_settings');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {
+    COMMENT: true,
+    REACTION: true,
+    MESSAGE: true,
+    JOURNEY: true,
+    FRIEND: true,
+  };
+};
 import { notificationService, NotificationResponse } from '../services/notification.service';
 import { boxService } from '@/modules/box/services/box.service';
 import { journeyService } from '@/modules/journey/services/journey.service';
@@ -192,7 +208,21 @@ export const useNotifications = (isOpen: boolean) => {
         }
     };
 
-    const filteredNotifications = filter === 'ALL' ? notifications : notifications.filter(n => !n.isRead);
+    // Lọc theo settings
+    const categorySettings = getCategorySettingsFromStorage();
+    let filteredNotifications = notifications;
+    // Lọc theo trạng thái bật/tắt danh mục
+    filteredNotifications = filteredNotifications.filter(noti => {
+      const cat = resolveNotificationCategory(noti.type);
+      if (cat === 'OTHER') return true;
+      return categorySettings[cat];
+    });
+    // Lọc unread nếu cần
+    if (filter === 'UNREAD') {
+      filteredNotifications = filteredNotifications.filter(n => !n.isRead);
+    }
+    // Sort mới nhất lên trên
+    filteredNotifications = filteredNotifications.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return {
         notifications: filteredNotifications,

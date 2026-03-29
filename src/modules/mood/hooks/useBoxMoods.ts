@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { moodService } from '../services/mood.service';
+// Bây giờ nó sẽ tìm thấy moodService từ file bên trên!
+import { moodService } from '../services/mood.service'; 
 import { MoodResponse, MoodRequest } from '../types';
 import { toast } from 'react-hot-toast';
+import { chatService } from '@/modules/chat/services/chat.service'; 
 
 export const useBoxMoods = (boxId: string | undefined, currentUserId: string | undefined) => {
     const [moods, setMoods] = useState<MoodResponse[]>([]);
@@ -14,7 +16,7 @@ export const useBoxMoods = (boxId: string | undefined, currentUserId: string | u
             const data = await moodService.getActiveMoods(boxId);
             setMoods(data);
         } catch (error) {
-            console.error('Lỗi tải Moods:', error);
+            console.error('Failed to load moods:', error);
         } finally {
             setIsLoading(false);
         }
@@ -22,17 +24,33 @@ export const useBoxMoods = (boxId: string | undefined, currentUserId: string | u
 
     useEffect(() => {
         fetchMoods();
-        // Có thể setup setInterval ở đây để tự động fetch lại sau mỗi X phút nếu muốn
     }, [fetchMoods]);
 
     const handleSetMood = async (data: MoodRequest) => {
         if (!boxId) return;
         try {
             await moodService.setMood(boxId, data);
-            toast.success('Đã cập nhật trạng thái!');
-            fetchMoods(); // Reload danh sách
+            toast.success('Status updated!');
+            fetchMoods(); 
+
+            try {
+                const conv = await chatService.getBoxConversation(boxId);
+                if (conv && conv.id) {
+                    const moodContent = data.message ? `${data.icon} ${data.message}` : `${data.icon}`;
+                    await chatService.sendMessage({
+                        conversationId: conv.id,
+                        receiverId: conv.id, 
+                        content: `Just updated status: ${moodContent}`,
+                        type: 'TEXT' as any,
+                        clientSideId: Date.now().toString()
+                    } as any);
+                }
+            } catch (chatError) {
+                console.error("Error sending automated mood message to box:", chatError);
+            }
+
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi đăng trạng thái');
+            toast.error(error.response?.data?.message || 'Failed to update status');
             throw error;
         }
     };
@@ -41,19 +59,20 @@ export const useBoxMoods = (boxId: string | undefined, currentUserId: string | u
         if (!boxId) return;
         try {
             await moodService.deleteMood(boxId);
-            toast.success('Đã gỡ trạng thái!');
+            toast.success('Status removed!');
             setMoods(prev => prev.filter(m => m.userId !== currentUserId));
         } catch (error: any) {
-            toast.error('Lỗi khi gỡ trạng thái');
+            toast.error('Failed to remove status');
         }
     };
 
     const handleReact = async (moodId: string, emoji: string) => {
+        if (!boxId) return;
         try {
-            await moodService.reactToMood(moodId, emoji);
-            fetchMoods(); // Tạm thời reload lại list để lấy reaction mới (tối ưu hơn là update state local)
+            await moodService.reactToMood(boxId, moodId, emoji);
+            fetchMoods(); 
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi thả cảm xúc');
+            toast.error(error.response?.data?.message || 'Failed to react');
         }
     };
 

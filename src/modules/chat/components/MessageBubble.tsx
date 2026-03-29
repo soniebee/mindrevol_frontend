@@ -11,6 +11,22 @@ interface Props {
   avatarUrl?: string;
 }
 
+// --- HÀM HELPER: NHUỘM MÀU @MENTION ---
+const renderContentWithMentions = (content: string) => {
+  if (!content) return "";
+  const parts = content.split(/(@\w+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('@')) {
+      return (
+        <span key={index} className="text-lime-600 dark:text-lime-400 font-bold hover:underline cursor-pointer decoration-2 underline-offset-4">
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+};
+
 // 1. Tách Component hiển thị Avatar
 const ChatAvatar = ({ show, url, isMe }: { show: boolean, url?: string, isMe: boolean }) => {
   if (isMe) return null; 
@@ -85,19 +101,27 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
           {replyImage && <MessageImage src={replyImage} isMe={isMe} />}
           {isSharedPost && sharedPostId && <div onClick={() => setShowTime(!showTime)}><PostSharePreview postId={sharedPostId} isMe={isMe} /></div>}
           
-          {message.content && message.content.trim() !== "" && (
-               <div 
-                onClick={() => setShowTime(!showTime)} 
-                className={cn(
-                  "px-5 py-3 text-[17px] shadow-sm break-words leading-relaxed border transition-all duration-200 inline-block cursor-pointer active:scale-[0.98]",
-                  isMe 
-                    ? "bg-lime-100 text-blue-950 dark:bg-lime-900/50 dark:text-lime-50 rounded-[20px] rounded-br-[4px] border-transparent" 
-                    : "bg-yellow-50 text-blue-950 dark:bg-zinc-800 dark:text-zinc-100 rounded-[20px] rounded-bl-[4px] border-transparent" 
-                )}
-                style={{ fontFamily: '"Jua", sans-serif' }}
-               >
-                  {message.content}
+          {/* HIỂN THỊ GHI ÂM HOẶC TEXT */}
+          {message.type === 'VOICE' ? (
+               <div className="relative z-10 py-1">
+                  <audio controls src={message.content} className="max-w-[200px] sm:max-w-[250px] h-11 outline-none" />
                </div>
+          ) : (
+              message.content && message.content.trim() !== "" && (
+                   <div 
+                    onClick={() => setShowTime(!showTime)} 
+                    className={cn(
+                      "px-5 py-3 text-[17px] shadow-sm break-words leading-relaxed border transition-all duration-200 inline-block cursor-pointer active:scale-[0.98]",
+                      isMe 
+                        ? "bg-lime-100 text-blue-950 dark:bg-lime-900/50 dark:text-lime-50 rounded-[20px] rounded-br-[4px] border-transparent" 
+                        : "bg-yellow-50 text-blue-950 dark:bg-zinc-800 dark:text-zinc-100 rounded-[20px] rounded-bl-[4px] border-transparent" 
+                    )}
+                    style={{ fontFamily: '"Jua", sans-serif' }}
+                   >
+                      {/* SỬA TẠI ĐÂY: Dùng hàm helper để nhuộm màu mention */}
+                      {renderContentWithMentions(message.content)}
+                   </div>
+              )
           )}
         </div>
       </div>
