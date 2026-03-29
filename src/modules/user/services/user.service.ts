@@ -1,6 +1,12 @@
 import { http } from '@/lib/http';
 import { JourneyResponse } from '@/modules/journey/types'; 
 
+export interface CalendarRecap {
+  day: number;
+  imageUrl: string;
+  checkinId: string;
+}
+
 // 1. Interface đầy đủ cho Profile User
 export interface UserProfile {
   id: string;
@@ -15,8 +21,14 @@ export interface UserProfile {
   // Stats
   friendCount: number;
   journeyCount?: number;
+  
+  // --- THÊM 3 DÒNG NÀY VÀO ĐÂY ---
+  currentStreak?: number; 
+  createdAt?: string;      
+  totalCheckins?: number;  
+  // ------------------------------
 
-  // Trạng thái quan hệ (Dùng cho UI xem profile người khác)
+  // Trạng thái quan hệ
   friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'DECLINED';
   isBlockedByMe?: boolean;
   isBlockedByThem?: boolean;
@@ -58,7 +70,6 @@ export interface UpdateProfileData {
   avatar?: File; 
 }
 
-// [MỚI] Interface cho request đổi pass qua OTP
 export interface UpdatePasswordOtpRequest {
   otp: string;
   newPassword: string;
@@ -66,13 +77,11 @@ export interface UpdatePasswordOtpRequest {
 
 class UserService {
   
-  // --- USER PROFILE ---
   async getMyProfile(): Promise<UserProfile> {
     const response = await http.get<{ data: UserProfile }>('/users/me');
     return response.data.data;
   }
 
-  // Lấy profile người khác theo ID
   async getUserProfile(userId: string): Promise<UserProfile> {
     const response = await http.get<{ data: UserProfile }>(`/users/${userId}/profile`);
     return response.data.data;
@@ -91,7 +100,6 @@ class UserService {
     return response.data.data;
   }
 
-  // --- PROFILE UPDATE ---
   async updateProfile(data: UpdateProfileData): Promise<UserProfile> {
     const formData = new FormData();
     if (data.fullname) formData.append('fullname', data.fullname);
@@ -107,30 +115,22 @@ class UserService {
     return response.data.data;
   }
 
-  // --- SECURITY (OTP FLOW) ---
-  
-  // [MỚI] Gửi OTP xác thực (dùng chung cho việc đặt/đổi mật khẩu)
   async sendOtp(email: string): Promise<void> {
-    // Tận dụng API gửi OTP login của Auth Controller
     await http.post('/auth/otp/send', { email });
   }
 
-  // [MỚI] Cập nhật mật khẩu bằng OTP
   async updatePasswordWithOtp(data: UpdatePasswordOtpRequest): Promise<void> {
     await http.post('/auth/update-password-otp', data);
   }
 
-  // [QUAN TRỌNG] Hàm chặn người dùng (để ChatHeader gọi)
   async blockUser(targetUserId: string): Promise<void> {
     await http.post(`/users/blocks/${targetUserId}`);
   }
 
-  // Hàm bỏ chặn
   async unblockUser(targetUserId: string): Promise<void> {
     await http.delete(`/users/blocks/${targetUserId}`);
   }
 
-  // --- SETTINGS API ---
   async getNotificationSettings(): Promise<NotificationSettings> {
     const response = await http.get<{ data: NotificationSettings }>('/users/settings/notifications');
     return response.data.data;
@@ -141,7 +141,6 @@ class UserService {
     return response.data.data;
   }
 
-  // --- SOCIAL ACCOUNTS ---
   async getLinkedAccounts(): Promise<LinkedAccount[]> {
     const response = await http.get<{ data: LinkedAccount[] }>('/users/me/social-accounts');
     return response.data.data;
@@ -151,7 +150,6 @@ class UserService {
     await http.delete(`/users/me/social-accounts/${provider}`);
   }
 
-  // --- SYSTEM / FEEDBACK ---
   async getSystemConfigs(): Promise<Record<string, string>> {
     const response = await http.get<{ data: Record<string, string> }>('/system/configs');
     return response.data.data;
@@ -166,8 +164,14 @@ class UserService {
   }
 
   async updateFcmToken(token: string): Promise<void> {
-    // Gọi API PATCH /api/v1/users/fcm-token như Backend yêu cầu
     await http.patch('/users/fcm-token', { token });
+  }
+
+  async getUserCalendar(userId: string, year: number, month: number): Promise<CalendarRecap[]> {
+    const res = await http.get<{ data: CalendarRecap[] }>(`/users/${userId}/calendar`, {
+      params: { year, month }
+    });
+    return res.data.data;
   }
 }
 

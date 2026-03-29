@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/store/AuthContext'; 
@@ -16,9 +15,10 @@ import Privacy from '@/pages/Privacy';
 
 import BoxListPage from '@/modules/box/pages/BoxListPage';
 import BoxDetailPage from '@/modules/box/pages/BoxDetailPage';
-
-// [THÊM MỚI] Import MapPage
 import { MapPage } from '@/modules/map/pages/MapPage';
+
+// [THÊM MỚI] Import Trang Lịch Ký Ức (Memory Timeline)
+import MemoryTimelinePage from '@/modules/user/pages/MemoryTimelinePage';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -76,9 +76,13 @@ function App() {
         isAuthenticated ? <BoxDetailPage /> : <Navigate to="/" replace />
       } />
 
-      {/* [THÊM MỚI] Route cho module Bản đồ (Map) */}
       <Route path="/map" element={
         isAuthenticated ? <MapPage /> : <Navigate to="/" replace />
+      } />
+
+      {/* [THÊM MỚI] Route cho module Chuỗi Lịch Ký Ức */}
+      <Route path="/streak" element={
+        isAuthenticated ? <MemoryTimelinePage /> : <Navigate to="/" replace />
       } />
 
       {/* Fallback route: Nếu không khớp route nào thì về trang chủ */}

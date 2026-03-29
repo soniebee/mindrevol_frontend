@@ -1,3 +1,4 @@
+//src/hooks/useChat
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
@@ -8,6 +9,7 @@ import { useChatSocket } from './useChatSocket';
 import { Message } from '../types';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { http } from '@/lib/http'; // <-- ĐÃ THÊM DÒNG NÀY ĐỂ FIX LỖI BÁO ĐỎ CHỮ http
 
 export const useChat = (conversationId: any, partnerId: any) => {
   const { user } = useAuth();
@@ -41,7 +43,6 @@ export const useChat = (conversationId: any, partnerId: any) => {
 
       setIsLoading(true);
       try {
-        // [ĐÃ SỬA] Gọi API bằng conversationId thay vì partnerId
         const data = await chatService.getMessages(conversationId);
         const sortedMessages = [...data].reverse();
         setMessages(conversationId, sortedMessages);
@@ -53,35 +54,41 @@ export const useChat = (conversationId: any, partnerId: any) => {
       }
     };
     fetchMessages();
-  }, [conversationId, setMessages]); // Bỏ partnerId khỏi dependencies
+  }, [conversationId, setMessages]); 
 
-  const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' = 'TEXT') => {
+  const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' = 'TEXT', file?: File) => {
     if (!content.trim() && type === 'TEXT') return;
-    if (!currentUserId || !conversationId) return; 
+    if (!currentUserId || (!partnerId && !conversationId)) return;
+
+    let finalContent = content;
+
+    // UPLOAD FILE GHI ÂM LÊN BACKEND TRƯỚC KHI GỬI SOCKET
+    if (file && type === 'VOICE') {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const uploadRes = await http.post('/files/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            finalContent = uploadRes.data.data; // Lấy link URL thật
+        } catch (error) {
+            toast.error("Không thể tải lên file ghi âm");
+            return; 
+        }
+    }
 
     const clientSideId = Date.now().toString(); 
     const optimisticMessage: Message = {
-      id: clientSideId, 
-      clientSideId: clientSideId,
-      conversationId: conversationId,
-      senderId: currentUserId,
-      content: content,
-      type: type as any, 
-      createdAt: new Date().toISOString(),
-    } as any;
+      id: clientSideId, clientSideId, conversationId, senderId: currentUserId,
+      content: finalContent, type: type as any, createdAt: new Date().toISOString(),
+    };
 
     addMessage(optimisticMessage);
 
     try {
-      await chatService.sendMessage({
-        conversationId: conversationId, // [THÊM MỚI] Gửi id cuộc trò chuyện xuống Backend
-        receiverId: partnerId || "",    // Vẫn gửi kèm dự phòng
-        content,
-        type,
-        clientSideId 
-      });
+      const realMessage = await chatService.sendMessage({ conversationId, receiverId: partnerId, content: finalContent, type, clientSideId });
+      updateMessageStatus(clientSideId, 'SENT', realMessage.id);
     } catch (err) {
-      console.error("Send message failed", err);
       updateMessageStatus(clientSideId, 'ERROR');
       toast.error("Gửi tin nhắn thất bại");
     }

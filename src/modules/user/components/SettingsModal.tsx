@@ -1,7 +1,6 @@
-// src/modules/user/components/SettingsModal.tsx
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Shield, FileText, LogOut, ChevronRight, Moon, Sun, Bell, ArrowLeft } from 'lucide-react'; 
+import { X, User, Shield, FileText, LogOut, ChevronRight, Moon, Sun, Bell, ArrowLeft, UserX } from 'lucide-react'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { EditProfileModal } from './EditProfileModal';
 import { SecurityModal } from './SecurityModal';
@@ -27,7 +26,6 @@ const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClo
       setLoading(true);
       userService.getNotificationSettings()
         .then(res => {
-          // FIX LỖI TS: Gán thẳng res vì API service đã trả về NotificationSettings
           setSettings(res); 
         })
         .catch(err => console.error("Lỗi lấy cài đặt thông báo", err))
@@ -109,7 +107,6 @@ const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClo
   );
 };
 
-// FIX LỖI SWITCH: Đổi prop onCheckedChange thành onChange
 const ToggleItem = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: (val: boolean) => void }) => (
   <div className="flex items-center justify-between">
     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</span>
@@ -129,6 +126,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [showNotifSettings, setShowNotifSettings] = useState(false);
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSendFeedback = async () => {
     if(!feedbackText.trim()) return;
@@ -139,6 +137,23 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setShowFeedbackInput(false);
     } catch (e) {
         alert("Có lỗi xảy ra, vui lòng thử lại sau.");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    // Xác nhận 2 bước để tránh bấm nhầm
+    if (!confirm("CẢNH BÁO: Hành động này sẽ XÓA VĨNH VIỄN tài khoản của bạn. Bạn có chắc chắn không?")) return;
+    if (!confirm("Dữ liệu sau khi xóa sẽ không thể khôi phục. Tiếp tục xóa tài khoản?")) return;
+
+    setIsDeleting(true);
+    try {
+      await userService.deleteAccount();
+      alert("Tài khoản của bạn đã được xóa thành công.");
+      logout(); // Xóa phiên đăng nhập nội bộ
+      onClose();
+    } catch (e) {
+      alert("Lỗi khi xóa tài khoản. Vui lòng thử lại sau.");
+      setIsDeleting(false);
     }
   };
 
@@ -185,6 +200,14 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 icon={<Bell className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />} 
                 label="Cài đặt Thông báo" 
                 onClick={() => setShowNotifSettings(true)} 
+              />
+              {/* [THÊM MỚI] Nút Xóa Tài Khoản */}
+              <MenuItem 
+                icon={<UserX className="w-5 h-5 text-red-500 dark:text-red-400" />} 
+                label={isDeleting ? "Đang xóa tài khoản..." : "Xóa tài khoản"} 
+                onClick={handleDeleteAccount} 
+                danger={true}
+                disabled={isDeleting}
               />
             </div>
           </div>
@@ -253,15 +276,16 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   );
 };
 
-const MenuItem = ({ icon, label, onClick, danger = false }: any) => (
+const MenuItem = ({ icon, label, onClick, danger = false, disabled = false }: any) => (
   <button 
     onClick={onClick}
-    className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl transition-colors group ${danger ? 'text-red-500 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-200'}`}
+    disabled={disabled}
+    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-colors group ${danger ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
   >
     <div className="flex items-center gap-3">
       {icon}
       <span className="font-medium text-sm">{label}</span>
     </div>
-    <ChevronRight className="w-4 h-4 text-zinc-400 dark:text-zinc-600 group-hover:text-zinc-600 dark:group-hover:text-zinc-400" />
+    <ChevronRight className={`w-4 h-4 ${danger ? 'text-red-300 dark:text-red-900/50' : 'text-zinc-400 dark:text-zinc-600'} group-hover:text-zinc-600 dark:group-hover:text-zinc-400`} />
   </button>
 );

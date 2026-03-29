@@ -1,3 +1,4 @@
+//src/store/useChatStore
 import { create } from 'zustand';
 import { Conversation, Message } from '../types';
 import { chatService } from '../services/chat.service';
@@ -67,36 +68,49 @@ export const useChatStore = create<ChatState>((set, get) => ({
     messages: { ...state.messages, [convId]: msgs }
   })),
 
-  addMessage: (msg) => set((state) => {
+  addMessage: (msg) => {
+    const state = get(); // Lấy state hiện tại
     const currentMsgs = state.messages[msg.conversationId] || [];
     
+    // Nếu tin nhắn đã tồn tại rồi thì bỏ qua (tránh duplicate)
     if (currentMsgs.some(m => (m.id === msg.id && msg.id) || (m.clientSideId === msg.clientSideId && msg.clientSideId))) {
-      return state;
+      return;
     }
-    const newMsgs = [...currentMsgs, msg];
 
     const convIndex = state.conversations.findIndex(c => String(c.id) === String(msg.conversationId));
-    let newConversations = [...state.conversations];
 
-    if (convIndex > -1) {
-      const updatedConv = { ...newConversations[convIndex] };
-      updatedConv.lastMessageContent = msg.type === 'IMAGE' ? '[Hình ảnh]' : msg.content;
-      updatedConv.lastMessageAt = new Date().toISOString(); 
-      updatedConv.lastSenderId = msg.senderId;
-      
-      if (String(state.activeConversationId) !== String(msg.conversationId)) {
-         updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
-      }
+    // NẾU CÓ NGƯỜI LẠ NHẮN (chưa có trong list), GỌI API FETCH LẠI LIST TỪ SERVER
+    if (convIndex === -1) {
+      state.fetchConversations();
+    }
 
-      newConversations.splice(convIndex, 1);
-      newConversations.unshift(updatedConv);
-    } 
+    // Cập nhật State
+    set((state) => {
+      const newMsgs = [...(state.messages[msg.conversationId] || []), msg];
+      let newConversations = [...state.conversations];
 
-    return { 
-      messages: { ...state.messages, [msg.conversationId]: newMsgs },
-      conversations: newConversations
-    };
-  }),
+      if (convIndex > -1) {
+        const updatedConv = { ...newConversations[convIndex] };
+        updatedConv.lastMessageContent = msg.type === 'IMAGE' ? '[Hình ảnh]' : msg.content;
+        updatedConv.lastMessageAt = new Date().toISOString(); 
+        updatedConv.lastSenderId = msg.senderId;
+        
+        // Nếu không phải đoạn chat đang mở thì tăng số tin nhắn chưa đọc
+        if (String(state.activeConversationId) !== String(msg.conversationId)) {
+           updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
+        }
+
+        // Đẩy lên đầu danh sách
+        newConversations.splice(convIndex, 1);
+        newConversations.unshift(updatedConv);
+      } 
+
+      return { 
+        messages: { ...state.messages, [msg.conversationId]: newMsgs },
+        conversations: newConversations
+      };
+    });
+  },
 
   markAsRead: (convId) => set((state) => {
     const newConvs = state.conversations.map(c => 

@@ -1,3 +1,4 @@
+//src/components/MobileConversation
 import React, { useEffect, useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';

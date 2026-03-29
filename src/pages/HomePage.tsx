@@ -14,16 +14,12 @@ const HomePage = () => {
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // 1. LOGIC TỰ ĐỘNG CHỌN HÀNH TRÌNH GẦN NHẤT TRÊN DESKTOP
   useEffect(() => {
     const initDesktopView = async () => {
-      // Chỉ tự động chọn nếu đang ở Desktop (width >= 768px) và chưa có journeyId
       if (window.innerWidth >= 768 && !searchParams.get('journeyId')) {
         try {
-          // Lấy danh sách hành trình đang hoạt động (Backend đã sort mới nhất lên đầu)
           const activeList = await journeyService.getUserActiveJourneys("me");
           if (activeList && activeList.length > 0) {
-            // Tự động set ID của hành trình đầu tiên vào URL
             setSearchParams({ journeyId: activeList[0].id }, { replace: true });
           }
         } catch (error) {
@@ -34,7 +30,6 @@ const HomePage = () => {
 
     initDesktopView();
 
-    // Nếu người dùng kéo giãn cửa sổ từ Mobile sang Desktop thì cũng tự động check
     const handleResize = () => {
       if (window.innerWidth >= 768 && !searchParams.get('journeyId')) {
         initDesktopView();
@@ -45,7 +40,6 @@ const HomePage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [searchParams, setSearchParams]);
 
-  // 2. LOGIC LẮNG NGHE SỰ THAY ĐỔI URL VÀ EVENT CHỌN HÀNH TRÌNH
   useEffect(() => {
     const journeyIdFromUrl = searchParams.get('journeyId');
     if (journeyIdFromUrl) setSelectedJourneyId(journeyIdFromUrl);
@@ -84,7 +78,8 @@ const HomePage = () => {
         {/* =================================================================
             1. GIAO DIỆN MOBILE
             ================================================================= */}
-        <div className="flex md:hidden flex-col w-full h-full pb-20">
+        {/* [ĐÃ SỬA] Đã loại bỏ class `pb-20` ở đây để loại bỏ khoảng hở lớn ở đáy màn hình */}
+        <div className="flex md:hidden flex-col w-full h-full">
             {!selectedJourneyId ? (
                 <div className="flex flex-col w-full h-full">
                     <div className="shrink-0 z-10 w-full">
@@ -117,7 +112,7 @@ const HomePage = () => {
                 <div className="w-full h-full relative">
                      <button 
                         onClick={handleBackToHome}
-                        className="absolute top-4 left-4 z-[60] bg-black/50 text-white px-4 py-2 rounded-full backdrop-blur-md text-sm font-bold active:scale-95"
+                        className="absolute top-4 left-4 z-40 bg-black/50 text-white px-4 py-2 rounded-full backdrop-blur-md text-sm font-bold active:scale-95"
                      >
                         ← Trở về
                      </button>

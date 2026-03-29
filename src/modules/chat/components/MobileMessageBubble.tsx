@@ -11,6 +11,22 @@ interface Props {
   avatarUrl?: string;
 }
 
+// Hàm render mention cho Mobile
+const renderContentWithMentions = (content: string) => {
+  if (!content) return "";
+  const parts = content.split(/(@\w+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('@')) {
+      return (
+        <span key={index} className="text-lime-600 font-bold">
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+};
+
 const ChatAvatar = ({ show, url, isMe }: { show: boolean, url?: string, isMe: boolean }) => {
   if (isMe) return null; 
   return (
@@ -48,19 +64,29 @@ export const MobileMessageBubble: React.FC<Props> = ({ message, isMe, showAvatar
       <div className={cn("flex gap-3 w-full items-end", isMe ? "justify-end" : "justify-start")}>
         <ChatAvatar show={showAvatar} url={avatarUrl} isMe={isMe} />
         <div className={cn("flex flex-col max-w-[85%] mb-4", isMe ? "items-end" : "items-start")}>
+          
           {isSharedPost && sharedPostId && <div onClick={() => setShowTime(!showTime)}><PostSharePreview postId={sharedPostId} isMe={isMe} /></div>}
-          {message.content && message.content.trim() !== "" && (
-               <div 
-                onClick={() => setShowTime(!showTime)} 
-                className={cn(
-                  "px-5 py-3 text-xl shadow-sm break-words leading-relaxed border transition-all duration-200 inline-block cursor-pointer active:scale-[0.98]",
-                  isMe ? "bg-lime-100 text-blue-950 rounded-[20px] rounded-br-[4px] border-transparent" : "bg-yellow-50 text-blue-950 rounded-[20px] rounded-bl-[4px] border-transparent" 
-                )}
-                style={{ fontFamily: '"Jua", sans-serif' }}
-               >
-                  {message.content}
-               </div>
+          
+          {message.type === 'VOICE' ? (
+              <div onClick={() => setShowTime(!showTime)} className={cn("p-2 shadow-sm break-words leading-relaxed border transition-all duration-200 inline-block cursor-pointer active:scale-[0.98]", isMe ? "bg-lime-100 rounded-[20px] rounded-br-[4px] border-transparent" : "bg-yellow-50 rounded-[20px] rounded-bl-[4px] border-transparent")}>
+                  <audio controls src={message.content} className="max-w-[200px] md:max-w-[250px] h-10 outline-none" />
+              </div>
+          ) : (
+              message.content && message.content.trim() !== "" && (
+                  <div 
+                   onClick={() => setShowTime(!showTime)} 
+                   className={cn(
+                     "px-5 py-3 text-xl shadow-sm break-words leading-relaxed border transition-all duration-200 inline-block cursor-pointer active:scale-[0.98]",
+                     isMe ? "bg-lime-100 text-blue-950 rounded-[20px] rounded-br-[4px] border-transparent" : "bg-yellow-50 text-blue-950 rounded-[20px] rounded-bl-[4px] border-transparent" 
+                   )}
+                   style={{ fontFamily: '"Jua", sans-serif' }}
+                  >
+                      {/* SỬA TẠI ĐÂY: Render mention highlight */}
+                      {renderContentWithMentions(message.content)}
+                  </div>
+              )
           )}
+
         </div>
       </div>
       <div className={cn("overflow-hidden transition-all duration-300 ease-in-out flex items-center", showTime ? "h-4 opacity-100 mb-1" : "h-0 opacity-0 mb-0", isMe ? "pr-2" : "pl-[52px]" )}>
