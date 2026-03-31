@@ -1,4 +1,3 @@
-//src/components/ChatList
 import React, { useState } from 'react';
 import { Search, Edit } from 'lucide-react';
 import { Conversation } from '../types';
@@ -8,18 +7,16 @@ import { vi } from 'date-fns/locale';
 
 interface ChatListProps {
   conversations: Conversation[];
-  // SỬA 1: Đổi number thành string để khớp với conv.id
   activeConvId: string | null; 
-  // SỬA 2: Hàm callback cũng phải nhận string
   onSelect: (convId: string) => void;
-  currentUserId: string; // Thêm prop này để so sánh lastSenderId chính xác
+  currentUserId: string; 
 }
 
 export const ChatList: React.FC<ChatListProps> = ({ 
   conversations, 
   activeConvId, 
   onSelect,
-  currentUserId // Nhận ID của user đang đăng nhập
+  currentUserId 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -28,7 +25,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full bg-black border-r border-white/10 w-full md:w-[350px]">
+    <div className="flex flex-col h-full bg-black border-r border-white/10 w-[350px]">
       {/* 1. Header & Search */}
       <div className="p-4 pb-2">
         <div className="flex justify-between items-center mb-4 px-2">
@@ -58,11 +55,9 @@ export const ChatList: React.FC<ChatListProps> = ({
           filteredConvs.map(conv => (
             <div 
               key={conv.id}
-              // conv.id là string, onSelect nhận string -> OK
               onClick={() => onSelect(conv.id)} 
               className={cn(
                 "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-white/5",
-                // So sánh string với string -> OK
                 activeConvId === conv.id ? "bg-white/10" : "" 
               )}
             >
@@ -90,7 +85,6 @@ export const ChatList: React.FC<ChatListProps> = ({
 
                 <div className="flex items-center justify-between gap-2">
                   <p className={cn("text-xs truncate", conv.unreadCount > 0 ? "text-white font-semibold" : "text-zinc-500")}>
-                    {/* SỬA 3: So sánh string với string (dùng currentUserId thay vì số 1) */}
                     {conv.lastSenderId === currentUserId && "Bạn: "} 
                     {conv.lastMessageContent || "Bắt đầu trò chuyện"} 
                   </p>

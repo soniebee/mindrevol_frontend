@@ -4,7 +4,8 @@ export enum MessageType {
   IMAGE = 'IMAGE',
   VIDEO = 'VIDEO',
   SYSTEM = 'SYSTEM',
-  VOICE = 'VOICE'
+  VOICE = 'VOICE',
+  FILE = 'FILE'
 }
 
 export interface UserSummary {
@@ -22,12 +23,13 @@ export interface Message {
   receiverId?: string;
   content: string;
   // <-- ĐÃ THÊM 'VOICE' VÀO ĐÂY ĐỂ BÊN MessageBubble HẾT LỖI
-  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'SYSTEM' | 'VOICE'; 
+  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'SYSTEM' | 'VOICE' | 'FILE';
   metadata?: any;
   createdAt: string;
   
   clientSideId?: string; 
-  status?: 'SENDING' | 'SENT' | 'ERROR'; 
+  status?: 'SENDING' | 'SENT' | 'ERROR' | 'SEEN';
+  replyToMsgId?: string;
 }
 
 export interface Conversation {
@@ -51,7 +53,8 @@ export interface SendMessageRequest {
   boxId?: string;
   content: string;
   // <-- ĐÃ THÊM 'VOICE' VÀ 'VIDEO' VÀO ĐÂY
-  type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE'; 
+  type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE';
   metadata?: any;
   clientSideId?: string;
+  replyToMsgId?: string;
 }

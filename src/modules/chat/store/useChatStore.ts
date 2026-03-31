@@ -8,7 +8,13 @@ interface ChatState {
   activeConversationId: string | null; 
   messages: Record<string, Message[]>; 
   isSidebarOpen: boolean;
+  replyingTo: Message | null;
+  setReplyingTo: (msg: Message | null) => void;
+  typingStatus: Record<string, boolean>;
 
+
+  prependMessages: (convId: string, msgs: Message[]) => void;
+  markConversationAsSeen: (convId: string) => void;
   fetchConversations: () => Promise<void>;
   setConversations: (list: Conversation[]) => void;
   openChat: (conversationId: string | null) => Promise<void>; 
@@ -19,7 +25,9 @@ interface ChatState {
   addMessage: (msg: Message) => void; 
   markAsRead: (convId: string) => void;
   
+  
   updateMessageStatus: (clientSideId: string, status: 'SENDING' | 'SENT' | 'ERROR', realId?: string) => void;
+  setTyping: (convId: string, isTyping: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -27,7 +35,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: null,
   messages: {},
   isSidebarOpen: true,
+  replyingTo: null,
+  typingStatus: {},
+  setReplyingTo: (msg) => set({ replyingTo: msg }),
 
+  setTyping: (convId, isTyping) => set((state) => ({ // [TYPING]
+    typingStatus: { ...state.typingStatus, [convId]: isTyping }
+  })),
   fetchConversations: async () => {
       try {
           const res = await chatService.getConversations();
@@ -69,48 +83,57 @@ export const useChatStore = create<ChatState>((set, get) => ({
   })),
 
   addMessage: (msg) => {
-    const state = get(); // Lấy state hiện tại
+    const state = get();
     const currentMsgs = state.messages[msg.conversationId] || [];
-    
-    // Nếu tin nhắn đã tồn tại rồi thì bỏ qua (tránh duplicate)
     if (currentMsgs.some(m => (m.id === msg.id && msg.id) || (m.clientSideId === msg.clientSideId && msg.clientSideId))) {
       return;
     }
-
     const convIndex = state.conversations.findIndex(c => String(c.id) === String(msg.conversationId));
-
-    // NẾU CÓ NGƯỜI LẠ NHẮN (chưa có trong list), GỌI API FETCH LẠI LIST TỪ SERVER
     if (convIndex === -1) {
       state.fetchConversations();
     }
-
-    // Cập nhật State
     set((state) => {
       const newMsgs = [...(state.messages[msg.conversationId] || []), msg];
       let newConversations = [...state.conversations];
-
       if (convIndex > -1) {
         const updatedConv = { ...newConversations[convIndex] };
         updatedConv.lastMessageContent = msg.type === 'IMAGE' ? '[Hình ảnh]' : msg.content;
         updatedConv.lastMessageAt = new Date().toISOString(); 
         updatedConv.lastSenderId = msg.senderId;
-        
-        // Nếu không phải đoạn chat đang mở thì tăng số tin nhắn chưa đọc
         if (String(state.activeConversationId) !== String(msg.conversationId)) {
            updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
         }
-
-        // Đẩy lên đầu danh sách
         newConversations.splice(convIndex, 1);
         newConversations.unshift(updatedConv);
       } 
-
       return { 
         messages: { ...state.messages, [msg.conversationId]: newMsgs },
-        conversations: newConversations
+        conversations: newConversations,
+        // [TYPING] Khi có tin nhắn mới đến, tự động tắt hiệu ứng đang gõ
+        typingStatus: { ...state.typingStatus, [msg.conversationId]: false } 
       };
     });
   },
+
+  prependMessages: (convId, newMsgs) => set((state) => {
+    const existingMsgs = state.messages[convId] || [];
+    // Lọc bỏ các tin nhắn bị trùng lặp
+    const existingIds = new Set(existingMsgs.map(m => m.id));
+    const uniqueNewMsgs = newMsgs.filter(m => !existingIds.has(m.id));
+    
+    // Nhét tin nhắn cũ lên TRƯỚC danh sách hiện tại
+    return { messages: { ...state.messages, [convId]: [...uniqueNewMsgs, ...existingMsgs] } };
+  }),
+
+  markConversationAsSeen: (convId) => set((state) => {
+    const msgs = state.messages[convId] || [];
+    const updatedMsgs = msgs.map(m => {
+        // Nếu là tin nhắn đã gửi thì đổi thành đã xem
+        if (m.status === 'SENT' || !m.status) return { ...m, status: 'SEEN' as const };
+        return m;
+    });
+    return { messages: { ...state.messages, [convId]: updatedMsgs } };
+  }),
 
   markAsRead: (convId) => set((state) => {
     const newConvs = state.conversations.map(c => 

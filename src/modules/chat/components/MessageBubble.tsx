@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Message } from '../types';
 import { cn } from '@/lib/utils';
-import { ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ExternalLink, Reply } from 'lucide-react'; 
+import { useChatStore } from '../store/useChatStore'; 
+import { useAuth } from '@/modules/auth/store/AuthContext';
 
 interface Props {
   message: Message;
@@ -11,7 +13,6 @@ interface Props {
   avatarUrl?: string;
 }
 
-// --- HÀM HELPER: NHUỘM MÀU @MENTION ---
 const renderContentWithMentions = (content: string) => {
   if (!content) return "";
   const parts = content.split(/(@\w+)/g);
@@ -27,7 +28,6 @@ const renderContentWithMentions = (content: string) => {
   });
 };
 
-// 1. Tách Component hiển thị Avatar
 const ChatAvatar = ({ show, url, isMe }: { show: boolean, url?: string, isMe: boolean }) => {
   if (isMe) return null; 
   return (
@@ -41,7 +41,6 @@ const ChatAvatar = ({ show, url, isMe }: { show: boolean, url?: string, isMe: bo
   );
 };
 
-// 2. Ảnh Reply
 const MessageImage = ({ src, isMe }: { src: string, isMe: boolean }) => (
   <div className={cn(
     "mb-2 relative z-0 cursor-pointer transition-all hover:scale-[1.01]",
@@ -53,7 +52,7 @@ const MessageImage = ({ src, isMe }: { src: string, isMe: boolean }) => (
     />
     <div className={cn(
         "relative overflow-hidden aspect-square border border-white/10 shadow-xl bg-[#18181b]",
-        "w-72 md:w-80", "rounded-[24px]" 
+        "w-80", "rounded-[24px]" 
     )}>
         <img src={src} alt="Reply" className="w-full h-full object-cover" />
         <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
@@ -63,13 +62,12 @@ const MessageImage = ({ src, isMe }: { src: string, isMe: boolean }) => (
   </div>
 );
 
-// 3. Component Thẻ Chia sẻ bài viết (Neo-brutalism nhẹ)
 const PostSharePreview = ({ postId, isMe }: { postId: string, isMe: boolean }) => {
   const navigate = useNavigate();
   return (
     <div 
       onClick={() => navigate(`/post/${postId}`)} 
-      className="mb-2 w-72 md:w-80 bg-sky-100/70 dark:bg-sky-900/30 rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] dark:shadow-none p-3 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 flex items-center gap-3 border border-transparent hover:border-sky-200 dark:hover:border-sky-700"
+      className="mb-2 w-80 bg-sky-100/70 dark:bg-sky-900/30 rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] dark:shadow-none p-3 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 flex items-center gap-3 border border-transparent hover:border-sky-200 dark:hover:border-sky-700"
     >
       <div className="w-16 h-16 bg-zinc-300 dark:bg-zinc-800 rounded-xl overflow-hidden shrink-0">
         <img src="https://placehold.co/64x64" className="w-full h-full object-cover" alt="Thumb" />
@@ -83,28 +81,94 @@ const PostSharePreview = ({ postId, isMe }: { postId: string, isMe: boolean }) =
   );
 };
 
-// 4. Component Bong bóng Chat chính
+// --- CHỈ SỬA COMPONENT NÀY, CÁC COMPONENT KHÁC GIỮ NGUYÊN ---
+const RepliedMessagePreview = ({ messageId, conversationId, currentUserId }: { messageId: string, conversationId: string, currentUserId?: string }) => {
+    // 1. Lấy danh sách tin nhắn để tìm tin gốc
+    const messages = useChatStore(state => state.messages[conversationId] || []);
+    // 2. Lấy thông tin cuộc trò chuyện hiện tại để biết tên đối phương là gì
+    const conversation = useChatStore(state => state.conversations.find(c => c.id === conversationId));
+    
+    const originalMsg = messages.find(m => String(m.id) === String(messageId));
+
+    if (originalMsg) {
+        // Kiểm tra xem ai là người gửi tin nhắn gốc
+        const isMeOrigin = originalMsg.senderId === currentUserId;
+        
+        // Logic tìm tên: Nếu là mình -> "Bạn", Nếu là đối phương -> Lấy tên đối phương, Khác -> "Người dùng"
+        const displayName = isMeOrigin 
+            ? "Bạn" 
+            : (conversation?.partner?.id === originalMsg.senderId 
+                ? conversation?.partner?.fullname 
+                : "Người dùng"); // Fallback an toàn
+
+        const previewText = originalMsg.type === 'IMAGE' ? '[Hình ảnh]' 
+                          : originalMsg.type === 'VOICE' ? '[Ghi âm]' 
+                          : originalMsg.content;
+
+        return (
+            <div className="mb-1 opacity-80 cursor-pointer hover:opacity-100 transition-opacity flex items-center gap-1.5 p-1.5 rounded-lg bg-black/5 dark:bg-white/5 w-fit">
+                <div className="w-[3px] h-full min-h-[14px] bg-black/40 dark:bg-white/40 rounded-full shrink-0" />
+                <div className="text-[12px] truncate max-w-[200px] text-black/70 dark:text-white/70 font-medium flex gap-1" style={{ fontFamily: '"Jua", sans-serif' }}>
+                    <span className="font-bold shrink-0">{displayName} trả lời:</span>
+                    <span className="truncate">{previewText}</span>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="mb-1 opacity-60 flex items-center gap-1.5 p-1.5 rounded-lg bg-black/5 dark:bg-white/5 w-fit">
+            <div className="w-[3px] h-full min-h-[14px] bg-black/40 dark:bg-white/40 rounded-full shrink-0" />
+            <div className="text-[12px] truncate max-w-[200px] text-black/70 dark:text-white/70 italic" style={{ fontFamily: '"Jua", sans-serif' }}>
+                Đã trả lời một tin nhắn
+            </div>
+        </div>
+    );
+};
+
 export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avatarUrl }) => {
   const [showTime, setShowTime] = useState(false);
+  const setReplyingTo = useChatStore(state => state.setReplyingTo);
+  const { user } = useAuth(); // Import useAuth để lấy currentUserId
+  const currentUserId = user?.id;
+
   const replyImage = message.metadata?.replyToImage;
   const isSharedPost = message.metadata?.contentType === 'SHARE_POST';
   const sharedPostId = message.metadata?.sharedPostId;
 
   return (
-    <div className={cn("flex flex-col w-full group", isMe ? "items-end" : "items-start")}>
+    <div className={cn("flex flex-col w-full group relative", isMe ? "items-end" : "items-start")}>
       
       <div className={cn("flex gap-3 w-full items-end", isMe ? "justify-end" : "justify-start")}>
         <ChatAvatar show={showAvatar} url={avatarUrl} isMe={isMe} />
         
-        <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%] mb-1", isMe ? "items-end" : "items-start")}>
+        <div className={cn("flex flex-col max-w-[70%] mb-1 relative", isMe ? "items-end" : "items-start")}>
           
+          <button 
+              onClick={() => setReplyingTo(message)}
+              className={cn(
+                  "absolute top-1/2 -translate-y-1/2 p-1.5 bg-white dark:bg-zinc-800 shadow-md border border-zinc-200 dark:border-zinc-700 rounded-full text-zinc-500 hover:text-black dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10 active:scale-90",
+                  isMe ? "-left-10" : "-right-10"
+              )}
+              title="Trả lời"
+          >
+              <Reply className="w-[14px] h-[14px]" />
+          </button>
+
+          {message.replyToMsgId && (
+              <RepliedMessagePreview 
+                  messageId={message.replyToMsgId} 
+                  conversationId={message.conversationId} 
+                  currentUserId={currentUserId} // Truyền currentUserId xuống
+              />
+          )}
+
           {replyImage && <MessageImage src={replyImage} isMe={isMe} />}
           {isSharedPost && sharedPostId && <div onClick={() => setShowTime(!showTime)}><PostSharePreview postId={sharedPostId} isMe={isMe} /></div>}
           
-          {/* HIỂN THỊ GHI ÂM HOẶC TEXT */}
           {message.type === 'VOICE' ? (
                <div className="relative z-10 py-1">
-                  <audio controls src={message.content} className="max-w-[200px] sm:max-w-[250px] h-11 outline-none" />
+                  <audio controls src={message.content} className="max-w-[250px] h-11 outline-none" />
                </div>
           ) : (
               message.content && message.content.trim() !== "" && (
@@ -118,7 +182,6 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
                     )}
                     style={{ fontFamily: '"Jua", sans-serif' }}
                    >
-                      {/* SỬA TẠI ĐÂY: Dùng hàm helper để nhuộm màu mention */}
                       {renderContentWithMentions(message.content)}
                    </div>
               )
@@ -126,14 +189,10 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
         </div>
       </div>
 
-      {/* Hiển thị thời gian khi click */}
-      <div className={cn(
-          "overflow-hidden transition-all duration-300 ease-in-out flex items-center", 
-          showTime ? "h-5 opacity-100 mb-1" : "h-0 opacity-0 mb-0", 
-          isMe ? "pr-2" : "pl-[52px]" 
-      )}>
+      <div className={cn("overflow-hidden transition-all duration-300 ease-in-out flex items-center", showTime ? "h-5 opacity-100 mb-1" : "h-0 opacity-0 mb-0", isMe ? "pr-2" : "pl-[52px]" )}>
           <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 select-none flex items-center gap-1">
-              {isMe && <span className="text-[10px]">Đã gửi</span>}
+              {/* CHỈ SỬA DÒNG NÀY: */}
+              {isMe && <span className="text-[10px] font-semibold">{message.status === 'SEEN' ? 'Đã xem' : 'Đã gửi'}</span>}
               {new Date(message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
           </span>
       </div>

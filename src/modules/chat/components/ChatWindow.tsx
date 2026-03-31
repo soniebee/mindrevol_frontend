@@ -7,7 +7,12 @@ import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { VoiceCallModal } from './VoiceCallModal';
 
-export const ChatWindow = () => {
+interface ChatWindowProps {
+  isSidebarOpen?: boolean;
+  toggleSidebar?: () => void;
+}
+
+export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSidebar }) => {
   const { activeConversationId, conversations } = useChatStore();
   
   // 1. Khai báo Ref cái loa ở đây để dùng chung
@@ -28,7 +33,7 @@ export const ChatWindow = () => {
       return null;
   }, [activeConversationId, conversations]);
 
-  const { messages, sendMessage, blockUser, unfriendUser, currentUserId } = useChat(activeConversationId, activeConv?.partner?.id);
+  const { messages, sendMessage, blockUser, unfriendUser, currentUserId, loadMoreMessages, hasMore, isLoadingMore } = useChat(activeConversationId, activeConv?.partner?.id);
 
   // 2. Truyền cái remoteAudioRef đã tạo ở trên vào hook
   const { startCall, endCall, incomingCall, outgoingCall, isInCall, setIsInCall, initWebRTC, sendSignal } = useVoiceCall(currentUserId || '', remoteAudioRef);
@@ -42,7 +47,7 @@ export const ChatWindow = () => {
 
   if (!activeConv) {
     return (
-      <div className="hidden md:flex flex-col items-center justify-center bg-[#FAFAFA] dark:bg-[#121212] h-full transition-colors duration-300">
+      <div className="flex flex-col items-center justify-center bg-[#FAFAFA] dark:bg-[#121212] h-full transition-colors duration-300">
         <style>{scrollbarStyles}</style>
         <div className="w-24 h-24 mb-4 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center border-2 border-zinc-200 dark:border-white/5 shadow-sm">
             <span className="text-4xl">👋</span>
@@ -65,23 +70,29 @@ export const ChatWindow = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#FAFAFA] dark:bg-[#121212] transition-colors duration-300 relative font-sans w-full">
+    <div className="flex flex-col h-full w-full relative overflow-hidden bg-white dark:bg-[#121212]">
       <style>{scrollbarStyles}</style>
 
+      {/* Truyền trạng thái Sidebar xuống ChatHeader */}
       <ChatHeader 
         partner={activeConv.partner} 
         onBlock={blockUser}        
         onUnfriend={unfriendUser} 
         onStartCall={() => startCall(activeConv.partner.id)} 
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
       />
 
-      <div className="flex-1 flex flex-col min-h-0 relative mt-[72px] overflow-hidden">
-          <MessageList 
-            messages={messages}
-            currentUserId={currentUserId}
-            partnerAvatar={activeConv.partner?.avatarUrl}
-          />
-      </div>
+      <div className="flex-1 min-h-0 relative bg-zinc-50/50 dark:bg-[#121212]">
+      <MessageList 
+        messages={messages}
+        currentUserId={currentUserId}
+        partnerAvatar={activeConv.partner?.avatarUrl}
+        onLoadMore={loadMoreMessages} // <-- THÊM DÒNG NÀY
+        hasMore={hasMore}             // <-- THÊM DÒNG NÀY
+        isLoadingMore={isLoadingMore} // <-- THÊM DÒNG NÀY
+      />
+  </div>
 
       <ChatInput onSend={sendMessage} />
 

@@ -14,19 +14,12 @@ export const chatService = {
   },
 
   // [ĐÃ SỬA] Đổi tham số từ partnerId sang conversationId
-  getMessages: async (conversationId: string): Promise<Message[]> => {
-    const response = await http.get<any>(`/chat/conversations/${conversationId}/messages`, {
-        params: { size: 50 } 
-    });
-    
-    const data = response.data.data || response.data;
-
-    if (Array.isArray(data)) {
-        return data;
-    } else if (data && Array.isArray(data.content)) {
-        return data.content;
-    }
-    return [];
+  getMessages: async (conversationId: string, page: number = 0, size: number = 50) => {
+      // Nhớ truyền params page và size xuống Backend
+      const res = await http.get(`/chat/conversations/${conversationId}/messages`, {
+          params: { page, size }
+      });
+      return res.data.data; // (Sửa .data.data theo đúng format Response Backend của bạn)
   },
 
   markAsRead: async (conversationId: string) => {

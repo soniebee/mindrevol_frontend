@@ -1,22 +1,22 @@
-//src/components/ChatHeader
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, UserX, Ban, ChevronLeft, Users, Phone } from 'lucide-react'; 
+import { MoreHorizontal, UserX, Ban, Users, Phone, PanelLeft } from 'lucide-react'; // <-- Thêm PanelLeft
 import { useChatStore } from '../store/useChatStore';
 import { Link } from 'react-router-dom'; 
 import { UserAvatarLink } from '@/components/ui/UserAvatarLink'; 
-import { UserSummary } from '../types'; // Đảm bảo đã import type này
 
 interface ChatHeaderProps {
   partner: any; 
   onBlock: () => void;
   onUnfriend: () => void;
   onStartCall?: () => void;
+  isSidebarOpen?: boolean; // <-- Thêm
+  toggleSidebar?: () => void; // <-- Thêm
 }
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfriend, onStartCall }) => {
+export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfriend, onStartCall, isSidebarOpen, toggleSidebar }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { openChat, conversations, activeConversationId } = useChatStore(); 
+  const { conversations, activeConversationId } = useChatStore(); 
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const isGroup = !!activeConversation?.boxId;
@@ -39,16 +39,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfr
   };
 
   return (
-    <div className="h-[72px] absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+    <div className="h-[72px] absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 shadow-sm transition-colors duration-300">
       <div className="flex items-center gap-3">
         
-        {/* Nút Back (Chỉ hiện trên Mobile) */}
-        <button 
-           onClick={() => openChat(null)} 
-           className="md:hidden p-2 -ml-2 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors"
-        >
-           <ChevronLeft className="w-8 h-8" />
-        </button>
+        {/* NÚT MỞ RỘNG SIDEBAR (Chỉ hiện khi Sidebar đang đóng) */}
+        {!isSidebarOpen && toggleSidebar && (
+            <button 
+                onClick={toggleSidebar} 
+                className="p-2 -ml-2 mr-1 text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl hover:text-black dark:hover:text-white transition-all"
+                title="Mở danh sách"
+            >
+                <PanelLeft className="w-6 h-6" />
+            </button>
+        )}
 
         {isGroup ? (
              <div className="w-12 h-12 border-2 border-black dark:border-white rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 overflow-hidden relative transition-colors">
@@ -61,14 +64,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfr
              </div>
         ) : (
              <div className="relative group shrink-0">
-                 {/* Avatar dùng Component tái sử dụng */}
                  <UserAvatarLink 
                     userId={partner?.id} 
                     avatarUrl={partner?.avatarUrl} 
                     fullname={partner?.fullname || "Người dùng"}
                     className="w-12 h-12 border-2 border-black dark:border-white rounded-full bg-gray-200 dark:bg-zinc-800 hover:ring-2 hover:ring-offset-1 hover:ring-zinc-500 transition-all cursor-pointer block overflow-hidden"
                  />
-                 {/* Chấm xanh Online */}
                  {partner?.isOnline && (
                     <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-[2px] border-white dark:border-[#121212] transition-colors" />
                  )}
@@ -103,14 +104,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfr
       </div>
 
       <div className="flex items-center gap-2">
-        {/* NÚT GỌI THOẠI WEBRTC */}
         {!isGroup && (
             <button onClick={onStartCall} className="p-2 rounded-full text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" title="Gọi thoại">
                 <Phone className="w-6 h-6" fill="currentColor" />
             </button>
         )}
 
-        {/* Menu Dấu 3 chấm */}
         {!isGroup && (
             <div className="relative" ref={menuRef}>
                 <button 
@@ -130,7 +129,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ partner, onBlock, onUnfr
                               <UserX className="w-4 h-4" /> <span style={{ fontFamily: '"Jua", sans-serif' }}>Hủy kết bạn</span>
                           </button>
                           
-                          {/* Đường kẻ ngang phân cách */}
                           <div className="h-[2px] bg-black dark:bg-white mx-2 my-1 transition-colors" />
                           
                           <button 

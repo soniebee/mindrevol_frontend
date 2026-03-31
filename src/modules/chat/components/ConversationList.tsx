@@ -1,16 +1,21 @@
-//src/components/ConversationList
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Search, Users, Edit } from 'lucide-react'; 
+// Add ArrowLeft, remove PanelLeftClose from imports
+import { Search, Users, Edit, ArrowLeft } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useChatStore } from '../store/useChatStore';
 import { friendService, FriendshipResponse } from '@/modules/user/services/friend.service';
 import { chatService } from '../services/chat.service';
 
-export const ConversationList = () => {
+// Interface updated to remove onCloseSidebar since this button always navigates now
+interface ConversationListProps {
+  // onCloseSidebar?: () => void; // Prop removed
+}
+
+export const ConversationList: React.FC<ConversationListProps> = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -70,22 +75,33 @@ export const ConversationList = () => {
       await openChat(item.conversationId); 
     } else {
       try {
-const newConv = await chatService.getOrCreateConversation(item.userId);
+        const newConv = await chatService.getOrCreateConversation(item.userId);
         if (newConv?.id) { await fetchConversations(); await openChat(newConv.id); }
       } catch (error) { console.error(error); }
     }
   };
 
   return (
-    <div className="flex flex-col h-full w-full md:w-[380px] bg-white dark:bg-[#121212] transition-colors border-r border-zinc-200 dark:border-white/10">
+    <div className="flex flex-col h-full w-[380px] bg-white dark:bg-[#121212] transition-colors border-r border-zinc-200 dark:border-white/10">
       
       {/* Header List */}
       <div className="p-4 pb-3 shadow-[0px_4px_10px_rgba(0,0,0,0.02)] dark:shadow-none z-10">
         <div className="flex justify-between items-center mb-4 px-1">
+              {/* Nút quay lại trang chủ (Giao diện App) */}
+    <button 
+      onClick={() => navigate('/')} 
+      className="p-2 -ml-2 text-black hover:bg-zinc-100 rounded-full transition-colors active:scale-95"
+    >
+      <ArrowLeft className="w-6 h-6" />
+    </button>
           <h2 className="text-[28px] font-bold text-black dark:text-white" style={{ fontFamily: '"Jua", sans-serif' }}>Tin nhắn</h2>
-          <button className="text-black dark:text-white bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 p-2.5 rounded-full transition-colors active:scale-95">
-            <Edit className="w-5 h-5"/>
-          </button>
+          
+          {/* --- HEADER --- */}
+<div className="flex justify-between items-center mb-4 px-1">
+  <button className="text-black bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full transition-colors active:scale-95">
+    <Edit className="w-5 h-5"/>
+  </button>
+</div>
         </div>
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -118,7 +134,7 @@ const newConv = await chatService.getOrCreateConversation(item.userId);
                   isActive ? "bg-zinc-100 dark:bg-zinc-800" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:scale-95"
                 )}
               >
-<div className="relative shrink-0">
+                <div className="relative shrink-0">
                   {item.isGroup ? (
                       <div className={cn(
                         "w-14 h-14 rounded-2xl flex items-center justify-center border-[3px] bg-zinc-100 dark:bg-zinc-800 overflow-hidden transition-all",
@@ -146,7 +162,7 @@ const newConv = await chatService.getOrCreateConversation(item.userId);
                   <div className="flex items-center justify-between mt-0.5">
                       <p className={cn("truncate text-[14px] max-w-[200px] transition-colors", isUnread ? "text-black dark:text-white font-semibold" : "text-zinc-500 dark:text-zinc-400 font-medium")} style={{ fontFamily: isUnread ? '"Jua", sans-serif' : 'inherit' }}>{messagePreview}</p>
                       {isUnread && <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shrink-0 ml-2"><span className="text-[10px] font-bold text-white">{item.unreadCount > 9 ? '9+' : item.unreadCount}</span></div>}
-</div>
+                  </div>
                 </div>
               </button>
             );
