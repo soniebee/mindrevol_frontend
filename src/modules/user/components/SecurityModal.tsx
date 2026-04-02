@@ -16,19 +16,19 @@ interface Props {
 export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   
-  // State quản lý View chính
+  // Main view state
   const [view, setView] = useState<'MENU' | 'PASSWORD' | 'BLOCK'>('MENU');
   
-  // State quản lý luồng OTP trong view PASSWORD
+  // OTP flow state in the PASSWORD view
   const [otpStep, setOtpStep] = useState<'INIT' | 'VERIFY'>('INIT');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Form Data
+  // Form data
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Hàm reset state khi đóng hoặc chuyển tab
+  // Reset state when closing or switching tabs
   const resetForm = () => {
     setOtpStep('INIT');
     setOtp('');
@@ -37,33 +37,33 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setIsLoading(false);
   };
 
-  // --- LOGIC GỬI OTP ---
+  // --- SEND OTP FLOW ---
   const handleSendOtp = async () => {
-    if (!user?.email) return toast.error("Không tìm thấy email người dùng");
+    if (!user?.email) return toast.error("User email not found");
     
     setIsLoading(true);
     try {
       await userService.sendOtp(user.email);
-      toast.success(`Mã xác thực đã được gửi tới ${user.email}`);
+      toast.success(`Verification code has been sent to ${user.email}`);
       setOtpStep('VERIFY');
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Gửi mã thất bại. Vui lòng thử lại.");
+      toast.error(error.response?.data?.message || "Failed to send the code. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- LOGIC XÁC NHẬN ĐỔI PASS ---
+  // --- PASSWORD UPDATE FLOW ---
   const handleSubmit = async () => {
     if (newPassword !== confirmPassword) {
-        return toast.error("Mật khẩu xác nhận không khớp");
+        return toast.error("Confirmation password does not match");
     }
     if (newPassword.length < 6) {
-        return toast.error("Mật khẩu phải từ 6 ký tự trở lên");
+        return toast.error("Password must be at least 6 characters long");
     }
     if (otp.length < 6) {
-        return toast.error("Vui lòng nhập mã OTP 6 số");
+        return toast.error("Please enter the 6-digit OTP code");
     }
 
     setIsLoading(true);
@@ -72,11 +72,11 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
             otp, 
             newPassword 
         });
-        toast.success("Cập nhật mật khẩu thành công!");
+        toast.success("Password updated successfully!");
         resetForm();
-        setView('MENU'); // Quay về menu sau khi thành công
+        setView('MENU'); // Return to the menu after success
     } catch (error: any) {
-        toast.error(error.response?.data?.message || "Cập nhật thất bại. Kiểm tra lại mã OTP.");
+        toast.error(error.response?.data?.message || "Update failed. Please check the OTP code again.");
     } finally {
         setIsLoading(false);
     }
@@ -107,7 +107,7 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </button>
              )}
              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                {view === 'PASSWORD' ? "Quản lý mật khẩu" : (view === 'BLOCK' ? "Danh sách chặn" : "Bảo mật")}
+                 {view === 'PASSWORD' ? "Password management" : (view === 'BLOCK' ? "Blocked users" : "Security")}
              </h2>
           </div>
           <button onClick={onClose}><X className="w-5 h-5 text-zinc-400" /></button>
@@ -115,7 +115,7 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         <div className="p-4 overflow-y-auto custom-scrollbar">
             
-            {/* --- VIEW: MENU CHÍNH --- */}
+            {/* --- MAIN MENU VIEW --- */}
             {view === 'MENU' && (
                 <div className="space-y-2">
                     <button 
@@ -125,9 +125,9 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         <div className="flex items-center gap-3">
                             <KeyRound className="w-5 h-5 text-blue-400" />
                             <div>
-                                <div className="font-bold text-white">Mật khẩu</div>
+                                <div className="font-bold text-white">Password</div>
                                 <div className="text-xs text-zinc-500 group-hover:text-zinc-400">
-                                    Thiết lập hoặc đổi mật khẩu đăng nhập
+                                    Set up or change your login password
                                 </div>
                             </div>
                         </div>
@@ -141,9 +141,9 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         <div className="flex items-center gap-3">
                             <ShieldAlert className="w-5 h-5 text-red-400" />
                             <div>
-                                <div className="font-bold text-white">Danh sách chặn</div>
+                                <div className="font-bold text-white">Blocked users</div>
                                 <div className="text-xs text-zinc-500 group-hover:text-zinc-400">
-                                    Quản lý người dùng bạn đã chặn
+                                    Manage the users you have blocked
                                 </div>
                             </div>
                         </div>
@@ -156,16 +156,16 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
             {view === 'PASSWORD' && (
                 <div className="animate-in slide-in-from-right-4 duration-300">
                     {otpStep === 'INIT' ? (
-                        // BƯỚC 1: Gửi OTP
+                        // STEP 1: Send OTP
                         <div className="text-center space-y-6 py-4">
                             <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <ShieldCheck className="w-8 h-8 text-blue-500" />
                             </div>
                             
                             <div className="space-y-2">
-                                <h3 className="text-xl font-bold text-white">Xác thực bảo mật</h3>
+                                <h3 className="text-xl font-bold text-white">Security verification</h3>
                                 <p className="text-zinc-400 text-sm px-4">
-                                    Để đảm bảo an toàn, chúng tôi cần gửi mã xác thực đến email của bạn trước khi thay đổi mật khẩu.
+                                    To keep your account safe, we need to send a verification code to your email before changing the password.
                                 </p>
                             </div>
 
@@ -174,7 +174,7 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                     <Mail className="w-5 h-5 text-zinc-400" />
                                 </div>
                                 <div className="text-left overflow-hidden min-w-0">
-                                    <div className="text-xs text-zinc-500">Email nhận mã</div>
+                                    <div className="text-xs text-zinc-500">Code delivery email</div>
                                     <div className="text-sm font-medium text-white truncate" title={user?.email}>
                                         {user?.email}
                                     </div>
@@ -186,22 +186,22 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 isLoading={isLoading}
                                 className="w-full h-11 font-bold text-base mt-4"
                             >
-                                Gửi mã xác thực
+                                Send verification code
                                 <ArrowRight className="w-4 h-4 ml-2" />
                             </Button>
                         </div>
                     ) : (
-                        // BƯỚC 2: Nhập OTP & Pass mới
+                        // STEP 2: Enter OTP and new password
                         <div className="space-y-5">
                             <div className="text-center mb-6">
-                                <h3 className="text-lg font-bold text-white">Thiết lập mật khẩu mới</h3>
+                                <h3 className="text-lg font-bold text-white">Set a new password</h3>
                                 <p className="text-xs text-zinc-500">
-                                    Nhập mã OTP đã được gửi đến email của bạn
+                                    Enter the OTP code sent to your email
                                 </p>
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-zinc-400 ml-1">Mã xác thực (OTP)</label>
+                                <label className="text-xs font-medium text-zinc-400 ml-1">Verification code (OTP)</label>
                                 <Input 
                                     value={otp} 
                                     onChange={e => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0,6))}
@@ -213,23 +213,23 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
                             <div className="grid gap-4 pt-2">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-zinc-400 ml-1">Mật khẩu mới</label>
+                                    <label className="text-xs font-medium text-zinc-400 ml-1">New password</label>
                                     <Input 
                                         type="password" 
                                         value={newPassword} 
                                         onChange={e => setNewPassword(e.target.value)} 
                                         className="bg-zinc-900 border-zinc-700 focus:border-blue-500"
-                                        placeholder="Nhập mật khẩu mới..."
+                                        placeholder="Enter new password..."
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-zinc-400 ml-1">Xác nhận mật khẩu</label>
+                                    <label className="text-xs font-medium text-zinc-400 ml-1">Confirm password</label>
                                     <Input 
                                         type="password" 
                                         value={confirmPassword} 
                                         onChange={e => setConfirmPassword(e.target.value)} 
                                         className="bg-zinc-900 border-zinc-700 focus:border-blue-500"
-                                        placeholder="Nhập lại mật khẩu..."
+                                        placeholder="Re-enter password..."
                                     />
                                 </div>
                             </div>
@@ -240,7 +240,7 @@ export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 disabled={!otp || !newPassword || !confirmPassword}
                                 className="w-full h-11 font-bold mt-4"
                             >
-                                Lưu thay đổi
+                                Save changes
                             </Button>
                         </div>
                     )}

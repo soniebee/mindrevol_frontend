@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { blockService } from '../services/block.service'; // Dùng đúng service này
 import { UserSummary } from '../services/user.service';
 
-// [FIX] Component này giờ là View con, không cần props isOpen/onClose
+// [FIX] This component is now a child view and does not need isOpen/onClose props
 export const BlockedUsersModal = () => {
   const [blockedUsers, setBlockedUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,20 +19,20 @@ export const BlockedUsersModal = () => {
       const data = await blockService.getBlockList();
       setBlockedUsers(data);
     } catch (error) {
-      console.error("Lỗi tải danh sách chặn:", error);
+      console.error("Failed to load blocked users list:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleUnblock = async (userId: string) => {
-    if (confirm("Bạn có chắc muốn bỏ chặn người dùng này?")) {
+    if (confirm("Are you sure you want to unblock this user?")) {
       try {
         await blockService.unblockUser(userId);
         // Refresh list
         setBlockedUsers(prev => prev.filter(user => user.id !== userId));
       } catch (error) {
-        alert("Có lỗi xảy ra khi bỏ chặn.");
+        alert("An error occurred while unblocking the user.");
       }
     }
   };
@@ -40,11 +40,11 @@ export const BlockedUsersModal = () => {
   return (
     <div className="flex-1 overflow-y-auto p-1 custom-scrollbar max-h-[400px]">
         {loading ? (
-            <div className="text-center text-zinc-500 py-10 text-sm">Đang tải...</div>
+            <div className="text-center text-zinc-500 py-10 text-sm">Loading...</div>
         ) : blockedUsers.length === 0 ? (
             <div className="text-center text-zinc-500 py-10 flex flex-col items-center">
                 <UserX className="w-10 h-10 mb-2 opacity-50" />
-                <span className="text-sm">Bạn chưa chặn ai cả.</span>
+                <span className="text-sm">You have not blocked anyone yet.</span>
             </div>
         ) : (
             <div className="space-y-3">
@@ -54,7 +54,7 @@ export const BlockedUsersModal = () => {
                             <img 
                                 src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.fullname}`} 
                                 className="w-10 h-10 rounded-full object-cover border border-zinc-700" 
-                                alt="Avt"
+                                    alt="Avatar"
                             />
                             <div>
                                 <h4 className="text-sm font-bold text-white">{user.fullname}</h4>
@@ -67,7 +67,7 @@ export const BlockedUsersModal = () => {
                             onClick={() => handleUnblock(user.id)}
                             className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
                         >
-                            <Unlock className="w-3 h-3 mr-1"/> Bỏ chặn
+                            <Unlock className="w-3 h-3 mr-1"/> Unblock
                         </Button>
                     </div>
                 ))}

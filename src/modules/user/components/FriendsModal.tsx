@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, MessageCircle, Loader2, Search, UserPlus, Users, BellRing } from 'lucide-react';
@@ -26,6 +26,35 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (activeTab === 'FRIENDS') {
+        const data = isMe ? await friendService.getMyFriends() : await friendService.getUserFriends(userId!);
+        setFriends(data || []);
+      } else if (activeTab === 'REQUESTS' && isMe) {
+        const data = await friendService.getIncomingRequests();
+        setRequests(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeTab, isMe, userId]);
+
+  const handleSearch = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await friendService.searchUsers(searchQuery);
+      setSearchResults(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery]);
+
   useEffect(() => {
     if (isOpen) {
       if (!isMe) setActiveTab('FRIENDS'); 
@@ -33,50 +62,21 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
       document.body.style.overflow = 'hidden';
     }
     return () => { document.body.style.overflow = 'auto'; };
-  }, [isOpen, activeTab, userId]);
+  }, [isOpen, isMe, fetchData]);
 
   useEffect(() => {
     if (activeTab === 'FIND' && searchQuery.trim().length > 1) {
       const timer = setTimeout(() => handleSearch(), 500);
       return () => clearTimeout(timer);
     }
-  }, [searchQuery]);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      if (activeTab === 'FRIENDS') {
-        let data = isMe ? await friendService.getMyFriends() : await friendService.getUserFriends(userId!);
-        setFriends(data || []);
-      } else if (activeTab === 'REQUESTS' && isMe) {
-        const data = await friendService.getIncomingRequests();
-        setRequests(data || []);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSearch = async () => {
-    setIsLoading(true);
-    try {
-      const data = await friendService.searchUsers(searchQuery);
-      setSearchResults(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [activeTab, searchQuery, handleSearch]);
 
   const handleSendRequest = async (targetId: string) => {
     try {
       await friendService.sendFriendRequest(targetId);
       setSearchResults(prev => prev.map(u => u.id === targetId ? { ...u, friendshipStatus: 'PENDING' } : u));
-    } catch (error) {
-      alert("Lỗi khi gửi lời mời.");
+    } catch {
+      alert("Failed to send the request.");
     }
   };
 
@@ -85,8 +85,8 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
       await friendService.acceptRequest(friendshipId);
       setRequests(prev => prev.filter(r => r.id !== friendshipId));
       fetchData(); 
-    } catch (error) {
-      alert("Lỗi xử lý");
+    } catch {
+      alert("Failed to process the request.");
     }
   };
 
@@ -118,7 +118,7 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
                   <Users size={20} strokeWidth={2.5} />
               </div>
               <h2 className="text-2xl font-normal text-zinc-900 dark:text-white" style={{ fontFamily: '"Jua", sans-serif' }}>
-                {isMe ? "Bạn Bè & Kết Nối" : "Danh sách bạn bè"}
+                {isMe ? "Friends & Connections" : "Friends list"}
               </h2>
           </div>
           <button onClick={onClose} className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0">
@@ -132,20 +132,20 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
                 <TabButton 
                     active={activeTab === 'FIND'} 
                     onClick={() => setActiveTab('FIND')} 
-                    label="Tìm bạn" 
+                    label="Find friends" 
                     icon={<Search size={16} />}
                 />
                 <TabButton 
                     active={activeTab === 'REQUESTS'} 
                     onClick={() => setActiveTab('REQUESTS')} 
-                    label="Lời mời" 
+                    label="Requests" 
                     icon={<BellRing size={16} />}
                     count={requests.length}
                 />
                 <TabButton 
                     active={activeTab === 'FRIENDS'} 
                     onClick={() => setActiveTab('FRIENDS')} 
-                    label="Bạn bè" 
+                    label="Friends" 
                     icon={<Users size={16} />}
                 />
             </div>
@@ -160,7 +160,7 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                 <input 
-                  placeholder="Nhập tên, email hoặc handle..." 
+                  placeholder="Enter a name, email, or handle..." 
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[20px] py-4 pl-12 pr-4 text-[15px] text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
@@ -190,26 +190,26 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
                         <button 
                           onClick={() => handleSendRequest(user.id)}
                           className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-[14px] transition-colors"
-                          title="Gửi kết bạn"
+                          title="Send friend request"
                         >
                           <UserPlus className="w-5 h-5" />
                         </button>
                       ) : user.friendshipStatus === 'PENDING' ? (
                         <span className="text-[11px] font-bold text-zinc-500 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full">
-                          Đã gửi
+                          Sent
                         </span>
                       ) : user.friendshipStatus === 'ACCEPTED' ? (
                         <span className="text-[11px] font-bold text-green-600 dark:text-green-400 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-200 dark:border-green-900/50">
-                          Bạn bè
+                          Friends
                         </span>
                       ) : null}
                     </div>
                   ))
                 ) : searchQuery.length > 1 ? (
-                  <div className="text-center text-zinc-500 py-10 font-['Jua'] text-lg">Không tìm thấy người dùng này.</div>
+                  <div className="text-center text-zinc-500 py-10 font-['Jua'] text-lg">No matching users found.</div>
                 ) : (
                   <div className="text-center text-zinc-400 py-10 text-sm font-medium">
-                    Nhập tên hoặc ID để tìm kiếm bạn đồng hành.
+                    Enter a name or ID to find people.
                   </div>
                 )}
               </div>
@@ -219,7 +219,7 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
           {/* TAB: REQUESTS (LỜI MỜI) */}
           {activeTab === 'REQUESTS' && isMe && (
             isLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div> :
-            requests.length === 0 ? <div className="text-center text-zinc-400 py-12 font-['Jua'] text-xl opacity-60">Không có lời mời nào</div> :
+            requests.length === 0 ? <div className="text-center text-zinc-400 py-12 font-['Jua'] text-xl opacity-60">No requests yet</div> :
             <div className="space-y-3">
               {requests.map(req => (
                 <div key={req.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white dark:bg-zinc-900 p-4 rounded-[24px] border border-zinc-100 dark:border-zinc-800 shadow-sm gap-4">
@@ -232,10 +232,10 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button onClick={() => handleAccept(req.id)} className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-[14px] text-[13px] font-bold text-white transition-colors shadow-sm">
-                      Chấp nhận
+                      Accept
                     </button>
                     <button onClick={() => handleDecline(req.id)} className="flex-1 sm:flex-none px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 text-[13px] font-bold rounded-[14px] transition-colors">
-                      Xóa
+                      Decline
                     </button>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
           {/* TAB: FRIENDS (DANH SÁCH BẠN BÈ) */}
           {activeTab === 'FRIENDS' && (
             isLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div> :
-            friends.length === 0 ? <div className="text-center text-zinc-400 py-12 font-['Jua'] text-xl opacity-60">{isMe ? "Chưa có bạn bè" : "Người dùng này chưa có bạn bè."}</div> :
+            friends.length === 0 ? <div className="text-center text-zinc-400 py-12 font-['Jua'] text-xl opacity-60">{isMe ? "No friends yet" : "This user has no friends yet."}</div> :
             <div className="space-y-2">
               {friends.map(f => (
                 <div key={f.id} className="flex items-center justify-between p-3 hover:bg-white dark:hover:bg-zinc-900 rounded-[20px] transition-colors group cursor-pointer border border-transparent hover:border-zinc-100 dark:hover:border-zinc-800 hover:shadow-sm">
@@ -282,8 +282,16 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
   );
 };
 
-// --- COMPONENT TAB MỚI (DẠNG VIÊN THUỐC / PILL) ---
-const TabButton = ({ active, onClick, label, count, icon }: any) => (
+// --- Pill-style tab button ---
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+  icon: React.ReactNode;
+}
+
+const TabButton = ({ active, onClick, label, count = 0, icon }: TabButtonProps) => (
   <button
     onClick={onClick}
     className={cn(

@@ -1,15 +1,15 @@
 import { NotificationResponse } from '../services/notification.service';
 
 const FALLBACK_TRANSLATIONS: Record<string, string> = {
-  'noti.and_others': 'và {{count}} người khác',
-  'noti.journey.invite': 'mời bạn tham gia hành trình {{name}}',
-  'noti.friend.request': '{{name}} gửi lời kết bạn',
-  'noti.friend.accepted': '{{name}} đã chấp nhận lời kết bạn',
-  'noti.box.invite': 'mời bạn tham gia không gian {{name}}',
-  'noti.checkin.reacted': '{{name}} đã thích bài Check-in của bạn',
-  'noti.mood.reacted': '{{name}} đã thích tâm trạng của bạn',
-  'noti.comment.mentioned': '{{name}} đã nhắc tên bạn trong bình luận',
-  'noti.box.member.joined': '{{name}} đã tham gia không gian'
+  'noti.and_others': 'and {{count}} others',
+  'noti.journey.invite': 'invited you to join journey {{name}}',
+  'noti.friend.request': '{{name}} sent you a friend request',
+  'noti.friend.accepted': '{{name}} accepted your friend request',
+  'noti.box.invite': 'invited you to join box {{name}}',
+  'noti.checkin.reacted': '{{name}} reacted to your check-in',
+  'noti.mood.reacted': '{{name}} reacted to your mood',
+  'noti.comment.mentioned': '{{name}} mentioned you in a comment',
+  'noti.box.member.joined': '{{name}} joined the box'
 };
 
 const translate = (key: string, params?: Record<string, string | number>) => {

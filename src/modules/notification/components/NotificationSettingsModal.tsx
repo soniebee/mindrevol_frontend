@@ -86,32 +86,32 @@ const CATEGORY_ROWS: CategoryRow[] = [
   {
     category: 'COMMENT',
     label: 'Comment',
-    description: 'Thong bao binh luan va mention trong binh luan',
+    description: 'Notifications for comments and comment mentions',
   },
   {
     category: 'REACTION',
     label: 'Reaction',
-    description: 'Thong bao tha cam xuc vao bai viet/check-in/mood',
+    description: 'Notifications for reactions on posts, check-ins, and moods',
   },
   {
     category: 'MESSAGE',
-    label: 'Tin nhan',
-    description: 'Thong bao tin nhan moi trong chat/box chat',
+    label: 'Message',
+    description: 'Notifications for new messages in chat and box chat',
   },
   {
     category: 'JOURNEY',
-    label: 'Hanh trinh',
-    description: 'Thong bao loi moi Journey/Box va su kien lien quan',
+    label: 'Journey',
+    description: 'Notifications for journey and box invites plus related events',
   },
   {
     category: 'FRIEND',
-    label: 'Ket ban',
-    description: 'Thong bao loi moi ket ban va chap nhan ket ban',
+    label: 'Friend',
+    description: 'Notifications for friend requests and accepted requests',
   },
 ];
 
 
-// Chỉ lưu trạng thái bật/tắt từng danh mục (không push/email/in-app)
+// Only store per-category on/off state (no push/email/in-app channels)
 type CategorySettings = Record<Exclude<NotificationCategory, 'OTHER'>, boolean>;
 const CATEGORY_KEYS: Exclude<NotificationCategory, 'OTHER'>[] = [
   'COMMENT', 'REACTION', 'MESSAGE', 'JOURNEY', 'FRIEND'
@@ -163,7 +163,7 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
         })
         .catch(() => {
           if (cancelled) return;
-          setDndError('Không thể tải cấu hình Không làm phiền.');
+            setDndError('Unable to load Do Not Disturb settings.');
         })
         .finally(() => { if (!cancelled) setIsDndLoading(false); });
     }
@@ -176,15 +176,15 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
     setCategorySettingsToStorage(newSettings);
   };
 
-  // Validate giờ (0-23), chỉ nhận số nguyên
+  // Validate hours (0-23), integers only
   const clampHour = (v: number) => Math.max(0, Math.min(23, Number.isFinite(v) ? Math.floor(v) : 0));
   const safeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Chỉ cho nhập số, không ký tự lạ
+    // Allow numeric input only
     const val = e.target.value.replace(/[^\d]/g, '');
     return val === '' ? '' : String(clampHour(Number(val)));
   };
 
-  // Không cập nhật UI trước khi API thành công, revert nếu lỗi
+  // Do not commit UI changes until the API succeeds; revert on error
   const updateDnd = async (patch: Partial<{ enabled: boolean; startHour: number; endHour: number }>) => {
     if (isDndLoading) return;
     setIsDndLoading(true);
@@ -209,9 +209,9 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
       });
       setPendingDnd(null);
     } catch (e) {
-      setDndError('Cập nhật Không làm phiền thất bại.');
+      setDndError('Failed to update Do Not Disturb settings.');
       setPendingDnd(null);
-      setDndSettings(lastStableDnd); // revert về trạng thái ổn định cuối cùng
+      setDndSettings(lastStableDnd); // revert to the last stable state
     } finally {
       setIsDndLoading(false);
     }
@@ -226,7 +226,7 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
     updateDnd({ [key]: Number(val) });
   };
 
-  // Hiển thị giá trị đang pending nếu có, ưu tiên pending
+  // Show pending values first if available
   const dndDisplay = pendingDnd || dndSettings;
 
   if (!isOpen) return null;
@@ -241,7 +241,7 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-white/10">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Quản lý thông báo</h2>
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Notification Settings</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
@@ -253,12 +253,12 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
 
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
           <div className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-white/5 rounded-lg px-3 py-2">
-            Tắt danh mục chỉ ngăn thông báo mới. Thông báo cũ và tin nhắn trong hội thoại vẫn được giữ nguyên.
+            Turning a category off only stops new notifications. Existing notifications and conversation messages remain unchanged.
           </div>
 
           <section>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Bell size={14} className="text-yellow-500" /> Danh mục thông báo
+              <Bell size={14} className="text-yellow-500" /> Notification categories
             </h3>
             <div className="space-y-2">
               {CATEGORY_ROWS.map((row) => (
@@ -277,14 +277,14 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
           {/* DND section */}
           <section className="mt-6">
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Bell size={14} className="text-yellow-500" /> Không làm phiền (DND)
+              <Bell size={14} className="text-yellow-500" /> Do Not Disturb (DND)
             </h3>
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Bật chế độ không làm phiền</span>
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Enable Do Not Disturb</span>
               <Switch checked={dndDisplay.enabled} onChange={handleDndToggle} disabled={isDndLoading} />
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">Từ</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">From</span>
               <input
                 type="number"
                 min={0}
@@ -296,8 +296,8 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
                 inputMode="numeric"
                 pattern="[0-9]*"
               />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">giờ</span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">đến</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">hour</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">to</span>
               <input
                 type="number"
                 min={0}
@@ -309,16 +309,16 @@ export const NotificationSettingsModal: React.FC<Props> = ({ isOpen, onClose }) 
                 inputMode="numeric"
                 pattern="[0-9]*"
               />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">giờ</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">hour</span>
             </div>
             {isDndLoading && (
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Đang đồng bộ với máy chủ...</div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Syncing with the server...</div>
             )}
             {dndError && (
               <div className="text-xs text-red-500 mt-1">{dndError}</div>
             )}
             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Khi bật, bạn sẽ không nhận được thông báo push trong khung giờ đã chọn.
+              When enabled, you will not receive push notifications during the selected time range.
             </div>
           </section>
         </div>
