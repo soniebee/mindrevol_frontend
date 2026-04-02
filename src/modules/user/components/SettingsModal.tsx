@@ -16,7 +16,7 @@ interface Props {
   onClose: () => void;
 }
 
-// ===== COMPONENT CON: Modal Cài đặt thông báo =====
+// ===== CHILD COMPONENT: Notification settings modal =====
 const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClo
         .then(res => {
           setSettings(res); 
         })
-        .catch(err => console.error("Lỗi lấy cài đặt thông báo", err))
+        .catch(err => console.error("Failed to load notification settings", err))
         .finally(() => setLoading(false));
     }
   }, [isOpen]);
@@ -39,7 +39,7 @@ const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClo
       await userService.updateNotificationSettings({ [field]: checked });
     } catch (e) {
       setSettings((prev: any) => ({ ...prev, [field]: !checked }));
-      alert("Không thể lưu cài đặt. Vui lòng thử lại.");
+        alert("Unable to save settings. Please try again.");
     }
   };
 
@@ -51,34 +51,34 @@ const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClo
         <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors">
           <ArrowLeft className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
-        <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Thông báo & Email</h2>
+        <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Notifications & Email</h2>
       </div>
 
       <div className="overflow-y-auto p-4 space-y-6">
         {loading ? (
-          <div className="text-center text-zinc-500 py-10">Đang tải...</div>
+            <div className="text-center text-zinc-500 py-10">Loading...</div>
         ) : (
           <>
             <div>
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Push Notifications (Trong App)</p>
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Push Notifications (In-app)</p>
               <div className="space-y-4 bg-zinc-50 dark:bg-white/5 p-4 rounded-xl">
                 <ToggleItem 
-                  label="Lời mời kết bạn" 
+                  label="Friend requests" 
                   checked={settings?.pushFriendRequest || false} 
                   onChange={(val) => handleToggle('pushFriendRequest', val)} 
                 />
                 <ToggleItem 
-                  label="Bình luận mới" 
+                  label="New comments" 
                   checked={settings?.pushNewComment || false} 
                   onChange={(val) => handleToggle('pushNewComment', val)} 
                 />
                 <ToggleItem 
-                  label="Cảm xúc (Reactions)" 
+                  label="Reactions" 
                   checked={settings?.pushReaction || false} 
                   onChange={(val) => handleToggle('pushReaction', val)} 
                 />
                 <ToggleItem 
-                  label="Lời mời tham gia Hành trình" 
+                  label="Journey invites" 
                   checked={settings?.pushJourneyInvite || false} 
                   onChange={(val) => handleToggle('pushJourneyInvite', val)} 
                 />
@@ -89,12 +89,12 @@ const NotificationSettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClo
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Email</p>
               <div className="space-y-4 bg-zinc-50 dark:bg-white/5 p-4 rounded-xl">
                 <ToggleItem 
-                  label="Nhắc nhở hằng ngày (Daily Reminder)" 
+                  label="Daily reminder" 
                   checked={settings?.emailDailyReminder || false} 
                   onChange={(val) => handleToggle('emailDailyReminder', val)} 
                 />
                 <ToggleItem 
-                  label="Cập nhật hệ thống" 
+                  label="System updates" 
                   checked={settings?.emailUpdates || false} 
                   onChange={(val) => handleToggle('emailUpdates', val)} 
                 />
@@ -132,27 +132,27 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     if(!feedbackText.trim()) return;
     try {
         await userService.sendFeedback({ type: 'GENERAL', content: feedbackText });
-        alert("Cảm ơn đóng góp của bạn!");
+        alert("Thanks for your feedback!");
         setFeedbackText('');
         setShowFeedbackInput(false);
     } catch (e) {
-        alert("Có lỗi xảy ra, vui lòng thử lại sau.");
+        alert("Something went wrong. Please try again later.");
     }
   };
 
   const handleDeleteAccount = async () => {
-    // Xác nhận 2 bước để tránh bấm nhầm
-    if (!confirm("CẢNH BÁO: Hành động này sẽ XÓA VĨNH VIỄN tài khoản của bạn. Bạn có chắc chắn không?")) return;
-    if (!confirm("Dữ liệu sau khi xóa sẽ không thể khôi phục. Tiếp tục xóa tài khoản?")) return;
+    // Two-step confirmation to prevent accidental deletion
+    if (!confirm("WARNING: This action will permanently delete your account. Are you sure?")) return;
+    if (!confirm("Your data cannot be restored after deletion. Continue deleting the account?")) return;
 
     setIsDeleting(true);
     try {
       await userService.deleteAccount();
-      alert("Tài khoản của bạn đã được xóa thành công.");
-      logout(); // Xóa phiên đăng nhập nội bộ
+      alert("Your account has been deleted successfully.");
+      logout(); // Clear the local session
       onClose();
     } catch (e) {
-      alert("Lỗi khi xóa tài khoản. Vui lòng thử lại sau.");
+      alert("Failed to delete the account. Please try again later.");
       setIsDeleting(false);
     }
   };
@@ -164,7 +164,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
       <div className="w-full max-w-md relative bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-300">
         
         <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-white/10">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Cài đặt</h2>
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Settings</h2>
           <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors">
             <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
           </button>
@@ -173,38 +173,38 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         <div className="overflow-y-auto p-2">
           
           <div className="mb-4">
-            <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Giao diện</p>
+            <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Appearance</p>
             <div className="space-y-1">
               <MenuItem 
                 icon={theme === 'dark' ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-orange-500" />} 
-                label={`Chế độ: ${theme === 'dark' ? 'Tối' : 'Sáng'}`} 
+                label={`Mode: ${theme === 'dark' ? 'Dark' : 'Light'}`} 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
               />
             </div>
           </div>
 
           <div className="mb-4">
-            <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Tài khoản</p>
+            <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Account</p>
             <div className="space-y-1">
               <MenuItem 
                 icon={<User className="w-5 h-5 text-blue-500 dark:text-blue-400" />} 
-                label="Chỉnh sửa trang cá nhân" 
+                label="Edit profile" 
                 onClick={() => setShowEditProfile(true)} 
               />
               <MenuItem 
                 icon={<Shield className="w-5 h-5 text-green-500 dark:text-green-400" />} 
-                label="Mật khẩu & Bảo mật" 
+                label="Password & security" 
                 onClick={() => setShowSecurity(true)} 
               />
               <MenuItem 
                 icon={<Bell className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />} 
-                label="Cài đặt Thông báo" 
+                label="Notification settings" 
                 onClick={() => setShowNotifSettings(true)} 
               />
               {/* [THÊM MỚI] Nút Xóa Tài Khoản */}
               <MenuItem 
                 icon={<UserX className="w-5 h-5 text-red-500 dark:text-red-400" />} 
-                label={isDeleting ? "Đang xóa tài khoản..." : "Xóa tài khoản"} 
+                label={isDeleting ? "Deleting account..." : "Delete account"} 
                 onClick={handleDeleteAccount} 
                 danger={true}
                 disabled={isDeleting}
@@ -213,29 +213,29 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="mb-4">
-            <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Hỗ trợ</p>
+            <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Support</p>
             <div className="space-y-1">
               
               {showFeedbackInput && (
                   <div className="px-4 py-2 space-y-2 bg-zinc-50 dark:bg-zinc-900/50 mx-2 rounded-xl mb-2 border border-zinc-200 dark:border-white/5">
                       <Input 
-                        placeholder="Bạn muốn chia sẻ điều gì?" 
+                        placeholder="What would you like to share?" 
                         value={feedbackText}
                         onChange={e => setFeedbackText(e.target.value)}
                         className="bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-black dark:text-white"
                       />
-                      <Button size="sm" onClick={handleSendFeedback} className="w-full">Gửi ngay</Button>
+                      <Button size="sm" onClick={handleSendFeedback} className="w-full">Send now</Button>
                   </div>
               )}
 
               <MenuItem 
                 icon={<FileText className="w-5 h-5 text-purple-500 dark:text-purple-400" />} 
-                label="Chính sách quyền riêng tư" 
+                label="Privacy policy" 
                 onClick={() => { onClose(); navigate('/privacy'); }} 
               />
               <MenuItem 
                 icon={<FileText className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />} 
-                label="Điều khoản sử dụng" 
+                label="Terms of service" 
                 onClick={() => { onClose(); navigate('/terms'); }} 
               />
             </div>
@@ -243,11 +243,11 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           <div className="p-2 pt-4 border-t border-zinc-100 dark:border-white/10">
             <button 
-              onClick={() => { if(confirm("Bạn có chắc muốn đăng xuất?")) { logout(); onClose(); } }}
+              onClick={() => { if(confirm("Are you sure you want to sign out?")) { logout(); onClose(); } }}
               className="w-full flex items-center gap-3 px-4 py-3 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors font-medium"
             >
               <LogOut className="w-5 h-5" />
-              Đăng xuất
+              Sign out
             </button>
             <div className="text-center mt-4 text-xs text-zinc-400 dark:text-zinc-600">Mindrevol v1.0.0</div>
           </div>

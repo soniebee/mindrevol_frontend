@@ -12,7 +12,7 @@ export interface NotificationResponse {
     senderId: string;
     senderName: string;
 
-    // --- BỔ SUNG SPRINT 2 (Giúp hết báo đỏ ở NotificationItem.tsx) ---
+    // --- Sprint 2 additions (supports clearing the red badge in NotificationItem.tsx) ---
     isSeen?: boolean;
     messageKey?: string;
     messageArgs?: string | string[];
@@ -49,7 +49,7 @@ export const notificationService = {
         await http.patch('/notifications/read-all');
     },
 
-    // [THÊM MỚI SPRINT 2] Đánh dấu đã nhận (xóa số badge đỏ trên chuông)
+    // [Sprint 2 addition] Mark as seen (clear the red badge on the bell)
     markAllAsSeen: async (): Promise<void> => {
         await http.patch('/notifications/seen-all');
     },

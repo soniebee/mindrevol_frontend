@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlayCircle, Calendar } from 'lucide-react';
-// Import đúng type từ file types vừa cập nhật
+// Import the correct type from the updated types file
 import { UserActiveJourneyResponse } from '@/modules/journey/types';
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const RecapAlbumCard: React.FC<Props> = ({ journey, onClick }) => {
-  // Lấy ảnh cover
+  // Get the cover image
   const coverImage = journey.checkins && journey.checkins.length > 0 ? journey.checkins[0].imageUrl : null;
 
   return (
@@ -35,7 +35,7 @@ export const RecapAlbumCard: React.FC<Props> = ({ journey, onClick }) => {
         <h3 className="font-bold text-white text-base md:text-lg line-clamp-2 drop-shadow-lg group-hover:translate-y-1 transition-transform">{journey.name}</h3>
         <div className="flex items-center gap-1 mt-2 text-[10px] md:text-xs text-zinc-300 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
             <Calendar className="w-3 h-3" />
-            <span>Đã hoàn thành</span>
+            <span>Completed</span>
         </div>
       </div>
     </div>

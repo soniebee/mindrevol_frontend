@@ -37,7 +37,7 @@ export const MonthCalendarBlock: React.FC<Props> = ({ userId, year, month, onIma
   const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
   const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
-  const monthNames = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const isCurrentMonth = new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
 
   return (
@@ -52,7 +52,7 @@ export const MonthCalendarBlock: React.FC<Props> = ({ userId, year, month, onIma
       </div>
 
       <div className="grid grid-cols-7 gap-2 mb-3 text-center text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
           <div key={day}>{day}</div>
         ))}
       </div>

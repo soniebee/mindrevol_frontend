@@ -27,7 +27,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            // [ĐÃ FIX BUG] Nếu modal cài đặt đang mở thì KHÔNG chạy logic click outside của Panel
+            // If the settings modal is open, skip the panel outside-click handler
             if (isSettingsOpen) return;
 
             if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
@@ -43,7 +43,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen) {
-            // Mark as seen when panel opens to clear badge count.
+            // Mark as seen when the panel opens to clear the badge count.
             markAllAsSeen();
         }
     }, [isOpen, markAllAsSeen]);
@@ -77,7 +77,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
         await handleAction(action, notification);
     };
 
-    // Vẫn render Modal Settings cho dù NotificationPanel bị đóng
+    // Keep rendering the settings modal even when the notification panel is closed
     return (
         <>
             {isOpen && (
@@ -87,7 +87,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                 >
                     <div className="p-4 border-b border-zinc-100 dark:border-white/10 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-zinc-900 dark:text-white">Thông báo</h3>
+                                    <h3 className="font-bold text-zinc-900 dark:text-white">Notifications</h3>
                             {unreadCount > 0 && (
                                 <span className="px-2 py-0.5 bg-indigo-500 text-white text-xs font-bold rounded-full">
                   {unreadCount}
@@ -99,7 +99,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                             <button
                                 onClick={markAllAsRead}
                                 className="p-2 text-zinc-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-full transition-colors"
-                                title="Đánh dấu tất cả đã đọc"
+                                title="Mark all as read"
                             >
                                 <Check className="w-4 h-4" />
                             </button>
@@ -110,7 +110,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                                     setIsSettingsOpen(true);
                                 }}
                                 className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
-                                title="Cài đặt thông báo"
+                                title="Notification settings"
                             >
                                 <Settings className="w-4 h-4" />
                             </button>
@@ -121,7 +121,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                         <div className="flex-1 overflow-y-auto overscroll-contain border-r border-zinc-100 dark:border-white/10">
                             {isLoading ? (
                                 <div className="p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                                    Đang tải thông báo...
+                                    Loading notifications...
                                 </div>
                             ) : notifications.length > 0 ? (
                                 notifications.map((notification) => (
@@ -136,7 +136,7 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                             ) : (
                                 <div className="p-8 text-center flex flex-col items-center justify-center text-zinc-500 dark:text-zinc-400">
                                     <Bell className="w-8 h-8 mb-3 opacity-20" />
-                                    <p className="text-sm">Bạn không có thông báo nào mới</p>
+                                    <p className="text-sm">You have no new notifications</p>
                                 </div>
                             )}
                         </div>
@@ -151,25 +151,25 @@ export const NotificationPanel: React.FC<Props> = ({ isOpen, onClose }) => {
                                         {selectedNotificationText}
                                     </p>
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 pt-1">
-                                        {new Date(selectedNotification.createdAt).toLocaleString('vi-VN')}
+                                        {new Date(selectedNotification.createdAt).toLocaleString('en-US')}
                                     </p>
                                 </div>
                             ) : (
-                                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                    Chọn một thông báo để xem chi tiết bên cạnh.
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                    Select a notification to view its details in the side panel.
                                 </p>
                             )}
                         </div>
                     </div>
                     <div className="p-2 border-t border-zinc-100 dark:border-white/10">
                         <button className="w-full py-2 text-sm font-medium text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
-                            Xem tất cả thông báo
+                            View all notifications
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* Render ngoài logic if (!isOpen) để Modal không bị văng khi click bên trong */}
+            {/* Render outside the if (!isOpen) branch so the modal does not close when clicking inside */}
             <NotificationSettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}

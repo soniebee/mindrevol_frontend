@@ -4,11 +4,11 @@ import { UserProfile, userService } from '../services/user.service';
 import { X, Camera } from 'lucide-react';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 
-// [FIX] Cập nhật Interface
+// [FIX] Updated interface
 interface EditProfileModalProps {
-  isOpen: boolean; // Thêm dòng này
+  isOpen: boolean;
   onClose: () => void;
-  user: UserProfile; // User là bắt buộc
+  user: UserProfile;
   onUpdateSuccess: () => void;
 }
 
@@ -22,7 +22,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, user
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Reset state khi mở lại
+  // Reset state when reopened
   useEffect(() => {
       if (isOpen) {
           setFullname(user.fullname);
@@ -52,7 +52,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, user
       onUpdateSuccess();
       onClose();
     } catch (error) {
-      alert('Cập nhật thất bại. Vui lòng thử lại.');
+      alert('Update failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -60,12 +60,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, user
 
   if (!isOpen) return null;
 
-  // Sử dụng Portal để modal luôn nổi lên trên cùng
+  // Use a portal so the modal always renders on top
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4 animate-in fade-in">
       <div className="w-full max-w-sm bg-zinc-900 rounded-3xl overflow-hidden flex flex-col max-h-[90vh] border border-zinc-800 shadow-2xl">
         <div className="p-4 flex justify-between items-center border-b border-zinc-800">
-          <h3 className="text-white font-bold text-lg">Chỉnh sửa hồ sơ</h3>
+          <h3 className="text-white font-bold text-lg">Edit profile</h3>
           <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-full transition"><X className="text-zinc-400 w-5 h-5" /></button>
         </div>
 
@@ -84,7 +84,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, user
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Họ và tên</label>
+              <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Full name</label>
               <input 
                 value={fullname} 
                 onChange={e => setFullname(e.target.value)}
@@ -92,7 +92,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, user
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tiểu sử (Bio)</label>
+              <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Bio</label>
               <textarea 
                 value={bio} 
                 onChange={e => setBio(e.target.value)}
@@ -109,7 +109,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, user
             disabled={isLoading}
             className="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl flex items-center justify-center hover:bg-yellow-400 transition disabled:opacity-50"
           >
-            {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+            {isLoading ? 'Saving...' : 'Save changes'}
           </button>
         </div>
       </div>
