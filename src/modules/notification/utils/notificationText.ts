@@ -1,7 +1,15 @@
 import { NotificationResponse } from '../services/notification.service';
 
 const FALLBACK_TRANSLATIONS: Record<string, string> = {
-  'noti.and_others': 'và {{count}} người khác'
+  'noti.and_others': 'và {{count}} người khác',
+  'noti.journey.invite': 'mời bạn tham gia hành trình {{name}}',
+  'noti.friend.request': '{{name}} gửi lời kết bạn',
+  'noti.friend.accepted': '{{name}} đã chấp nhận lời kết bạn',
+  'noti.box.invite': 'mời bạn tham gia không gian {{name}}',
+  'noti.checkin.reacted': '{{name}} đã thích bài Check-in của bạn',
+  'noti.mood.reacted': '{{name}} đã thích tâm trạng của bạn',
+  'noti.comment.mentioned': '{{name}} đã nhắc tên bạn trong bình luận',
+  'noti.box.member.joined': '{{name}} đã tham gia không gian'
 };
 
 const translate = (key: string, params?: Record<string, string | number>) => {
