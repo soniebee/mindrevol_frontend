@@ -1,13 +1,9 @@
-import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import React from 'react';
+import { X, Bell } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { NotificationResponse } from '@/modules/notification/services/notification.service';
-import {
-    getNotificationMeta,
-    isActionableNotification
-} from '@/modules/notification/constants';
-import { getNotificationDisplayText } from '@/modules/notification/utils/notificationText';
 
 interface Props {
     noti: NotificationResponse;
@@ -16,110 +12,78 @@ interface Props {
     onAction: (e: React.MouseEvent, action: 'ACCEPT' | 'REJECT', noti: NotificationResponse) => void;
 }
 
+const ACTIONABLE_TYPES = ['BOX_INVITE', 'JOURNEY_INVITE', 'FRIEND_REQUEST'];
+
 export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onAction }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const meta = getNotificationMeta(noti.type);
-    const requiresAction = isActionableNotification(noti);
-    const isAggregated = (noti.actorsCount ?? 0) > 1;
+    
+    const requiresAction = ACTIONABLE_TYPES.includes(noti.type) && !noti.isRead;
 
     const handleClick = () => {
+        if (ACTIONABLE_TYPES.includes(noti.type)) return;
         onClick(noti);
     };
 
-    const handleActionClick = async (e: React.MouseEvent, action: 'ACCEPT' | 'REJECT') => {
-        e.stopPropagation();
-        setIsLoading(true);
-        try {
-            await onAction(e, action, noti);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const displayText = getNotificationDisplayText(noti);
-    const avatarUrls = (noti.actorAvatars ?? []).filter((url) => url.startsWith('http')).slice(0, 2);
-    const shouldRenderAvatarStack = isAggregated && avatarUrls.length > 0;
-
     return (
-        <div
+        <div 
             onClick={handleClick}
             className={cn(
-                "px-6 py-4 transition-colors cursor-pointer flex gap-4 relative border-b border-zinc-100 dark:border-white/5 group",
-                !noti.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-zinc-50 dark:hover:bg-white/5"
+                "px-5 py-4 transition-all duration-300 cursor-pointer flex gap-4 relative border-b border-[#D6CFC7]/30 dark:border-[#2B2A29]/50 group",
+                // Highlight nhẹ màu Be/Đen mờ cho thông báo chưa đọc
+                !noti.isRead 
+                    ? "bg-[#F4EBE1]/40 dark:bg-[#2B2A29]/40" 
+                    : "hover:bg-[#F4EBE1]/20 dark:hover:bg-[#1A1A1A]/40"
             )}
         >
-            {!noti.isRead && <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500" />}
-
-            <div className={cn(
-                'w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-xl overflow-hidden border relative',
-                meta.iconContainerClassName
-            )}>
-                {shouldRenderAvatarStack ? (
-                    <div className="w-full h-full flex items-center justify-center">
-                        {avatarUrls.map((avatar, index) => (
-                            <img
-                                key={`${avatar}-${index}`}
-                                src={avatar}
-                                alt=""
-                                className={cn(
-                                    'w-7 h-7 rounded-full object-cover border-2 border-white dark:border-[#18181b] absolute',
-                                    index === 0 ? 'left-1.5' : 'right-1.5'
-                                )}
-                            />
-                        ))}
-                    </div>
-                ) : noti.imageUrl ? (
+            {/* Chấm xanh báo chưa đọc */}
+            {!noti.isRead && <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />}
+            
+            {/* Avatar viền bo góc vuông mềm mại */}
+            <div className="w-14 h-14 rounded-[18px] bg-[#E2D9CE] dark:bg-[#3A3734] shrink-0 flex items-center justify-center text-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white/50 dark:border-white/5">
+                {noti.imageUrl ? (
                     noti.imageUrl.startsWith('http') ? <img src={noti.imageUrl} alt="" className="w-full h-full object-cover" /> : noti.imageUrl
                 ) : (
-                    <meta.icon size={20} className={meta.iconClassName} />
-                )}
-
-                {isAggregated && (
-                    <span className="absolute -right-1 -bottom-1 min-w-5 h-5 px-1 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center border border-white dark:border-[#18181b]">
-                        +{Math.min((noti.actorsCount ?? 1) - 1, 99)}
-                    </span>
+                    <Bell size={22} className="text-[#8A8580] dark:text-[#A09D9A]" strokeWidth={2.5} />
                 )}
             </div>
 
-            <div className="flex-1 min-w-0">
-                <h4 className="text-[16px] font-bold text-black dark:text-white mb-0.5 truncate" style={{ fontFamily: '"Jua", sans-serif' }}>
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <h4 className="text-[1rem] font-extrabold text-[#1A1A1A] dark:text-white mb-1 leading-snug line-clamp-2 tracking-tight">
                     {noti.title}
                 </h4>
-                <p className={cn("text-[14px] leading-snug pr-4", !noti.isRead ? "text-zinc-800 dark:text-zinc-200 font-medium" : "text-zinc-500 dark:text-zinc-400")}>
-                    {displayText}
+                <p className={cn(
+                    "text-[0.9rem] leading-relaxed pr-4 line-clamp-3", 
+                    !noti.isRead ? "text-[#4A4A4A] dark:text-[#D6CFC7] font-bold" : "text-[#8A8580] dark:text-[#A09D9A] font-semibold"
+                )}>
+                    {noti.message}
                 </p>
-                <p className="text-[11px] text-blue-500 dark:text-blue-400 font-bold mt-1.5 uppercase tracking-wider">
-                    {formatDistanceToNow(new Date(noti.createdAt), { addSuffix: true })}
+                <p className="text-[0.75rem] text-[#A09D9A] dark:text-[#8A8580] font-extrabold mt-2 uppercase tracking-widest">
+                    {formatDistanceToNow(new Date(noti.createdAt), { addSuffix: true, locale: vi })}
                 </p>
 
                 {requiresAction && (
-                    <div className="flex gap-2 mt-3">
-                        <button
-                            onClick={(e) => handleActionClick(e, 'ACCEPT')}
-                            disabled={isLoading}
-                            className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white text-xs font-bold rounded-[10px] transition-colors shadow-sm flex items-center justify-center gap-2 min-w-[80px]"
+                    <div className="flex gap-2.5 mt-3.5">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onAction(e, 'ACCEPT', noti); }}
+                            className="px-5 py-2.5 bg-[#1A1A1A] dark:bg-white hover:bg-black active:scale-95 text-white dark:text-[#1A1A1A] text-[0.85rem] font-extrabold rounded-[14px] transition-all shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
                         >
-                            {isLoading && <Loader2 size={14} className="animate-spin" />}
-                            <span>{isLoading ? 'Đang xử lý' : 'Chấp nhận'}</span>
+                            Chấp nhận
                         </button>
-                        <button
-                            onClick={(e) => handleActionClick(e, 'REJECT')}
-                            disabled={isLoading}
-                            className="px-4 py-1.5 bg-zinc-100 hover:bg-zinc-200 disabled:bg-zinc-50 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:disabled:bg-zinc-800 dark:text-zinc-300 text-xs font-bold rounded-[10px] transition-colors border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-2 min-w-[70px]"
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onAction(e, 'REJECT', noti); }}
+                            className="px-5 py-2.5 bg-[#F4EBE1] hover:bg-[#E2D9CE] dark:bg-[#2B2A29] dark:hover:bg-[#3A3734] active:scale-95 text-[#1A1A1A] dark:text-white text-[0.85rem] font-extrabold rounded-[14px] transition-all border border-transparent dark:border-[#4A4D55]/30"
                         >
-                            {isLoading && <Loader2 size={14} className="animate-spin" />}
-                            <span>{isLoading ? 'Xử lý' : 'Từ chối'}</span>
+                            Từ chối
                         </button>
                     </div>
                 )}
             </div>
 
-            <button
+            <button 
                 onClick={(e) => onDelete(e, noti.id)}
-                className="absolute right-4 top-4 p-1.5 rounded-full text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
-                title="Delete"
+                className="absolute right-4 top-4 p-2 rounded-[14px] text-[#A09D9A] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all active:scale-90"
+                title="Xóa"
             >
-                <X size={16} />
+                <X size={18} strokeWidth={2.5} />
             </button>
         </div>
     );

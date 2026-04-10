@@ -132,8 +132,6 @@ export interface JourneyResponse {
   creatorId: string;
   hasNewUpdates?: boolean;
   previewImages?: string[];
-
-  // [THÊM 2 DÒNG NÀY ĐỂ FIX LỖI]
   themeColor?: string;
   avatar?: string;
 
@@ -214,11 +212,17 @@ export interface UserActiveJourneyResponse {
   theme: JourneyTheme | string;      
   themeColor?: string;
   avatar?: string;
+
+  // 🔥 BỔ SUNG THÔNG TIN BOX Ở ĐÂY ĐỂ HOOK TRÍCH XUẤT RA BỘ LỌC
+  boxId?: string;
+  boxName?: string;
+  boxAvatar?: string;
+
   memberAvatars: (string | null)[]; 
   totalMembers: number;
   daysRemaining: number;
   totalCheckins: number;
-  isProfileVisible: boolean; // Thêm dòng này
+  isProfileVisible: boolean; 
   checkins: any[]; 
   hasNewUpdates?: boolean;
 }

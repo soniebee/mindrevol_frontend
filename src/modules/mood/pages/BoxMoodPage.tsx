@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Share2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Hand, Trash2 } from 'lucide-react';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useBoxMoods } from '@/modules/mood/hooks/useBoxMoods';
-import { MoodSelectionSheet } from '@/modules/mood/components/MoodSelectionSheet';
+import { SetMoodModal } from '@/modules/mood/components/SetMoodModal';
 
 interface Props {
     boxId: string;
@@ -11,204 +11,243 @@ interface Props {
 
 export const BoxMoodPage: React.FC<Props> = ({ boxId, onBack }) => {
     const { user } = useAuth();
-    const { moods, myMood, handleSetMood, handleDeleteMood } = useBoxMoods(boxId, user?.id);
+    const { moods, boxMembers, myMood, handleSetMood, handleDeleteMood, handleAskMood, handleReact, handleReplyToMood } = useBoxMoods(boxId, user?.id);
     
     const [viewingUserId, setViewingUserId] = useState<string | undefined>(user?.id);
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [replyMessage, setReplyMessage] = useState("");
 
     useEffect(() => {
-        if (viewingUserId !== user?.id && !moods.find(m => m.userId === viewingUserId)) {
-            setViewingUserId(user?.id);
-        }
-    }, [moods, viewingUserId, user?.id]);
+        if (!viewingUserId) setViewingUserId(user?.id);
+    }, [user?.id]);
 
     const viewingMood = viewingUserId === user?.id ? myMood : moods.find(m => m.userId === viewingUserId);
     const isViewingMe = viewingUserId === user?.id;
 
     const viewingUser = isViewingMe 
-        ? { fullname: user?.fullname || "You", avatarUrl: user?.avatarUrl } 
-        : { fullname: viewingMood?.fullname, avatarUrl: viewingMood?.avatarUrl };
+        ? { fullname: user?.fullname || "Bạn", avatarUrl: user?.avatarUrl } 
+        : boxMembers.find(m => m.userId === viewingUserId) || { fullname: "Bạn bè", avatarUrl: "" };
 
-    const handleReply = () => {
-        console.log(`Sending reply to ${viewingUserId}: ${replyMessage}`);
+    const handleReply = async () => {
+        if (!viewingUserId || !viewingMood) return;
+        await handleReplyToMood(viewingUserId, replyMessage, viewingMood.icon);
         setReplyMessage("");
     };
 
-    const handleShareToBox = () => {
-        console.log(`Sharing mood ${viewingMood?.id} to Box ${boxId}`);
-    };
+    const sortedMembers = [...boxMembers.filter(m => m.userId !== user?.id)].sort((a, b) => {
+        const moodA = moods.find(m => m.userId === a.userId);
+        const moodB = moods.find(m => m.userId === b.userId);
+        if (moodA && !moodB) return -1;
+        if (!moodA && moodB) return 1;
+        if (moodA && moodB) {
+            return new Date(moodB.createdAt || 0).getTime() - new Date(moodA.createdAt || 0).getTime();
+        }
+        return 0;
+    });
 
     return (
-                 // 1. Xóa overflow-hidden
-                <div className="min-h-screen bg-[#e6f7f4] dark:bg-zinc-950 flex justify-center font-['Jua']">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-b from-[#F4EBE1] to-[#FFFFFF] dark:from-[#121212] dark:to-[#0A0A0A] font-quicksand p-0 md:p-6 overflow-hidden">
+            
+            <div className="w-full md:w-[700px] h-[100dvh] md:h-[85vh] md:max-h-[850px] bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-xl md:rounded-[40px] md:shadow-[0_24px_60px_rgba(0,0,0,0.08)] flex flex-col relative overflow-hidden md:border md:border-white/60 md:dark:border-white/5">
                 
-                {/* 2. Đổi h-[100dvh] thành min-h-[100dvh] để nó tự giãn chiều cao, và thêm pb-8 để lướt mượt */}
-                <div className="w-full max-w-4xl min-h-[100dvh] flex flex-col relative pb-8 md:pb-0">
-                            
-                {/* --- HEADER --- */}
-                <div className="flex items-center gap-3 md:gap-4 px-6 pt-8 md:pt-12 pb-4 shrink-0">
-                    <button onClick={onBack} className="p-2 -ml-2 text-zinc-800 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors">
-                        <ArrowLeft size={32} strokeWidth={2.5} />
+                {/* HEADER */}
+                <div className="flex items-center justify-between px-6 pt-12 md:pt-8 pb-4 shrink-0 z-20">
+                    <button onClick={onBack} className="p-2 -ml-2 text-[#8A8580] hover:text-[#1A1A1A] dark:text-[#A09D9A] dark:hover:text-white hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] rounded-[16px] transition-colors active:scale-95">
+                        <ArrowLeft size={28} strokeWidth={2.5} />
                     </button>
                     
-                    <div className="flex items-center gap-3 text-xl md:text-2xl text-zinc-900 dark:text-white font-bold tracking-wide">
-                        {viewingUser.avatarUrl ? (
-                            <img src={viewingUser.avatarUrl} alt="avatar" className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-[2px] border-white dark:border-zinc-800 shadow-sm" />
-                        ) : (
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                                <span className="text-base md:text-lg">👤</span>
-                            </div>
-                        )}
-                        <span>{viewingUser.fullname}</span>
+                    <div className="px-5 py-2 bg-[#F4EBE1]/50 dark:bg-[#2B2A29]/50 rounded-[20px] backdrop-blur-md">
+                        <span className="font-black text-[#1A1A1A] dark:text-white tracking-widest uppercase text-[0.8rem]">Không gian Cảm xúc</span>
                     </div>
+                    <div className="w-10"></div>
                 </div>
 
-                {/* --- MAIN CARD --- */}
-                <div className="flex-1 px-6 md:px-10 pb-4 flex flex-col items-center justify-center">
-                    {/* Thẻ Card trắng giờ sẽ xòe to mượt mà trên Desktop */}
-                    <div className="w-full max-w-2xl min-h-[400px] md:min-h-[500px] bg-white dark:bg-zinc-900 rounded-[40px] md:rounded-[64px] shadow-sm md:shadow-xl flex flex-col items-center justify-center p-8 md:p-12 relative overflow-hidden transition-all duration-300">
-                        
-                        {isViewingMe ? (
-                            // ========================================================
-                            // GIAO DIỆN CỦA MÌNH
-                            // ========================================================
-                            <div className="flex flex-col items-center text-center animate-in fade-in zoom-in duration-300 w-full relative">
-                                
-                                {viewingMood && (
-                                    <button 
-                                        onClick={() => handleDeleteMood()} 
-                                        className="absolute -top-2 -right-2 md:top-2 md:right-2 p-3 text-zinc-400 hover:text-red-500 bg-zinc-100 dark:bg-zinc-800/80 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all"
-                                        title="Delete status"
-                                    >
-                                        <Trash2 size={24} strokeWidth={2.5} />
-                                    </button>
-                                )}
-
-                                <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2">What's up?</h2>
-                                <p className="text-zinc-500 mb-8 md:mb-10 font-sans font-medium md:text-lg">Share a tiny mood for today!</p>
-                                
-                                <div className={`text-[120px] md:text-[160px] leading-none mb-6 md:mb-10 drop-shadow-sm transition-all ${!viewingMood ? 'opacity-50' : 'animate-in zoom-in'}`}>
-                                    {viewingMood ? viewingMood.icon : "🧘‍♂️"}
-                                </div>
-
-                                <div className="min-h-[48px] md:min-h-[56px] w-full flex items-center justify-center mb-6 md:mb-8">
-                                    {viewingMood?.message && (
-                                        <p className="text-lg md:text-xl text-zinc-700 dark:text-zinc-200 font-sans font-medium bg-zinc-50 dark:bg-zinc-800/50 px-6 py-3 rounded-2xl border border-zinc-100 dark:border-zinc-700 max-w-[90%] truncate">
-                                            {viewingMood.message}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <button 
-                                    onClick={() => setIsSheetOpen(true)}
-                                    className="w-[200px] md:w-[240px] h-[56px] md:h-[64px] bg-[#5d9c70] hover:bg-[#4e855e] text-white rounded-[28px] text-lg md:text-xl shadow-md transition-transform active:scale-95 tracking-wide"
-                                >
-                                    {viewingMood ? "New status" : "Add status"}
-                                </button>
-                                <p className="text-[10px] md:text-xs text-zinc-400 mt-4 md:mt-6 tracking-wide uppercase font-sans font-bold">Visible for 24h</p>
-                            </div>
-                        ) : (
-                            // ========================================================
-                            // GIAO DIỆN BẠN BÈ 
-                            // ========================================================
-                            <div className="flex flex-col items-center w-full animate-in fade-in zoom-in duration-300">
-                                <span className="text-[120px] md:text-[160px] drop-shadow-md leading-none mb-6 md:mb-10">
-                                    {viewingMood?.icon}
-                                </span>
-                                
-                                {viewingMood?.message && (
-                                    <p className="text-lg md:text-xl text-zinc-700 dark:text-zinc-200 text-center px-6 bg-zinc-50 dark:bg-zinc-800/50 py-4 rounded-2xl w-full border border-zinc-100 dark:border-zinc-700 font-sans font-medium">
-                                        {viewingMood.message}
-                                    </p>
-                                )}
-
-                                <div className="mt-auto w-full pt-10 md:pt-12 flex flex-col gap-4">
-                                    <div className="flex items-center bg-zinc-100 dark:bg-zinc-950 rounded-full p-1.5 border border-zinc-200 dark:border-zinc-800">
-                                        <input 
-                                            type="text" 
-                                            value={replyMessage}
-                                            onChange={(e) => setReplyMessage(e.target.value)}
-                                            placeholder={`Reply to ${viewingUser.fullname?.split(' ')[0]}...`}
-                                            className="flex-1 bg-transparent border-none px-4 md:text-lg focus:ring-0 font-sans font-medium"
-                                        />
-                                        <button 
-                                            onClick={handleReply}
-                                            disabled={!replyMessage.trim()}
-                                            className="w-12 h-12 rounded-full bg-[#5d9c70] text-white flex items-center justify-center disabled:opacity-50 transition"
-                                        >
-                                            <Send size={20} className="-ml-1" />
-                                        </button>
-                                    </div>
-                                    <button 
-                                        onClick={handleShareToBox}
-                                        className="w-full flex items-center justify-center gap-2 py-4 rounded-full bg-amber-100 text-amber-700 md:text-lg hover:bg-amber-200 transition"
-                                    >
-                                        <Share2 size={20} /> Share to Box chat
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-               {/* --- FRIEND'S MOODS (BOTTOM LIST) --- */}
-               <div className="h-[160px] md:h-[180px] px-6 md:px-10 pb-8 md:pb-12 shrink-0 flex flex-col justify-end">
-                    <h3 className="text-zinc-800 dark:text-zinc-200 text-sm md:text-base mb-1 tracking-wide font-sans font-bold uppercase">Friend's moods</h3>
+                {/* MAIN CONTENT */}
+                <div className="flex-1 px-6 pb-4 flex flex-col items-center justify-center relative">
                     
-                    {/* [ĐÃ FIX 1]: Thêm py-3 px-1 để có khoảng trống cho hiệu ứng phóng to (scale-110) không bị cắt */}
-                    <div className="flex gap-4 md:gap-6 overflow-x-auto custom-scrollbar py-3 px-1 items-center">
+                    <div className="w-full max-w-[500px] bg-white dark:bg-[#2B2A29] rounded-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/50 dark:border-[#3A3734] p-8 md:p-10 relative z-20 flex flex-col items-center text-center transition-all duration-500 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)]">
                         
-                        {/* CỦA MÌNH (YOU) */}
-                        <div className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0" onClick={() => setViewingUserId(user?.id)}>
-                            <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center relative border-[3px] transition-all ${viewingUserId === user?.id ? 'border-[#5d9c70] scale-110 shadow-md z-10' : 'border-white dark:border-zinc-700'} bg-white`}>
-                                
-                                {/* [ĐÃ FIX 2]: Hiện Mood -> Không Mood thì hiện Avatar -> Không Avatar thì hiện chữ cái */}
-                                {myMood ? (
-                                    <span className="text-3xl md:text-4xl">{myMood.icon}</span>
-                                ) : user?.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt="You" className="w-full h-full object-cover rounded-full" />
-                                ) : (
-                                    <div className="w-full h-full rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 font-bold text-xl font-sans">
-                                        {user?.fullname?.charAt(0).toUpperCase() || 'U'}
-                                    </div>
-                                )}
-
-                            </div>
-                            <span className={`text-[12px] md:text-[14px] mt-1 ${viewingUserId === user?.id ? 'text-[#5d9c70] font-bold' : 'text-zinc-500'}`}>You</span>
+                        <div className="flex items-center gap-3 mb-8 bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] py-1.5 px-4 rounded-full">
+                            {viewingUser.avatarUrl ? (
+                                <img src={viewingUser.avatarUrl} className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-6 h-6 rounded-full bg-[#E2D9CE] dark:bg-[#3A3734] flex items-center justify-center text-[0.7rem] font-black text-[#1A1A1A] dark:text-white">
+                                    {viewingUser.fullname?.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                            <span className="text-[0.95rem] font-bold text-[#8A8580] dark:text-[#A09D9A]">{viewingUser.fullname}</span>
                         </div>
 
-                        {/* BẠN BÈ */}
-                        {moods.filter(m => m.userId !== user?.id).map(mood => (
-                            <div key={mood.id} className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0" onClick={() => setViewingUserId(mood.userId)}>
-                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center relative border-[3px] transition-all ${viewingUserId === mood.userId ? 'border-[#5d9c70] scale-110 shadow-md z-10' : 'border-white dark:border-zinc-700'} bg-white`}>
-                                    
-                                    <span className="text-3xl md:text-4xl">{mood.icon}</span>
-                                    
-                                    {/* Ảnh avatar nhỏ đính kèm góc dưới */}
-                                    <img 
-                                        src={mood.avatarUrl || `https://ui-avatars.com/api/?name=${mood.fullname}`} 
-                                        alt="avt" 
-                                        className="absolute -bottom-1 -right-1 w-6 h-6 md:w-7 md:h-7 rounded-full border-[3px] border-[#e6f7f4] dark:border-zinc-950 object-cover" 
-                                    />
-                                </div>
-                                <span className={`text-[12px] md:text-[14px] mt-1 truncate max-w-[64px] md:max-w-[80px] ${viewingUserId === mood.userId ? 'text-[#5d9c70] font-bold' : 'text-zinc-500'}`}>
-                                    {mood.fullname?.split(' ')[0]}
-                                </span>
+                        {isViewingMe ? (
+                            // ================= GIAO DIỆN CỦA MÌNH =================
+                            <div className="flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 w-full relative">
+                                
+                                {viewingMood && (
+                                    <button onClick={() => handleDeleteMood()} className="absolute -top-4 right-0 p-2.5 text-[#A09D9A] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[14px] transition-all" title="Gỡ trạng thái">
+                                        <Trash2 size={20} strokeWidth={2.5} />
+                                    </button>
+                                )}
+                                
+                                {viewingMood ? (
+                                    <div className="text-[6rem] md:text-[8rem] leading-none mb-6 animate-in zoom-in hover:scale-110 cursor-pointer transition-transform drop-shadow-xl" onClick={() => setIsModalOpen(true)}>
+                                        {viewingMood.icon}
+                                    </div>
+                                ) : (
+                                    <div className="w-[120px] h-[120px] md:w-[150px] md:h-[150px] mb-6 animate-in zoom-in hover:scale-110 cursor-pointer transition-transform drop-shadow-[0_12px_24px_rgba(0,0,0,0.15)]" onClick={() => setIsModalOpen(true)}>
+                                        <img src="/moscow/moscow (1).png" alt="Mascot" className="w-full h-full object-contain pointer-events-none" />
+                                    </div>
+                                )}
+
+                                {viewingMood?.message ? (
+                                    <p className="text-[1.1rem] text-[#1A1A1A] dark:text-white font-extrabold mb-6 leading-relaxed">{viewingMood.message}</p>
+                                ) : (
+                                    <p className="text-[1.05rem] text-[#8A8580] font-bold mb-6">Bạn đang cảm thấy thế nào?</p>
+                                )}
+
+                                <button onClick={() => setIsModalOpen(true)} className="w-full h-[56px] bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] hover:bg-black rounded-[20px] text-[1.05rem] font-extrabold shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 transition-all mb-4">
+                                    {viewingMood ? "Đổi cảm xúc" : "Thêm cảm xúc"}
+                                </button>
+
+                                {/* 🔥 HIỂN THỊ DANH SÁCH AI ĐÃ THẢ TIM CHO MÌNH */}
+                                {viewingMood?.reactions && viewingMood.reactions.length > 0 && (
+                                    <div className="w-full mt-2 pt-6 border-t border-[#D6CFC7]/50 dark:border-[#3A3734] animate-in fade-in slide-in-from-bottom-4">
+                                        <p className="text-[0.75rem] text-[#8A8580] font-bold uppercase tracking-widest mb-3">Những người đã tương tác</p>
+                                        <div className="flex flex-wrap justify-center gap-2">
+                                            {viewingMood.reactions.map(r => (
+                                                <div key={r.userId} className="flex items-center gap-1.5 bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] px-3 py-1.5 rounded-[12px] border border-transparent dark:border-white/5">
+                                                    {r.avatarUrl ? (
+                                                        <img src={r.avatarUrl} className="w-5 h-5 rounded-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-5 h-5 rounded-full bg-[#E2D9CE] dark:bg-[#3A3734] flex items-center justify-center text-[9px] font-black text-[#1A1A1A] dark:text-white">
+                                                            {r.fullname.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <span className="text-[0.8rem] font-bold text-[#1A1A1A] dark:text-white">{r.fullname.split(' ')[0]}</span>
+                                                    <span className="text-[1.1rem] leading-none ml-1">{r.emoji}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        ))}
+                        ) : viewingMood ? (
+                            // ================= GIAO DIỆN BẠN BÈ =================
+                            <div className="flex flex-col items-center w-full animate-in fade-in zoom-in-95 duration-300">
+                                <div className="text-[6rem] md:text-[8rem] leading-none mb-6 hover:scale-110 transition-transform cursor-pointer drop-shadow-xl">
+                                    {viewingMood.icon}
+                                </div>
+                                
+                                {viewingMood.message && (
+                                    <p className="text-[1.1rem] text-[#1A1A1A] dark:text-white font-extrabold mb-8 leading-relaxed">{viewingMood.message}</p>
+                                )}
+
+                                {/* 🔥 THANH THẢ CẢM XÚC (REACTION BAR) */}
+                                <div className="flex items-center justify-center gap-3 mb-6 bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] p-2 rounded-[24px]">
+                                    {['👍', '❤️', '😂', '🥺'].map(emoji => {
+                                        const hasReacted = viewingMood.reactions?.some(r => r.userId === user?.id && r.emoji === emoji);
+                                        return (
+                                            <button 
+                                                key={emoji} 
+                                                onClick={() => handleReact(viewingMood.id, emoji)}
+                                                className={`w-12 h-12 rounded-[16px] text-[1.4rem] flex items-center justify-center transition-all active:scale-90 ${hasReacted ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-[0_4px_12px_rgba(0,0,0,0.1)] -translate-y-1' : 'bg-white dark:bg-[#3A3734] hover:bg-white/80 shadow-sm border border-transparent dark:border-white/5'}`}
+                                            >
+                                                {emoji}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+
+                                <div className="w-full flex items-center bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] rounded-[20px] p-1.5 border border-[#D6CFC7]/50 dark:border-[#3A3734]">
+                                    <input 
+                                        type="text" 
+                                        value={replyMessage}
+                                        onChange={(e) => setReplyMessage(e.target.value)}
+                                        placeholder={`Gửi lời nhắn...`}
+                                        className="flex-1 bg-transparent border-none px-4 text-[0.95rem] font-bold text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] focus:ring-0"
+                                    />
+                                    <button disabled={!replyMessage.trim()} onClick={handleReply} className="w-10 h-10 rounded-[14px] bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] flex items-center justify-center disabled:opacity-50 active:scale-95 transition-all hover:shadow-md">
+                                        <Send size={18} className="-ml-0.5" strokeWidth={2.5} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            // ================= HỎI THĂM BẠN BÈ =================
+                            <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+                                <div className="w-[120px] h-[120px] md:w-[150px] md:h-[150px] mb-6 drop-shadow-[0_12px_24px_rgba(0,0,0,0.15)] hover:scale-105 transition-transform duration-500">
+                                    <img src="/moscow/moscow (7).png" alt="Mascot" className="w-full h-full object-contain pointer-events-none" />
+                                </div>
+                                <h3 className="text-[1.2rem] font-black text-[#1A1A1A] dark:text-white mb-2">Đang im ắng quá!</h3>
+                                <p className="text-[0.95rem] text-[#8A8580] font-semibold mb-8 px-4">
+                                    {viewingUser.fullname?.split(' ')[0]} chưa cập nhật cảm xúc. Hãy chọc xem sao!
+                                </p>
+                                <button 
+                                    onClick={() => viewingUserId && handleAskMood(viewingUserId)}
+                                    className="flex items-center gap-2 px-8 h-[56px] bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] hover:bg-black rounded-[20px] text-[1.05rem] font-extrabold shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 transition-all group"
+                                >
+                                    <Hand size={20} className="group-hover:rotate-12 transition-transform" strokeWidth={2.5} /> Hỏi thăm
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
-            
 
-                <MoodSelectionSheet 
-                    isOpen={isSheetOpen}
-                    onClose={() => setIsSheetOpen(false)}
-                    onSubmit={handleSetMood}
-                    currentMood={myMood}
-                />
-                
+                {/* BOTTOM LIST */}
+                <div className="h-[160px] md:h-[180px] px-6 pb-6 shrink-0 flex flex-col justify-end z-20">
+                    <div className="flex gap-4 overflow-x-auto overflow-y-visible custom-scrollbar pt-6 pb-2 px-2 items-center">
+                        {/* CỦA MÌNH */}
+                        <div className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group" onClick={() => setViewingUserId(user?.id)}>
+                            <div className={`w-[60px] h-[60px] rounded-[18px] flex items-center justify-center relative transition-all duration-300 ${viewingUserId === user?.id ? 'bg-[#1A1A1A] dark:bg-white shadow-[0_8px_20px_rgba(0,0,0,0.15)] -translate-y-3' : 'bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE]'}`}>
+                                {myMood ? (
+                                    <span className="text-[1.8rem] leading-none">{myMood.icon}</span>
+                                ) : user?.avatarUrl ? (
+                                    <img src={user.avatarUrl} alt="You" className="w-[calc(100%-6px)] h-[calc(100%-6px)] object-cover rounded-[14px]" />
+                                ) : (
+                                    <span className="text-[#8A8580] font-black text-[1.2rem]">{user?.fullname?.charAt(0).toUpperCase()}</span>
+                                )}
+                            </div>
+                            <span className={`text-[0.75rem] font-bold ${viewingUserId === user?.id ? 'text-[#1A1A1A] dark:text-white' : 'text-[#8A8580]'}`}>Bạn</span>
+                        </div>
+
+                        {sortedMembers.map(member => {
+                            const friendMood = moods.find(m => m.userId === member.userId);
+                            const isSelected = viewingUserId === member.userId;
+                            
+                            return (
+                                <div key={member.userId} className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group" onClick={() => setViewingUserId(member.userId)}>
+                                    <div className={`w-[60px] h-[60px] rounded-[18px] flex items-center justify-center relative transition-all duration-300 ${isSelected ? 'bg-[#1A1A1A] dark:bg-white shadow-[0_8px_20px_rgba(0,0,0,0.15)] -translate-y-3' : 'bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE]'}`}>
+                                        {friendMood ? (
+                                            <>
+                                                <span className="text-[1.8rem] leading-none">{friendMood.icon}</span>
+                                                <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-[#121212] shadow-sm z-10 animate-pulse"></div>
+                                            </>
+                                        ) : member.avatarUrl ? (
+                                            <img src={member.avatarUrl} alt="avt" className="w-[calc(100%-6px)] h-[calc(100%-6px)] object-cover rounded-[14px] grayscale opacity-40" />
+                                        ) : (
+                                            <span className="text-[#A09D9A] opacity-40 font-black text-[1.2rem]">{member.fullname?.charAt(0).toUpperCase()}</span>
+                                        )}
+                                        
+                                        {friendMood && (
+                                            <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-[8px] border-[2px] border-white dark:border-[#121212] bg-[#E2D9CE] dark:bg-[#3A3734] flex items-center justify-center overflow-hidden shadow-sm">
+                                                {member.avatarUrl ? (
+                                                    <img src={member.avatarUrl} alt="avt" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-[10px] font-black text-[#1A1A1A] dark:text-white">{member.fullname?.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className={`text-[0.75rem] font-bold truncate max-w-[64px] ${isSelected ? 'text-[#1A1A1A] dark:text-white' : 'text-[#8A8580]'}`}>
+                                        {member.fullname.split(' ')[0]}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
             </div>
+            
+            <SetMoodModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSetMood} currentIcon={myMood?.icon} currentMessage={myMood?.message} />
         </div>
     );
 };

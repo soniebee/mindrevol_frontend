@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Plus, Search, Loader2, Layout, Bell } from 'lucide-react';
+import { X, Plus, Search, Loader2, LayoutGrid, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -24,48 +24,53 @@ export const JourneyListHeader: React.FC<Props> = ({
   activeTab, setActiveTab, alerts
 }) => {
   return (
-    <div className="p-6 pb-0 space-y-4 shrink-0">
-      <div className="flex items-center justify-between">
+    <div className="px-6 md:px-8 pb-3 space-y-6 shrink-0 bg-transparent font-quicksand">
+      
+      {/* 1. TITLE & BUTTONS */}
+      <div className="flex items-center justify-between pt-1">
         <div className="flex items-baseline gap-2">
-          <h2 className="text-[28px] text-black dark:text-white" style={{ fontFamily: '"Jua", sans-serif' }}>
-              Journeys
+          <h2 className="text-[1.6rem] md:text-[1.8rem] font-black text-[#1A1A1A] dark:text-white tracking-tight">
+              Hành trình
           </h2>
-          <span className={cn("text-sm font-bold", isLimitReached ? 'text-red-500' : 'text-zinc-400')}>
+          <span className={cn("text-[0.95rem] font-extrabold", isLimitReached ? 'text-red-500' : 'text-[#8A8580] dark:text-[#A09D9A]')}>
               ({currentCount}/{maxJourneys})
           </span>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button 
             onClick={onCreateClick}
             disabled={isLimitReached} 
             className={cn(
-                "p-2.5 rounded-full transition-all active:scale-95",
+                "p-2.5 rounded-[16px] transition-all flex items-center justify-center",
                 isLimitReached 
-                    ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed" 
-                    : "bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
+                    ? "bg-[#E2D9CE] dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] cursor-not-allowed" 
+                    : "bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 active:scale-95"
             )}
-            title={isLimitReached ? "Limit reached" : "Create new journey"}
+            title={isLimitReached ? "Đã đạt giới hạn" : "Tạo hành trình mới"}
           >
-            <Plus className="w-5 h-5" />
+            <Plus size={20} strokeWidth={3} />
           </button>
-          <button onClick={onClose} className="p-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-400 transition-colors">
-            <X className="w-5 h-5" />
+          <button 
+            onClick={onClose} 
+            className="p-2.5 rounded-[16px] bg-[#F4EBE1]/50 dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] hover:bg-[#F4EBE1] dark:hover:bg-[#3A3734] transition-colors active:scale-95"
+          >
+            <X size={20} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
-      {/* Quick Join */}
-      <div className="flex gap-2">
+      {/* 2. NHẬP MÃ THAM GIA */}
+      <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A09D9A]" strokeWidth={2.5} />
           <input 
             type="text" 
-            placeholder={isLimitReached ? "Limit reached" : "Enter invite code..."}
+            placeholder={isLimitReached ? "Đã đạt giới hạn..." : "Nhập mã tham gia..."}
             disabled={isLimitReached} 
             className={cn(
-                "w-full bg-zinc-50 dark:bg-[#1A1A1A] border border-zinc-200 dark:border-zinc-800 rounded-[14px] py-2.5 pl-10 pr-4 text-sm text-black dark:text-white outline-none uppercase transition-all font-sans font-medium placeholder:normal-case",
-                isLimitReached ? "opacity-50 cursor-not-allowed" : "focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                "w-full h-[52px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[20px] pl-11 pr-4 text-[1rem] font-bold text-[#1A1A1A] dark:text-white outline-none uppercase transition-all placeholder:normal-case placeholder:font-semibold shadow-sm focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A]",
+                isLimitReached ? "opacity-60 cursor-not-allowed" : ""
             )}
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
@@ -74,37 +79,38 @@ export const JourneyListHeader: React.FC<Props> = ({
         <button 
           onClick={onJoin}
           disabled={!inviteCode || joinLoading || isLimitReached} 
-          className="px-5 py-2.5 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black text-sm font-bold rounded-[14px] transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center min-w-[70px] shadow-sm"
+          className="px-6 h-[52px] bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] text-[0.95rem] font-black rounded-[20px] transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:scale-95 flex items-center justify-center min-w-[80px] shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
         >
-          {joinLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Join'}
+          {joinLoading ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Vào'}
         </button>
       </div>
 
-      {/* TABS Navigation */}
-      <div className="flex border-b border-zinc-200 dark:border-zinc-800 mt-2">
+      {/* 3. TABS BỒNG BỀNH */}
+      <div className="flex gap-3 overflow-x-auto custom-scrollbar pt-1">
         <button 
           onClick={() => setActiveTab('MY_JOURNEYS')}
           className={cn(
-              "flex-1 pb-3 text-sm font-bold flex justify-center items-center gap-2 relative transition-colors",
-              activeTab === 'MY_JOURNEYS' ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400" : "text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white"
+              "px-5 py-2.5 rounded-[18px] text-[0.9rem] font-black transition-all flex items-center gap-2.5 whitespace-nowrap active:scale-95",
+              activeTab === 'MY_JOURNEYS' 
+                  ? "bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-[0_6px_16px_rgba(0,0,0,0.12)] -translate-y-0.5" 
+                  : "bg-[#F4EBE1]/50 text-[#8A8580] dark:bg-[#2B2A29] dark:text-[#A09D9A] hover:bg-[#F4EBE1] dark:hover:bg-[#3A3734] border border-transparent hover:border-[#D6CFC7]/50 dark:hover:border-white/5"
           )}
         >
-          <Layout className="w-4 h-4" /> Active
-          {alerts.requests > 0 && (
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-1" title="Pending requests" />
-          )}
+          <LayoutGrid size={18} strokeWidth={2.5} /> Đang diễn ra
         </button>
         
         <button 
           onClick={() => setActiveTab('INVITATIONS')}
           className={cn(
-              "flex-1 pb-3 text-sm font-bold flex justify-center items-center gap-2 relative transition-colors",
-              activeTab === 'INVITATIONS' ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400" : "text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white"
+              "px-5 py-2.5 rounded-[18px] text-[0.9rem] font-black transition-all flex items-center gap-2.5 whitespace-nowrap active:scale-95",
+              activeTab === 'INVITATIONS' 
+                  ? "bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-[0_6px_16px_rgba(0,0,0,0.12)] -translate-y-0.5" 
+                  : "bg-[#F4EBE1]/50 text-[#8A8580] dark:bg-[#2B2A29] dark:text-[#A09D9A] hover:bg-[#F4EBE1] dark:hover:bg-[#3A3734] border border-transparent hover:border-[#D6CFC7]/50 dark:hover:border-white/5"
           )}
         >
-          <Bell className="w-4 h-4" /> Invitations
+          <Bell size={18} strokeWidth={2.5} /> Lời mời
           {alerts.invitations > 0 && (
-            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-bold ml-1">
+            <span className="bg-red-500 text-white text-[0.7rem] px-2 py-0.5 rounded-[8px] font-bold shadow-sm">
               {alerts.invitations}
             </span>
           )}

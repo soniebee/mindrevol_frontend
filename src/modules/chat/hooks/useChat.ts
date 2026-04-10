@@ -1,4 +1,4 @@
-//src/hooks/useChat
+//src/modules/chat/hooks/useChat.ts
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
@@ -9,7 +9,7 @@ import { useChatSocket } from './useChatSocket';
 import { Message } from '../types';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { http } from '@/lib/http'; // <-- ĐÃ THÊM DÒNG NÀY ĐỂ FIX LỖI BÁO ĐỎ CHỮ http
+import { http } from '@/lib/http';
 
 export const useChat = (conversationId: any, partnerId: any) => {
   const { user } = useAuth();
@@ -18,43 +18,48 @@ export const useChat = (conversationId: any, partnerId: any) => {
 
   const { 
     messages: messagesMap, 
-    addMessage, 
-    setMessages, 
+    addMessage,
+    updateMessage, // THÊM HÀM NÀY ĐỂ EDIT
+    setCursorData, // [ĐÃ ĐỔI TỪ setMessages SANG setCursorData]
     updateMessageStatus,
     replyingTo,        
     setReplyingTo,
-    prependMessages 
+    hasMoreMessages,   // [THÊM MỚI TỪ STORE]
+    cursors            // [THÊM MỚI TỪ STORE]
   } = useChatStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // Lấy danh sách messages của phòng hiện tại
   const messages = (messagesMap && Array.isArray(messagesMap[conversationId])) 
     ? messagesMap[conversationId] 
     : [];
 
+  const hasMore = hasMoreMessages[conversationId] ?? true;
+  const currentCursor = cursors[conversationId] ?? null;
+
   useChatSocket(conversationId); 
 
+  // Lấy dữ liệu lần đầu tiên khi vào phòng
   useEffect(() => {
     const fetchMessages = async () => {
       if (!conversationId) return;
-      if (conversationId.startsWith('friend_')) {
-          setMessages(conversationId, []); 
+      
+      // Nếu là ID tạm (chưa có phòng thật trên DB) -> Reset rỗng
+      if (conversationId.startsWith('friend_') || conversationId.startsWith('new_')) {
+          setCursorData(conversationId, { data: [], nextCursor: null, hasNext: false });
           return;
       }
 
       setIsLoading(true);
-      setPage(0);       // Reset trang về 0
-      setHasMore(true); // Reset hasMore
+      setError(null);
       
       try {
-        const data = await chatService.getMessages(conversationId, 0, 50); // Truyền page 0, size 50
-        const sortedMessages = [...data].reverse();
-        setMessages(conversationId, sortedMessages);
-        if (data.length < 50) setHasMore(false); // Nếu ít hơn 50 tin -> hết tin nhắn cũ
+        // [SỬA LOGIC] Chuyển page, size thành cursor, limit
+        const pageData = await chatService.getMessages(conversationId, null, 50); 
+        setCursorData(conversationId, pageData);
       } catch (err) {
         setError("Không thể tải tin nhắn");
       } finally {
@@ -62,40 +67,32 @@ export const useChat = (conversationId: any, partnerId: any) => {
       }
     };
     fetchMessages();
-  }, [conversationId, setMessages]);
+  }, [conversationId, setCursorData]);
 
-  // 2. [THÊM MỚI] Hàm tải thêm tin nhắn cũ
+  // Hàm tải thêm tin nhắn cũ bằng Cursor
   const loadMoreMessages = useCallback(async () => {
-      if (isLoadingMore || !hasMore || !conversationId || conversationId.startsWith('friend_')) return;
+      if (isLoadingMore || !hasMore || !conversationId || conversationId.startsWith('friend_') || conversationId.startsWith('new_')) return;
       
       setIsLoadingMore(true);
       try {
-          const nextPage = page + 1;
-          const data = await chatService.getMessages(conversationId, nextPage, 50);
-          
-          if (data.length === 0) {
-              setHasMore(false);
-          } else {
-              const sorted = [...data].reverse();
-              prependMessages(conversationId, sorted); // Đẩy tin cũ lên đầu
-              setPage(nextPage);
-              if (data.length < 50) setHasMore(false);
-          }
+          const pageData = await chatService.getMessages(conversationId, currentCursor, 50);
+          setCursorData(conversationId, pageData);
       } catch (err) {
           console.error("Lỗi khi tải thêm tin nhắn:", err);
       } finally {
           setIsLoadingMore(false);
       }
-  }, [conversationId, page, hasMore, isLoadingMore, prependMessages]);
+  }, [conversationId, currentCursor, hasMore, isLoadingMore, setCursorData]);
 
+  // Gửi tin nhắn mới
   const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE' = 'TEXT', file?: File) => {
     if (!content.trim() && type === 'TEXT') return;
     if (!currentUserId || (!partnerId && !conversationId)) return;
 
     let finalContent = content;
 
-    // UPLOAD FILE GHI ÂM LÊN BACKEND TRƯỚC KHI GỬI SOCKET
-    if (file && type === 'VOICE') {
+    // UPLOAD FILE GHI ÂM/HÌNH ẢNH LÊN BACKEND TRƯỚC KHI GỬI SOCKET
+    if (file && (type === 'VOICE' || type === 'IMAGE' || type === 'FILE')) {
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -104,7 +101,7 @@ export const useChat = (conversationId: any, partnerId: any) => {
             });
             finalContent = uploadRes.data.data; // Lấy link URL thật
         } catch (error) {
-            toast.error("Không thể tải lên file ghi âm");
+            toast.error("Không thể tải lên file đính kèm");
             return; 
         }
     }
@@ -112,8 +109,13 @@ export const useChat = (conversationId: any, partnerId: any) => {
     const clientSideId = Date.now().toString(); 
     const currentReplyId = replyingTo?.id;
     const optimisticMessage: Message = {
-      id: clientSideId, clientSideId, conversationId, senderId: currentUserId,
-      content: finalContent, type: type as any, createdAt: new Date().toISOString(),
+      id: clientSideId, 
+      clientSideId, 
+      conversationId, 
+      senderId: currentUserId,
+      content: finalContent, 
+      type: type as any, 
+      createdAt: new Date().toISOString(),
       replyToMsgId: currentReplyId
     };
 
@@ -121,13 +123,40 @@ export const useChat = (conversationId: any, partnerId: any) => {
     setReplyingTo(null);
 
     try {
-      const realMessage = await chatService.sendMessage({ conversationId, receiverId: partnerId, content: finalContent, type, clientSideId, replyToMsgId: currentReplyId });
+      const realMessage = await chatService.sendMessage({ 
+          conversationId: !conversationId.startsWith('friend_') && !conversationId.startsWith('new_') ? conversationId : undefined, 
+          receiverId: partnerId, 
+          content: finalContent, 
+          type, 
+          clientSideId, 
+          replyToMsgId: currentReplyId 
+      });
       updateMessageStatus(clientSideId, 'SENT', realMessage.id);
     } catch (err) {
       updateMessageStatus(clientSideId, 'ERROR');
       toast.error("Gửi tin nhắn thất bại");
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus, replyingTo, setReplyingTo]);
+
+  // [THÊM MỚI] Hàm sửa tin nhắn
+  const editMessage = useCallback(async (messageId: string, newContent: string) => {
+      if (!newContent.trim()) return;
+
+      // Tìm tin nhắn hiện tại để lưu tạm đề phòng bị lỗi (Rollback)
+      const currentMsg = messages.find(m => m.id === messageId);
+      if (!currentMsg) return;
+
+      // Optimistic Update UI
+      updateMessage({ ...currentMsg, content: newContent, metadata: { ...currentMsg.metadata, isEdited: true } });
+
+      try {
+          await chatService.editMessage(messageId, newContent);
+          // Socket sẽ bắn về update toàn diện nên không cần làm gì thêm
+      } catch (error) {
+          toast.error("Chỉnh sửa thất bại");
+          updateMessage(currentMsg); // Rollback
+      }
+  }, [messages, updateMessage]);
 
   // Logic Chặn
   const blockUser = async () => { 
@@ -161,6 +190,7 @@ export const useChat = (conversationId: any, partnerId: any) => {
     error,
     currentUserId,
     sendMessage,
+    editMessage, // [TRẢ VỀ HÀM EDIT]
     blockUser,   
     unfriendUser,
     loadMoreMessages, 

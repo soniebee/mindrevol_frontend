@@ -22,19 +22,19 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
       initial={{ opacity: 0, x: 20 }} 
       animate={{ opacity: 1, x: 0 }} 
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col h-full space-y-6"
+      className="flex flex-col h-full w-full space-y-6"
     >
-      <div className="flex-1 space-y-8">
-        <div className="text-center space-y-2">
-          <p className="text-sm font-sans text-stone-500">
-            Mã xác thực 6 số đã được gửi đến:
+      <div className="flex-1 space-y-6 text-center w-full">
+        <div className="space-y-2">
+          <p className="text-[0.95rem] font-semibold text-[#8A8580]">
+            Mã 6 số đang nằm trong hòm thư:
           </p>
-          <p className="text-lg font-normal text-blue-950 tracking-wide bg-blue-50 py-2 px-4 rounded-2xl inline-block">
+          <p className="text-[1.05rem] font-extrabold text-[#1A1A1A]">
             {email || 'your-email@example.com'}
           </p>
         </div>
 
-        <div className="flex gap-2 justify-center">
+        <div className="flex gap-2 sm:gap-3 justify-center mt-6">
           {otp.map((digit, index) => (
             <input
               key={index}
@@ -48,18 +48,20 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
               onPaste={handlePaste}
               disabled={isLoading}
               className={`
-                w-12 h-14 sm:w-14 sm:h-16 
-                text-center text-2xl font-sans font-bold rounded-[20px] 
-                transition-all duration-200 outline-none
-                ${digit ? 'bg-white shadow-[0px_2px_4px_0px_rgba(0,0,0,0.1)] text-blue-950' : 'bg-neutral-100/70 shadow-inner text-stone-800'}
-                focus:ring-2 focus:ring-blue-300 focus:bg-white
+                w-11 h-14 sm:w-12 sm:h-16
+                text-center text-xl font-extrabold rounded-[16px] 
+                border-2 transition-all duration-300 outline-none
+                ${digit 
+                  ? 'bg-white border-[#D6CFC7] text-[#1A1A1A] shadow-[0_8px_20px_rgba(0,0,0,0.05)] -translate-y-[2px]' 
+                  : 'bg-[rgba(255,255,255,0.5)] border-transparent text-[#1A1A1A] shadow-[0_4px_10px_rgba(0,0,0,0.02)]'}
+                focus:bg-white focus:border-[#4A4A4A] focus:shadow-[0_8px_20px_rgba(0,0,0,0.08)] focus:-translate-y-[2px] focus:ring-0
               `}
             />
           ))}
         </div>
 
         {error && (
-           <p className="text-red-500 text-sm text-center font-sans font-medium animate-pulse">
+           <p className="text-red-500 text-[0.9rem] font-bold animate-pulse mt-3">
              {error}
            </p>
         )}
@@ -68,42 +70,46 @@ export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initi
           onClick={handleSubmit} 
           isLoading={isLoading} 
           disabled={!isComplete}
-          className="w-full h-14 text-xl font-normal bg-blue-800/80 hover:bg-blue-800 text-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] transition-all"
+          className="w-full mt-6 group flex items-center justify-center gap-2"
         >
           Xác thực ngay
+          <svg className="transition-transform duration-300 group-hover:translate-x-1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
         </Button>
 
-        <div className="text-center">
+        <div className="text-center mt-5">
            <button 
              type="button" 
              onClick={handleResend}
              disabled={countdown > 0 || isLoading}
-             className={`text-sm font-sans transition-colors underline underline-offset-4 ${
+             className={`text-[0.95rem] font-bold transition-all duration-300 ${
                countdown > 0 
-                   ? 'text-stone-400 cursor-not-allowed' 
-                   : 'text-blue-600 hover:text-blue-800'
+                   ? 'text-[#A09D9A] cursor-not-allowed' 
+                   : 'text-[#8A8580] hover:text-[#1A1A1A] relative after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-full after:bg-[#1A1A1A] after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left'
              }`}
            >
-             {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã'}
+             {countdown > 0 ? `Đợi xíu... (${countdown}s)` : 'Gửi lại mã nhé'}
            </button>
         </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-red-950/10 flex flex-col gap-3">
+      <div className="pt-4 flex flex-col gap-3 w-full items-center">
         {!customVerify && (
-            <Button
-              variant="outline"
-              className="w-full h-14 text-lg font-normal bg-rose-50/50 hover:bg-rose-100 border-none text-red-950 rounded-[20px] shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05)]"
+            <button
+              type="button"
+              className="text-[0.95rem] font-bold text-[#8A8580] hover:text-[#1A1A1A] transition-colors py-2 relative after:absolute after:bottom-1 after:left-0 after:h-[1.5px] after:w-full after:bg-[#1A1A1A] after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
               onClick={goToLogin}
             >
-              Đăng nhập bằng mật khẩu
-            </Button>
+              Thôi, tớ nhớ mật khẩu rồi
+            </button>
         )}
 
         {onBack && (
             <button 
                 onClick={onBack}
-                className="text-sm font-sans text-stone-500 hover:text-red-950 transition-colors py-2"
+                className="text-[0.95rem] font-bold text-[#A09D9A] hover:text-[#1A1A1A] transition-colors py-2"
             >
                 Quay lại bước trước
             </button>

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, ImagePlus, Users, BookOpen, Moon, Waves, Leaf, Search, X } from 'lucide-react';
+import { Loader2, ImagePlus, Users, Search, X, Camera } from 'lucide-react';
 import { boxService } from '../services/box.service';
-import { friendService } from '@/modules/user/services/friend.service'; // Thêm import friendService
+import { fileService } from '@/modules/storage/services/file.service';
+import { friendService } from '@/modules/user/services/friend.service';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
@@ -12,37 +13,38 @@ interface CreateBoxModalProps {
     onSuccess: () => void;
 }
 
-// 1. Cập nhật đúng tên Theme của bạn và gắn Icon tương ứng
-export const BOX_THEMES = [
-    { id: 'theme-1', name: 'Morning Reads', image: '/themes/box/1.png', icon: BookOpen, textPos: { x: 50, y: 30 }, avatarPos: { x: 15, y: 70 } },
-    { id: 'theme-2', name: 'Night Garden', image: '/themes/box/2.png', icon: Moon, textPos: { x: 30, y: 20 }, avatarPos: { x: 80, y: 60 } },
-    { id: 'theme-3', name: 'Seaside Shells', image: '/themes/box/3.png', icon: Waves, textPos: { x: 70, y: 40 }, avatarPos: { x: 20, y: 80 } },
-    { id: 'theme-4', name: 'Forest Forage', image: '/themes/box/4.png', icon: Leaf, textPos: { x: 50, y: 50 }, avatarPos: { x: 50, y: 80 } },
-];
-
 export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const [name, setName] = useState('');
-    const [selectedTheme, setSelectedTheme] = useState(BOX_THEMES[0]);
+    const [description, setDescription] = useState('');
+    
     const [avatarImage, setAvatarImage] = useState<string | null>(null); 
+    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+    
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [bgFile, setBgFile] = useState<File | null>(null);
+
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // STATES CHO PHẦN INVITE FRIENDS
     const [friends, setFriends] = useState<any[]>([]);
     const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
 
     const avatarFileInputRef = useRef<HTMLInputElement>(null);
+    const bgFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (isOpen) {
             setName('');
-            setSelectedTheme(BOX_THEMES[0]);
+            setDescription('');
             setAvatarImage(null);
+            setBackgroundImage(null);
+            setAvatarFile(null); 
+            setBgFile(null);    
             setSearchQuery('');
             setSelectedFriends([]);
             setError('');
-            fetchFriends(); // Tải danh sách bạn bè khi mở modal
+            fetchFriends();
         }
     }, [isOpen]);
 
@@ -55,10 +57,9 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
         }
     };
 
-    // Lọc danh sách bạn bè để hiển thị (loại bỏ những người đã được chọn)
     const filteredFriends = useMemo(() => {
         const unselected = friends.filter(f => !selectedFriends.some(s => s.id === f.id));
-        if (!searchQuery.trim()) return unselected; // Hiện tất cả (hoặc có thể để trống nếu không muốn hiện hết)
+        if (!searchQuery.trim()) return unselected;
         return unselected.filter(f => 
             f.fullname.toLowerCase().includes(searchQuery.toLowerCase()) || 
             (f.handle && f.handle.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -67,7 +68,7 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
 
     const handleAddFriend = (friend: any) => {
         setSelectedFriends(prev => [...prev, friend]);
-        setSearchQuery(''); // Xóa thanh search sau khi chọn
+        setSearchQuery('');
     };
 
     const handleRemoveFriend = (friendId: string) => {
@@ -76,248 +77,230 @@ export const CreateBoxModal: React.FC<CreateBoxModalProps> = ({ isOpen, onClose,
 
     if (!isOpen) return null;
 
-    const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'bg') => {
         const file = e.target.files?.[0];
-        if (file) setAvatarImage(URL.createObjectURL(file));
+        if (file) {
+            const url = URL.createObjectURL(file); 
+            if (type === 'avatar') {
+                setAvatarImage(url);
+                setAvatarFile(file); 
+            } else {
+                setBackgroundImage(url);
+                setBgFile(file);    
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim()) return setError('Please enter a box name.');
+        if (!name.trim()) return setError('Tên Box không được để trống.');
+        
         try {
             setIsLoading(true);
             
-            // Gửi dữ liệu tạo Box kèm mảng inviteUserIds
+            let finalAvatarUrl = avatarImage || "📦";
+            let finalThemeUrl = backgroundImage || 'default';
+
+            if (avatarFile) {
+                finalAvatarUrl = await fileService.uploadFile(avatarFile);
+            }
+            
+            if (bgFile) {
+                finalThemeUrl = await fileService.uploadFile(bgFile);
+            }
+            
             await boxService.createBox({ 
                 name: name.trim(), 
-                description: "", 
-                themeSlug: selectedTheme.id, 
-                avatar: avatarImage || "📦",
-                textPosition: `${selectedTheme.textPos.x.toFixed(2)},${selectedTheme.textPos.y.toFixed(2)}`,
-                inviteUserIds: selectedFriends.map(f => f.id) // 🔥 Đẩy mảng ID bạn bè lên BE
+                description: description.trim(), 
+                themeSlug: finalThemeUrl, 
+                avatar: finalAvatarUrl,
+                textPosition: '50,50', 
+                inviteUserIds: selectedFriends.map(f => f.id)
             });
             
-            toast.success("Box created successfully!");
+            toast.success("Tạo Box thành công!");
             onSuccess();
             onClose();
         } catch (err: any) {
-            setError(err?.response?.data?.message || 'Error creating Box.');
+            setError(err?.response?.data?.message || 'Có lỗi xảy ra khi tạo Box.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return createPortal(
-        <div 
-            className="fixed inset-0 z-[10000] overflow-y-auto custom-scrollbar flex flex-col font-sans"
-            style={{ fontFamily: '"Jua", sans-serif' }}
-        >
-            <div className="fixed inset-0 bg-white dark:bg-[#0a0a0a] transition-colors duration-500 pointer-events-none" />
-            <div className="fixed inset-0 pointer-events-none overflow-hidden flex justify-center z-0">
-                <div className="w-full max-w-[1000px] h-full relative">
-                    <div className="absolute -top-10 -left-20 w-[400px] h-[300px] bg-blue-300/40 dark:bg-blue-600/10 blur-[100px] rounded-full transition-colors duration-500" />
-                </div>
-            </div>
+        <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center p-0 md:p-6 font-quicksand">
+            
+            {/* BACKDROP KÍNH MỜ */}
+            <div 
+                className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" 
+                onClick={onClose} 
+            />
 
-            <div className="relative min-h-full w-full flex flex-col items-center py-8 px-4">
-                <div className="my-auto relative z-10 w-full max-w-[460px] mx-auto flex flex-col px-4 sm:px-6 py-6 sm:py-8 bg-transparent rounded-[32px] transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8">
-                    
-                    <div className="flex items-center justify-between mb-6 shrink-0 px-2">
-                        <button onClick={onClose} className="text-3xl text-black dark:text-white hover:scale-110 transition-transform -mt-1">&lt;</button>
-                        <h2 className="text-black dark:text-white text-2xl font-normal transition-colors">
-                            New Box
+            {/* MODAL CONTAINER */}
+            <div className="relative w-full md:w-[520px] bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-2xl flex flex-col max-h-[92vh] md:max-h-[90vh] animate-in slide-in-from-bottom-1/2 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300 overflow-hidden">
+                
+                {/* THUMB TRƯỢT TRÊN MOBILE */}
+                <div className="w-full flex justify-center pt-3 pb-1 md:hidden shrink-0">
+                    <div className="w-12 h-1.5 bg-[#D6CFC7] dark:bg-[#3A3734] rounded-full"></div>
+                </div>
+
+                {/* HEADER */}
+                <div className="flex items-center justify-between px-6 md:px-8 py-5 shrink-0 border-b border-[#F4EBE1] dark:border-[#2B2A29]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[14px] flex items-center justify-center">
+                            <Users className="w-5 h-5 text-[#1A1A1A] dark:text-white" strokeWidth={2.5} />
+                        </div>
+                        <h2 className="text-[1.4rem] md:text-[1.5rem] font-black text-[#1A1A1A] dark:text-white tracking-tight">
+                            Tạo Không gian mới
                         </h2>
-                        <div className="w-8" />
+                    </div>
+                    <button onClick={onClose} className="p-2.5 bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE] dark:hover:bg-[#3A3734] rounded-[16px] text-[#8A8580] dark:text-[#A09D9A] transition-colors active:scale-95">
+                        <X size={20} strokeWidth={2.5} />
+                    </button>
+                </div>
+
+                {/* BODY KHÔNG GIAN CUỘN */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 py-6 space-y-8">
+                    
+                    {error && (
+                        <div className="p-4 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[0.95rem] font-bold text-center">
+                            {error}
+                        </div>
+                    )}
+                    
+                    {/* KHU VỰC ẢNH BÌA VÀ AVATAR */}
+                    <div className="relative mb-10">
+                        {/* ẢNH BÌA */}
+                        <div 
+                            onClick={() => bgFileInputRef.current?.click()}
+                            className="w-full h-36 md:h-40 rounded-[24px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-dashed border-[#D6CFC7] dark:border-[#3A3734] flex flex-col items-center justify-center cursor-pointer hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] transition-all overflow-hidden relative group"
+                        >
+                            {backgroundImage ? (
+                                <img src={backgroundImage} className="w-full h-full object-cover group-hover:brightness-75 transition-all" alt="Background" />
+                            ) : (
+                                <div className="flex flex-col items-center text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white transition-colors">
+                                    <Camera size={28} className="mb-2" strokeWidth={2.5} />
+                                    <span className="text-[0.75rem] font-extrabold uppercase tracking-widest">Thêm ảnh bìa</span>
+                                </div>
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                <Camera className="text-white drop-shadow-md" size={32} />
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" ref={bgFileInputRef} onChange={(e) => handleFileUpload(e, 'bg')} />
+                        </div>
+
+                        {/* AVATAR BOX */}
+                        <div 
+                            onClick={() => avatarFileInputRef.current?.click()}
+                            className="absolute -bottom-8 left-6 md:left-8 w-24 h-24 rounded-[24px] border-[4px] border-white dark:border-[#121212] bg-[#E2D9CE] dark:bg-[#3A3734] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform overflow-hidden group shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
+                        >
+                            {avatarImage ? (
+                                <img src={avatarImage} className="w-full h-full object-cover group-hover:brightness-75 transition-all" alt="Avatar" />
+                            ) : (
+                                <ImagePlus size={28} className="text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white transition-colors" strokeWidth={2.5} />
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                <Camera className="text-white drop-shadow-md" size={24} />
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" ref={avatarFileInputRef} onChange={(e) => handleFileUpload(e, 'avatar')} />
+                        </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-5 px-1">
-                        {error && (
-                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-sans font-medium text-center">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="w-full bg-[#f4f9e8] dark:bg-[#1a2e1a] rounded-[31px] p-5 shadow-sm relative">
-                            <h3 className="text-red-950 dark:text-lime-100 text-xl font-normal mb-2">Preview</h3>
-
-                            <div 
-                                className="w-full aspect-[7/4] rounded-[24px] overflow-hidden relative shadow-[0px_4px_4px_0px_rgba(0,0,0,0.15)] bg-transparent"
-                                style={{ containerType: 'inline-size' }}
-                            >
-                                <img 
-                                    src={selectedTheme.image} 
-                                    className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-                                    draggable={false}
-                                    alt="Theme"
-                                />
-                                
-                                <div 
-                                    className="absolute flex items-center transform -translate-x-1/2 -translate-y-1/2 select-none z-20 pointer-events-none"
-                                    style={{ 
-                                        left: `${selectedTheme.textPos.x}%`, 
-                                        top: `${selectedTheme.textPos.y}%`,
-                                        textShadow: '0px 2px 8px rgba(0,0,0,0.8), 0px 1px 3px rgba(0,0,0,0.6)'
-                                    }}
-                                >
-                                    <span 
-                                        className="text-white font-normal tracking-wide whitespace-nowrap" 
-                                        style={{ fontFamily: '"Jua", sans-serif', fontSize: '6.5cqw' }}
-                                    >
-                                        {name.trim() || 'Box Name...'}
-                                    </span>
-                                </div>
-
-                                <div 
-                                    onClick={() => avatarFileInputRef.current?.click()}
-                                    className="absolute bg-white shadow-[0px_4px_10px_rgba(0,0,0,0.3)] rotate-[-8deg] z-10 flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 select-none cursor-pointer hover:scale-105 transition-transform"
-                                    style={{ 
-                                        left: `${selectedTheme.avatarPos.x}%`, 
-                                        top: `${selectedTheme.avatarPos.y}%`,
-                                        width: '16cqw', 
-                                        height: '16cqw', 
-                                        padding: '1.2cqw', 
-                                        borderRadius: '2.5cqw' 
-                                    }}
-                                    title="Click to upload avatar"
-                                >
-                                    {avatarImage ? (
-                                        <img 
-                                            src={avatarImage} 
-                                            className="w-full h-full object-cover pointer-events-none" 
-                                            style={{ borderRadius: '1.5cqw' }} 
-                                            draggable={false} 
-                                        />
-                                    ) : (
-                                        <div 
-                                            className="w-full h-full bg-zinc-100 flex flex-col items-center justify-center border border-zinc-200 border-dashed pointer-events-none"
-                                            style={{ borderRadius: '1.5cqw' }} 
-                                        >
-                                            <ImagePlus className="text-zinc-400" style={{ width: '5cqw', height: '5cqw' }} />
-                                        </div>
-                                    )}
-                                </div>
-                                <input type="file" accept="image/*" className="hidden" ref={avatarFileInputRef} onChange={handleCustomAvatarUpload} />
-                            </div>
-
-                            <h3 className="text-red-950 dark:text-lime-100 text-xl mt-4 mb-2 font-normal">Box name</h3>
+                    {/* FORM NHẬP LIỆU */}
+                    <div className="space-y-5">
+                        <div>
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">
+                                Tên Không gian
+                            </label>
                             <input 
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full h-11 bg-white dark:bg-zinc-800 rounded-xl px-4 text-zinc-800 dark:text-white placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-lime-500 font-sans shadow-sm text-base" 
-                                placeholder="e.g. F5 Besties..." 
+                                className="w-full h-[56px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] font-bold text-[1.05rem] outline-none transition-all focus:ring-0 shadow-sm" 
+                                placeholder="VD: Gia đình nhỏ..." 
                             />
                         </div>
 
-                        {/* PHẦN CHỌN THEME */}
-                        <div className="w-full bg-[#fdf2f4] dark:bg-[#2d1b1e] rounded-[31px] p-5 shadow-sm relative">
-                            <h3 className="text-red-950 dark:text-rose-200 text-xl font-normal">Theme</h3>
-                            <p className="text-[10px] text-red-950/60 dark:text-rose-200/60 mb-3 font-sans font-medium">Choose a cute vibe</p>
-                            
-                            <div className="flex flex-nowrap gap-3 overflow-x-auto custom-scrollbar pb-2 items-center w-full">
-                                {BOX_THEMES.map((theme) => {
-                                    const Icon = theme.icon;
-                                    return (
-                                        <button 
-                                            key={theme.id}
-                                            onClick={() => setSelectedTheme(theme)}
-                                            className={cn(
-                                                "w-[84px] h-[84px] shrink-0 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all border-2",
-                                                selectedTheme.id === theme.id 
-                                                    ? "bg-white dark:bg-zinc-800 border-rose-400 shadow-[0_4px_12px_rgba(251,113,133,0.2)] text-rose-500" 
-                                                    : "bg-white/60 dark:bg-zinc-900/60 border-transparent text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-sm"
-                                            )}
-                                        >
-                                            <Icon size={26} strokeWidth={1.5} />
-                                            <span className="text-[11px] font-semibold font-sans text-center leading-tight px-1">{theme.name}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                        <div>
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">
+                                Mô tả (Không bắt buộc)
+                            </label>
+                            <textarea 
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full h-24 py-4 bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] font-bold text-[1rem] outline-none transition-all focus:ring-0 shadow-sm resize-none" 
+                                placeholder="Giới thiệu ngắn về Không gian này..." 
+                            />
                         </div>
 
-                        {/* PHẦN INVITE FRIENDS MỚI */}
-                        <div className="w-full bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-[31px] p-5 shadow-sm relative">
-                            <h3 className="text-blue-950 dark:text-blue-200 text-xl font-normal flex items-center gap-2">
-                                <Users size={20} /> Invite Friends
-                            </h3>
-                            <p className="text-[10px] text-blue-900/60 dark:text-blue-200/60 mb-3 font-sans font-medium">Select friends to join this box</p>
+                        {/* MỜI THÀNH VIÊN */}
+                        <div className="pt-2">
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest flex items-center gap-2 mb-3 pl-1">
+                                <Users size={16} strokeWidth={2.5} /> Mời thành viên tham gia
+                            </label>
                             
-                            {/* Hiển thị những bạn bè đã chọn (Chips) */}
                             {selectedFriends.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-3">
+                                <div className="flex flex-wrap gap-2.5 mb-4">
                                     {selectedFriends.map(f => (
-                                        <div key={f.id} className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 px-3 py-1.5 rounded-full text-xs font-bold font-sans animate-in zoom-in-95">
-                                            {f.fullname}
-                                            <button onClick={() => handleRemoveFriend(f.id)} className="hover:text-red-500 transition-colors">
-                                                <X size={14}/>
+                                        <div key={f.id} className="flex items-center gap-2 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] px-3.5 py-2 rounded-[14px] text-[0.9rem] font-bold animate-in zoom-in-95 shadow-md">
+                                            {f.fullname.split(' ')[0]}
+                                            <button type="button" onClick={() => handleRemoveFriend(f.id)} className="hover:text-red-400 dark:hover:text-red-500 transition-colors ml-1">
+                                                <X size={16} strokeWidth={2.5} />
                                             </button>
                                         </div>
                                     ))}
                                 </div>
                             )}
 
-                            {/* Ô Search */}
                             <div className="relative">
-                                <Search className="absolute left-3.5 top-3 text-zinc-400" size={18} />
+                                <Search className="absolute left-4 top-3.5 text-[#A09D9A]" size={20} strokeWidth={2.5} />
                                 <input 
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full h-11 bg-white dark:bg-zinc-800 rounded-xl pl-10 pr-4 text-zinc-800 dark:text-white placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-blue-400 font-sans shadow-sm text-sm transition-all" 
-                                    placeholder="Search by name or @handle..." 
+                                    className="w-full h-[52px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[18px] pl-11 pr-5 text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] font-bold text-[1rem] outline-none transition-all focus:ring-0" 
+                                    placeholder="Tìm kiếm bạn bè..." 
                                 />
                             </div>
 
-                            {/* Kết quả tìm kiếm / Gợi ý */}
                             {searchQuery.trim() && filteredFriends.length > 0 && (
-                                <div className="mt-2 max-h-32 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 shadow-md p-1 animate-in slide-in-from-top-2">
+                                <div className="mt-2 max-h-48 overflow-y-auto custom-scrollbar bg-white dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#3A3734] rounded-[20px] shadow-[0_8px_24px_rgba(0,0,0,0.1)] p-2 animate-in slide-in-from-top-2">
                                     {filteredFriends.map(f => (
-                                        <div 
-                                            key={f.id} 
-                                            onClick={() => handleAddFriend(f)} 
-                                            className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer transition-colors"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden shrink-0">
-                                                {f.avatarUrl ? <img src={f.avatarUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs font-bold">{f.fullname?.charAt(0).toUpperCase()}</div>}
+                                        <div key={f.id} onClick={() => handleAddFriend(f)} className="flex items-center gap-3 p-2.5 hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] rounded-[14px] cursor-pointer transition-colors active:scale-[0.98]">
+                                            <div className="w-10 h-10 rounded-[12px] bg-[#E2D9CE] dark:bg-[#3A3734] border border-white/50 dark:border-transparent overflow-hidden shadow-sm">
+                                                {f.avatarUrl ? (
+                                                    <img src={f.avatarUrl} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-[0.8rem] text-[#1A1A1A] dark:text-white font-black">
+                                                        {f.fullname?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="flex flex-col font-sans">
-                                                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{f.fullname}</span>
-                                                <span className="text-[10px] text-zinc-500">@{f.handle}</span>
-                                            </div>
+                                            <span className="text-[1rem] font-bold text-[#1A1A1A] dark:text-white">{f.fullname}</span>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                            {searchQuery.trim() && filteredFriends.length === 0 && (
-                                <div className="mt-2 text-center text-xs text-zinc-500 font-sans py-2">
-                                    No friends found.
-                                </div>
-                            )}
                         </div>
-
                     </div>
+                </div>
 
-                    <div className="mt-6 flex flex-col items-center">
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={isLoading || !name.trim()}
-                            className={cn(
-                                "w-full max-w-[280px] h-12 md:h-14 rounded-xl shadow-[0px_4px_10px_rgba(0,0,0,0.2)] text-white text-xl flex items-center justify-center gap-2 transition-all font-normal",
-                                (isLoading || !name.trim())
-                                ? "bg-zinc-400 cursor-not-allowed shadow-none" 
-                                : "bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 active:scale-95" 
-                            )}
-                            style={{ fontFamily: '"Jua", sans-serif' }}
-                        >
-                            {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
-                            Create Box
-                        </button>
-                        <p className="text-stone-500 dark:text-stone-400 text-xs font-sans mt-3">
-                            Invitations will be sent automatically ✨
-                        </p>
-                    </div>
+                {/* FOOTER ACTIONS */}
+                <div className="p-6 md:p-8 bg-white dark:bg-[#121212] border-t border-[#F4EBE1] dark:border-[#2B2A29] shrink-0">
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isLoading || !name.trim()}
+                        className={cn(
+                            "w-full h-[60px] rounded-[24px] text-[1.1rem] font-black flex items-center justify-center gap-2 transition-all",
+                            (isLoading || !name.trim()) 
+                            ? "bg-[#E2D9CE] dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] cursor-not-allowed" 
+                            : "bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] hover:-translate-y-1 active:scale-[0.98] shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
+                        )}
+                    >
+                        {isLoading && <Loader2 className="w-6 h-6 animate-spin" />}
+                        Tạo Không gian
+                    </button>
                 </div>
             </div>
         </div>,

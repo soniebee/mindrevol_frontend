@@ -28,11 +28,11 @@ export interface Checkin {
   userId: string; 
   userFullName: string;
   userAvatar: string;
-  journeyId: string;
+  // [ĐÃ SỬA] Thay đổi journeyId thành Optional vì bài lưu trữ không có hành trình
+  journeyId?: string;
   
   imageUrl: string;
   thumbnailUrl: string;
-  // [THÊM MỚI] Thuộc tính cho Live Photo
   videoUrl?: string; 
   caption: string;
   
@@ -52,7 +52,8 @@ export interface Checkin {
 }
 
 export interface CreateCheckinRequest {
-  journeyId: string;
+  // [ĐÃ SỬA] Thay đổi journeyId thành Optional khi client gửi dữ liệu lên
+  journeyId?: string;
   file: File;
   caption?: string;
   

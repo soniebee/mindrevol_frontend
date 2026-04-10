@@ -9,7 +9,6 @@ interface MergedJourney extends JourneyResponse {
   daysRemaining?: number;
   totalMembers?: number;
   thumbnailUrl?: string; 
-  // [GIỮ LOGIC] Khai báo previewImages để Card sử dụng
   previewImages?: string[];
 }
 
@@ -32,8 +31,6 @@ export const MobileActiveJourneyList: React.FC<Props> = ({ onJourneySelect, sele
 
           const merged: MergedJourney[] = myList.map((journey: JourneyResponse) => {
               const extraData = activeList.find((a: UserActiveJourneyResponse) => a.id === journey.id);
-              
-              // [GIỮ LOGIC] Lấy toàn bộ danh sách ảnh từ các bài đăng (của tất cả thành viên)
               const checkinImages = extraData?.checkins
                   ?.filter((c: any) => c.imageUrl)
                   .map((c: any) => c.imageUrl as string) || [];
@@ -46,10 +43,7 @@ export const MobileActiveJourneyList: React.FC<Props> = ({ onJourneySelect, sele
                   themeColor: extraData?.themeColor || journey.themeColor,
                   avatar: extraData?.avatar || journey.avatar,
                   thumbnailUrl: extraData?.thumbnailUrl,
-                  // [GIỮ LOGIC] Ưu tiên hiển thị danh sách ảnh bài đăng
-                  previewImages: checkinImages.length > 0 
-                      ? checkinImages 
-                      : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : []) 
+                  previewImages: checkinImages.length > 0 ? checkinImages : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : []) 
               };
           });
           
@@ -63,7 +57,6 @@ export const MobileActiveJourneyList: React.FC<Props> = ({ onJourneySelect, sele
 
   useEffect(() => {
     fetchJourneys();
-    
     window.addEventListener('JOURNEY_UPDATED', fetchJourneys);
     return () => window.removeEventListener('JOURNEY_UPDATED', fetchJourneys);
   }, []);
@@ -78,7 +71,7 @@ export const MobileActiveJourneyList: React.FC<Props> = ({ onJourneySelect, sele
   if (loading) {
     return (
       <div className="w-full flex justify-center py-10 bg-transparent">
-         <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+         <Loader2 className="w-8 h-8 text-[#8A8580] animate-spin" />
       </div>
     );
   }
@@ -86,19 +79,18 @@ export const MobileActiveJourneyList: React.FC<Props> = ({ onJourneySelect, sele
   if (activeJourneys.length === 0) return null;
 
   return (
-    // [GIỮ THIẾT KẾ GỐC] Không có khung nền cam, margin/padding chuẩn
-    <div className="w-full flex flex-col bg-transparent px-5 pb-6 animate-in fade-in duration-300">
+    <div className="w-full flex flex-col bg-transparent px-5 pb-6 font-quicksand animate-in fade-in duration-300">
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-black dark:text-white text-2xl font-normal drop-shadow-sm" style={{ fontFamily: '"Jua", sans-serif' }}>
-          Active Journey
+        <h2 className="text-[#1A1A1A] dark:text-white text-[1.4rem] font-black tracking-tight">
+          Hành trình hiện tại
         </h2>
       </div>
       
-      <div className="flex flex-col w-full gap-4">
+      <div className="flex flex-col w-full gap-5">
         {activeJourneys.map((journey) => (
             <div 
                 key={journey.id}
-                className={`w-full transition-all duration-300 ${selectedId === journey.id ? 'scale-[1.02] ring-2 ring-green-400 rounded-[24px] shadow-lg' : 'scale-100'}`}
+                className={`w-full transition-all duration-300 ${selectedId === journey.id ? 'scale-[1.02] ring-[3px] ring-[#1A1A1A] dark:ring-white rounded-[28px] shadow-[0_16px_40px_rgba(0,0,0,0.12)]' : 'scale-100 hover:-translate-y-1'}`}
             >
                 <MobileJourneyCard 
                     journey={journey}

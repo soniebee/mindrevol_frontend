@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, ImagePlus, UserPlus, Move } from 'lucide-react';
+import { Loader2, ImagePlus, X, Camera, Package, Settings2 } from 'lucide-react';
 import { boxService } from '../services/box.service';
+import { fileService } from '@/modules/storage/services/file.service';
 import { BoxDetailResponse, UpdateBoxRequest } from '../types';
-import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { toast } from 'react-hot-toast';
 
 interface UpdateBoxModalProps {
     isOpen: boolean;
@@ -13,349 +14,221 @@ interface UpdateBoxModalProps {
     boxData: BoxDetailResponse;
 }
 
-const BOX_THEMES = [
-    { id: 'theme-1', image: '/themes/box/1.png' },
-    { id: 'theme-2', image: '/themes/box/2.png' },
-    { id: 'theme-3', image: '/themes/box/3.png' },
-    { id: 'theme-4', image: '/themes/box/4.png' },
-    { id: 'theme-5', image: '/themes/box/5.png' },
-    { id: 'theme-6', image: '/themes/box/6.png' },
-];
-
-// Hàm dịch tọa độ
-const parsePosition = (posStr?: string, defaultX = 50, defaultY = 30) => {
-    if (!posStr) return { x: defaultX, y: defaultY };
-    const parts = posStr.split(',');
-    if (parts.length !== 2) return { x: defaultX, y: defaultY };
-    return { 
-        x: parseFloat(parts[0]) || defaultX, 
-        y: parseFloat(parts[1]) || defaultY 
-    };
-};
-
 export const UpdateBoxModal: React.FC<UpdateBoxModalProps> = ({ isOpen, onClose, onSuccess, boxData }) => {
     const [name, setName] = useState('');
-    
-    // Đã sửa: Dùng themeSlug để tìm image thay vì coverImage
-    const [selectedTheme, setSelectedTheme] = useState({ 
-        id: boxData?.themeSlug || 'theme-1', 
-        image: BOX_THEMES.find(t => t.id === boxData?.themeSlug)?.image || BOX_THEMES[0].image 
-    });
+    const [description, setDescription] = useState('');
     
     const [avatarImage, setAvatarImage] = useState<string | null>(null); 
+    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+    
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [bgFile, setBgFile] = useState<File | null>(null);
+
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const themeFileInputRef = useRef<HTMLInputElement>(null);
     const avatarFileInputRef = useRef<HTMLInputElement>(null);
-    const previewRef = useRef<HTMLDivElement>(null);
+    const bgFileInputRef = useRef<HTMLInputElement>(null);
 
-    // --- LOGIC KÉO THẢ (DRAG & DROP) ---
-    const [textPos, setTextPos] = useState({ x: 50, y: 30 }); 
-    const [avatarPos, setAvatarPos] = useState({ x: 15, y: 70 }); 
-    const [dragTarget, setDragTarget] = useState<'text' | 'avatar' | null>(null);
-
-    const handlePointerDown = (e: React.MouseEvent | React.TouchEvent, target: 'text' | 'avatar') => {
-        e.preventDefault(); 
-        e.stopPropagation();
-        setDragTarget(target);
-    };
-
-    const handlePointerMove = useCallback((e: MouseEvent | TouchEvent) => {
-        if (!dragTarget || !previewRef.current) return;
-        const rect = previewRef.current.getBoundingClientRect();
-        
-        let clientX = 0;
-        let clientY = 0;
-        
-        if (e instanceof MouseEvent) {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        } else if (e instanceof TouchEvent) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        }
-
-        let newX = ((clientX - rect.left) / rect.width) * 100;
-        let newY = ((clientY - rect.top) / rect.height) * 100;
-
-        newX = Math.max(0, Math.min(100, newX));
-        newY = Math.max(0, Math.min(100, newY));
-
-        if (dragTarget === 'text') {
-            setTextPos({ x: newX, y: newY });
-        } else if (dragTarget === 'avatar') {
-            setAvatarPos({ x: newX, y: newY });
-        }
-    }, [dragTarget]);
-
-    const handlePointerUp = useCallback(() => {
-        setDragTarget(null);
-    }, []);
-
-    useEffect(() => {
-        if (dragTarget) {
-            window.addEventListener('mousemove', handlePointerMove);
-            window.addEventListener('mouseup', handlePointerUp);
-            window.addEventListener('touchmove', handlePointerMove, { passive: false });
-            window.addEventListener('touchend', handlePointerUp);
-        } else {
-            window.removeEventListener('mousemove', handlePointerMove);
-            window.removeEventListener('mouseup', handlePointerUp);
-            window.removeEventListener('touchmove', handlePointerMove);
-            window.removeEventListener('touchend', handlePointerUp);
-        }
-        return () => {
-            window.removeEventListener('mousemove', handlePointerMove);
-            window.removeEventListener('mouseup', handlePointerUp);
-            window.removeEventListener('touchmove', handlePointerMove);
-            window.removeEventListener('touchend', handlePointerUp);
-        };
-    }, [dragTarget, handlePointerMove, handlePointerUp]);
-
-    // LOAD DỮ LIỆU CŨ LÊN FORM
     useEffect(() => {
         if (isOpen && boxData) {
-            setName(boxData.name);
+            setName(boxData.name || '');
+            setDescription(boxData.description || '');
             
-            // Đã sửa: Dùng themeSlug để đối chiếu thay vì coverImage
-            const currentTheme = BOX_THEMES.find(t => t.id === boxData.themeSlug) || BOX_THEMES[0];
-            setSelectedTheme({ id: currentTheme.id, image: currentTheme.image });
+            const isAvatarUrl = boxData.avatar?.includes('/') || boxData.avatar?.startsWith('http') || boxData.avatar?.startsWith('blob:');
+            setAvatarImage(isAvatarUrl ? boxData.avatar : null);
+            setAvatarFile(null); 
             
-            const isAvatarUrl = boxData.avatar?.includes('/') || boxData.avatar?.startsWith('http');
-            setAvatarImage(isAvatarUrl ? boxData.avatar! : null);
-
-            setTextPos(parsePosition(boxData.textPosition, 50, 30));
-            setAvatarPos(parsePosition(boxData.avatarPosition, 15, 70));
+            const isThemeUrl = boxData.themeSlug?.includes('/') || boxData.themeSlug?.startsWith('http') || boxData.themeSlug?.startsWith('blob:');
+            setBackgroundImage(isThemeUrl ? boxData.themeSlug : null);
+            setBgFile(null); 
+            
             setError('');
         }
     }, [isOpen, boxData]);
 
     if (!isOpen) return null;
 
-    const handleCustomThemeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'bg') => {
         const file = e.target.files?.[0];
-        if (file) setSelectedTheme({ id: 'custom', image: URL.createObjectURL(file) });
-    };
-
-    const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) setAvatarImage(URL.createObjectURL(file));
+        if (file) {
+            const url = URL.createObjectURL(file);
+            if (type === 'avatar') {
+                setAvatarImage(url);
+                setAvatarFile(file); 
+            } else {
+                setBackgroundImage(url);
+                setBgFile(file);    
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim()) return setError('Please enter a box name.');
+        if (!name.trim()) return setError('Tên Box không được để trống.');
+        
         try {
             setIsLoading(true);
             
-            // Đã sửa: Xóa coverImage, themeColor, avatarPosition để khớp với UpdateBoxRequest
+            let finalAvatarUrl = avatarImage || boxData.avatar || "📦";
+            let finalThemeUrl = backgroundImage || boxData.themeSlug || 'default';
+
+            if (avatarFile) {
+                finalAvatarUrl = await fileService.uploadFile(avatarFile);
+            }
+            
+            if (bgFile) {
+                finalThemeUrl = await fileService.uploadFile(bgFile);
+            }
+            
             const payload: UpdateBoxRequest = { 
                 name: name.trim(), 
-                description: boxData.description || "", 
-                themeSlug: selectedTheme.id, 
-                avatar: avatarImage || boxData.avatar || "📦",
-                textPosition: `${textPos.x.toFixed(2)},${textPos.y.toFixed(2)}`
+                description: description.trim(), 
+                themeSlug: finalThemeUrl, 
+                avatar: finalAvatarUrl   
             };
             
             await boxService.updateBox(boxData.id, payload);
-            toast.success('Box updated successfully!');
+            
+            toast.success("Cập nhật Không gian thành công!");
             onSuccess();
             onClose();
         } catch (err: any) {
-            setError(err?.response?.data?.message || 'Failed to update Box.');
+            setError(err?.response?.data?.message || 'Có lỗi xảy ra khi cập nhật.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return createPortal(
-        <div 
-            className="fixed inset-0 z-[10000] overflow-y-auto custom-scrollbar flex flex-col font-sans"
-            style={{ fontFamily: '"Jua", sans-serif' }}
-        >
-            {/* NỀN BLUR TỔNG THỂ */}
-            <div className="fixed inset-0 bg-white dark:bg-[#0a0a0a] transition-colors duration-500 pointer-events-none" />
-            <div className="fixed inset-0 pointer-events-none overflow-hidden flex justify-center z-0">
-                <div className="w-full max-w-[1000px] h-full relative">
-                    <div className="absolute -top-10 -left-20 w-[400px] h-[300px] bg-blue-300/40 dark:bg-blue-600/10 blur-[100px] rounded-full transition-colors duration-500" />
-                </div>
-            </div>
+        <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center p-0 md:p-6 font-quicksand">
+            
+            {/* BACKDROP */}
+            <div 
+                className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" 
+                onClick={onClose} 
+            />
 
-            {/* WRAPPER CUỘN */}
-            <div className="relative min-h-full w-full flex flex-col items-center sm:py-12 pt-16 pb-4">
-                <div className="mt-auto sm:my-auto relative z-10 w-full max-w-[460px] mx-auto flex flex-col px-4 sm:px-6 py-6 sm:py-8 bg-transparent rounded-[32px] transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8 overflow-hidden">
-                    
-                    {/* HEADER */}
-                    <div className="flex items-center justify-between mb-6 shrink-0 px-2">
-                        <button onClick={onClose} className="text-3xl text-black dark:text-white hover:scale-110 transition-transform -mt-1">&lt;</button>
-                        <h2 className="text-black dark:text-white text-2xl font-normal transition-colors">
-                            Edit Box
+            {/* MODAL CONTAINER */}
+            <div className="relative w-full md:w-[480px] bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-2xl flex flex-col max-h-[92vh] md:max-h-[90vh] animate-in slide-in-from-bottom-1/2 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300 overflow-hidden">
+                
+                {/* THUMB TRƯỢT TRÊN MOBILE */}
+                <div className="w-full flex justify-center pt-3 pb-1 md:hidden shrink-0">
+                    <div className="w-12 h-1.5 bg-[#D6CFC7] dark:bg-[#3A3734] rounded-full"></div>
+                </div>
+
+                {/* HEADER */}
+                <div className="flex items-center justify-between px-6 md:px-8 py-5 shrink-0 border-b border-[#F4EBE1] dark:border-[#2B2A29]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[14px] flex items-center justify-center">
+                            <Settings2 className="w-5 h-5 text-[#1A1A1A] dark:text-white" strokeWidth={2.5} />
+                        </div>
+                        <h2 className="text-[1.4rem] md:text-[1.5rem] font-black text-[#1A1A1A] dark:text-white tracking-tight">
+                            Cập nhật Không gian
                         </h2>
-                        <div className="w-8" />
+                    </div>
+                    <button onClick={onClose} className="p-2.5 bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE] dark:hover:bg-[#3A3734] rounded-[16px] text-[#8A8580] dark:text-[#A09D9A] transition-colors active:scale-95">
+                        <X size={20} strokeWidth={2.5} />
+                    </button>
+                </div>
+
+                {/* BODY NỘI DUNG CUỘN */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 py-6 space-y-8">
+                    
+                    {error && (
+                        <div className="p-4 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[0.95rem] font-bold text-center">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* KHU VỰC ẢNH BÌA VÀ AVATAR */}
+                    <div className="relative mb-10">
+                        {/* ẢNH BÌA */}
+                        <div 
+                            onClick={() => bgFileInputRef.current?.click()}
+                            className="w-full h-36 md:h-40 rounded-[24px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-dashed border-[#D6CFC7] dark:border-[#3A3734] flex flex-col items-center justify-center cursor-pointer hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] transition-all overflow-hidden relative group"
+                        >
+                            {backgroundImage ? (
+                                <img src={backgroundImage} className="w-full h-full object-cover group-hover:brightness-75 transition-all" alt="Background" />
+                            ) : (
+                                <div className="flex flex-col items-center text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white transition-colors">
+                                    <Camera size={28} className="mb-2" strokeWidth={2.5} />
+                                    <span className="text-[0.75rem] font-extrabold uppercase tracking-widest">Đổi ảnh bìa</span>
+                                </div>
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                <Camera className="text-white drop-shadow-md" size={32} />
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" ref={bgFileInputRef} onChange={(e) => handleFileUpload(e, 'bg')} />
+                        </div>
+
+                        {/* AVATAR */}
+                        <div 
+                            onClick={() => avatarFileInputRef.current?.click()}
+                            className="absolute -bottom-8 left-6 md:left-8 w-24 h-24 rounded-[24px] border-[4px] border-white dark:border-[#121212] bg-[#E2D9CE] dark:bg-[#3A3734] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform overflow-hidden group shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
+                        >
+                            {avatarImage ? (
+                                <img src={avatarImage} className="w-full h-full object-cover group-hover:brightness-75 transition-all" alt="Avatar" />
+                            ) : (
+                                boxData.avatar && !boxData.avatar.includes('/') && !boxData.avatar.startsWith('http') && !boxData.avatar.startsWith('blob:') ? (
+                                    <span className="text-[3rem] leading-none drop-shadow-sm group-hover:opacity-50 transition-opacity">
+                                        {boxData.avatar === '📦' ? <Package className="text-[#8A8580] w-10 h-10" /> : boxData.avatar}
+                                    </span>
+                                ) : (
+                                    <ImagePlus size={28} className="text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white transition-colors" strokeWidth={2.5} />
+                                )
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                <Camera className="text-white drop-shadow-md" size={24} />
+                            </div>
+                            <input type="file" accept="image/*" className="hidden" ref={avatarFileInputRef} onChange={(e) => handleFileUpload(e, 'avatar')} />
+                        </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-5 px-1">
-                        {error && (
-                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-sans font-medium text-center">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="w-full bg-[#f4f9e8] dark:bg-[#1a2e1a] rounded-[31px] p-5 shadow-sm relative">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-red-950 dark:text-lime-100 text-xl font-normal">Preview</h3>
-                                <p className="text-[10px] text-zinc-500 flex items-center gap-1 font-sans bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md">
-                                    <Move className="w-3 h-3" /> Drag & Drop
-                                </p>
-                            </div>
-
-                            {/* CONTAINER PREVIEW CQW */}
-                            <div 
-                                ref={previewRef}
-                                className="w-full aspect-[7/4] rounded-[24px] overflow-hidden relative shadow-[0px_4px_4px_0px_rgba(0,0,0,0.15)] bg-transparent"
-                                style={{ containerType: 'inline-size' }}
-                            >
-                                <img 
-                                    src={selectedTheme.image} 
-                                    className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-                                    draggable={false}
-                                    alt="Theme"
-                                />
-                                
-                                {/* CHỮ NỔI */}
-                                <div 
-                                    onMouseDown={(e) => handlePointerDown(e, 'text')}
-                                    onTouchStart={(e) => handlePointerDown(e, 'text')}
-                                    className={cn(
-                                        "absolute flex items-center transform -translate-x-1/2 -translate-y-1/2 select-none z-20 cursor-grab",
-                                        dragTarget === 'text' && "cursor-grabbing scale-105 transition-transform duration-100"
-                                    )}
-                                    style={{ 
-                                        left: `${textPos.x}%`, 
-                                        top: `${textPos.y}%`,
-                                        textShadow: '0px 2px 8px rgba(0,0,0,0.8), 0px 1px 3px rgba(0,0,0,0.6)'
-                                    }}
-                                >
-                                    <span 
-                                        className="text-white font-normal tracking-wide whitespace-nowrap pointer-events-none" 
-                                        style={{ fontFamily: '"Jua", sans-serif', fontSize: '6.5cqw' }}
-                                    >
-                                        {name.trim() || 'Box Name...'}
-                                    </span>
-                                </div>
-
-                                {/* ẢNH POLAROID */}
-                                <div 
-                                    onMouseDown={(e) => handlePointerDown(e, 'avatar')}
-                                    onTouchStart={(e) => handlePointerDown(e, 'avatar')}
-                                    className={cn(
-                                        "absolute bg-white shadow-[0px_4px_10px_rgba(0,0,0,0.3)] rotate-[-8deg] z-10 flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 select-none cursor-grab",
-                                        dragTarget === 'avatar' && "cursor-grabbing scale-105 transition-transform duration-100"
-                                    )}
-                                    style={{ 
-                                        left: `${avatarPos.x}%`, 
-                                        top: `${avatarPos.y}%`,
-                                        width: '16cqw', 
-                                        height: '16cqw', 
-                                        padding: '1.2cqw', 
-                                        borderRadius: '2.5cqw' 
-                                    }}
-                                >
-                                    {avatarImage ? (
-                                        <img 
-                                            src={avatarImage} 
-                                            className="w-full h-full object-cover pointer-events-none" 
-                                            style={{ borderRadius: '1.5cqw' }} 
-                                            draggable={false} 
-                                        />
-                                    ) : (
-                                        <div 
-                                            className="w-full h-full bg-zinc-100 flex flex-col items-center justify-center border border-zinc-200 border-dashed pointer-events-none"
-                                            style={{ borderRadius: '1.5cqw' }} 
-                                        >
-                                            {/* Hiển thị Emoji cũ nếu có, nếu không hiển thị icon ImagePlus */}
-                                            {(boxData.avatar && !boxData.avatar.includes('/')) ? (
-                                                <span style={{ fontSize: '6cqw' }}>{boxData.avatar}</span>
-                                            ) : (
-                                                <ImagePlus className="text-zinc-400" style={{ width: '5cqw', height: '5cqw' }} />
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <h3 className="text-red-950 dark:text-lime-100 text-xl mt-4 mb-2 font-normal">Box name</h3>
+                    {/* NHẬP LIỆU */}
+                    <div className="space-y-5">
+                        <div>
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">
+                                Tên Không gian
+                            </label>
                             <input 
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full h-11 bg-white dark:bg-zinc-800 rounded-xl px-4 text-zinc-800 dark:text-white placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-lime-500 font-sans shadow-sm text-base" 
-                                placeholder="e.g. F5 Besties..." 
+                                className="w-full h-[56px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] font-bold text-[1.05rem] outline-none transition-all focus:ring-0 shadow-sm" 
+                                placeholder="VD: Gia đình nhỏ..." 
                             />
                         </div>
 
-                        <div className="w-full bg-[#fdf2f4] dark:bg-[#2d1b1e] rounded-[31px] p-5 shadow-sm relative">
-                            <h3 className="text-red-950 dark:text-rose-200 text-xl font-normal">Theme</h3>
-                            <p className="text-[10px] text-red-950/60 dark:text-rose-200/60 mb-3 font-sans font-medium">Choose a cute world & avatar</p>
-                            
-                            <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-2 items-center">
-                                <div 
-                                    onClick={() => themeFileInputRef.current?.click()}
-                                    className="w-16 h-16 shrink-0 rounded-2xl border-2 border-dashed border-rose-300 dark:border-rose-800 bg-white/50 dark:bg-black/20 hover:bg-white flex flex-col items-center justify-center cursor-pointer transition-all shadow-sm"
-                                >
-                                    <ImagePlus className="w-5 h-5 text-rose-400 mb-1" />
-                                    <span className="text-[9px] font-bold text-rose-500 uppercase font-sans">Cover</span>
-                                    <input type="file" accept="image/*" className="hidden" ref={themeFileInputRef} onChange={handleCustomThemeUpload} />
-                                </div>
-
-                                <div 
-                                    onClick={() => avatarFileInputRef.current?.click()}
-                                    className="w-16 h-16 shrink-0 rounded-2xl border-2 border-dashed border-sky-300 dark:border-sky-800 bg-white/50 dark:bg-black/20 hover:bg-white flex flex-col items-center justify-center cursor-pointer transition-all shadow-sm"
-                                >
-                                    <UserPlus className="w-5 h-5 text-sky-500 mb-1" />
-                                    <span className="text-[9px] font-bold text-sky-600 uppercase font-sans">Avatar</span>
-                                    <input type="file" accept="image/*" className="hidden" ref={avatarFileInputRef} onChange={handleCustomAvatarUpload} />
-                                </div>
-
-                                <div className="w-px h-10 bg-rose-200 dark:bg-rose-900 mx-1 shrink-0" />
-
-                                {BOX_THEMES.map((theme) => (
-                                    <div 
-                                        key={theme.id}
-                                        onClick={() => setSelectedTheme(theme)}
-                                        className={cn(
-                                            "w-24 h-16 shrink-0 rounded-2xl overflow-hidden cursor-pointer border-[3px] transition-all",
-                                            selectedTheme.image === theme.image 
-                                                ? "border-rose-400 scale-105 shadow-md" 
-                                                : "border-transparent opacity-70 hover:opacity-100"
-                                        )}
-                                    >
-                                        <img src={theme.image} alt={theme.id} className="w-full h-full object-cover" />
-                                    </div>
-                                ))}
-                            </div>
+                        <div>
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">
+                                Mô tả
+                            </label>
+                            <textarea 
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full h-24 py-4 bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] font-bold text-[1rem] outline-none transition-all focus:ring-0 shadow-sm resize-none" 
+                                placeholder="Giới thiệu ngắn về Không gian này..." 
+                            />
                         </div>
-
                     </div>
+                </div>
 
-                    <div className="mt-6 flex flex-col items-center">
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={isLoading || !name.trim()}
-                            className={cn(
-                                "w-full max-w-[280px] h-12 md:h-14 rounded-xl shadow-[0px_4px_10px_rgba(0,0,0,0.2)] text-white text-xl flex items-center justify-center gap-2 transition-all font-normal",
-                                (isLoading || !name.trim())
-                                ? "bg-zinc-400 cursor-not-allowed shadow-none" 
-                                : "bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 active:scale-95" 
-                            )}
-                            style={{ fontFamily: '"Jua", sans-serif' }}
-                        >
-                            {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
-                            Save Changes
-                        </button>
-                    </div>
+                {/* FOOTER ACTIONS */}
+                <div className="p-6 md:p-8 bg-white dark:bg-[#121212] border-t border-[#F4EBE1] dark:border-[#2B2A29] shrink-0">
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isLoading || !name.trim()}
+                        className={cn(
+                            "w-full h-[60px] rounded-[24px] text-[1.1rem] font-black flex items-center justify-center gap-2 transition-all",
+                            (isLoading || !name.trim()) 
+                            ? "bg-[#E2D9CE] dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] cursor-not-allowed" 
+                            : "bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] hover:-translate-y-1 active:scale-[0.98] shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
+                        )}
+                    >
+                        {isLoading && <Loader2 className="w-6 h-6 animate-spin" />}
+                        Lưu thay đổi
+                    </button>
                 </div>
             </div>
         </div>,

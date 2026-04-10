@@ -1,7 +1,10 @@
-import React from 'react';
-import { Compass, LayoutGrid, ListTree, BookOpen } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { MiniCalendarGrid, formatDate } from './BoxJourneyShared';
+import React, { useState } from 'react';
+import { BookOpen, Plus } from 'lucide-react';
+import { useAuth } from '@/modules/auth/store/AuthContext';
+import { ActiveJourneyCard } from '@/modules/journey/components/ActiveJourneyCard';
+import { JourneySettingsModal } from '@/modules/journey/components/JourneySettingsModal';
+import { InviteMembersModal } from '@/modules/journey/components/InviteMembersModal';
+import { PendingRequestsList } from '@/modules/journey/components/PendingRequestsList';
 
 interface BoxJourneyListDesktopProps {
     journeys: any[];
@@ -13,209 +16,143 @@ interface BoxJourneyListDesktopProps {
 }
 
 export const BoxJourneyListDesktop: React.FC<BoxJourneyListDesktopProps> = ({
-    journeys, viewMode, setViewMode, setIsCreateJourneyModalOpen, navigate, boxName
+    journeys, setIsCreateJourneyModalOpen, navigate, boxName
 }) => {
+    const { user } = useAuth();
     const activeJourneys = journeys.filter(j => j.status !== 'COMPLETED');
     const endedJourneys = journeys.filter(j => j.status === 'COMPLETED');
 
+    // States cho các Modals
+    const [settingsJourney, setSettingsJourney] = useState<any>(null);
+    const [inviteJourney, setInviteJourney] = useState<any>(null);
+    const [requestsJourney, setRequestsJourney] = useState<any>(null);
+
     return (
-        <div className="hidden md:block mt-8">
-            {/* --- HEADER KHU VỰC --- */}
-            <div className="flex justify-between items-end mb-8 gap-6 border-b border-zinc-100 dark:border-zinc-800 pb-6">
+        <div className="hidden md:block mt-6">
+            
+            <div className="flex justify-between items-end mb-8 gap-6 border-b border-[#F4EBE1] dark:border-[#2B2A29] pb-6">
                 <div>
-                    <h2 className="text-[32px] font-normal text-zinc-900 dark:text-white flex items-center gap-3 tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>
-                        <div className="w-12 h-12 rounded-[18px] bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
-                            <BookOpen size={24} strokeWidth={2} />
+                    <h2 className="text-[2.2rem] font-black text-[#1A1A1A] dark:text-white flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 rounded-[20px] bg-white/60 dark:bg-[#1A1A1A]/60 backdrop-blur-md flex items-center justify-center text-[#1A1A1A] dark:text-white shadow-[0_8px_24px_rgba(0,0,0,0.04)] border border-white/50 dark:border-white/5">
+                            <BookOpen size={26} strokeWidth={2.5} />
                         </div>
-                        Milestones
+                        Hành trình
                     </h2>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-base mt-2 font-medium">Footprints of "{boxName}"</p>
+                    <p className="text-[#8A8580] dark:text-[#A09D9A] text-[1.05rem] mt-3 font-bold">
+                        Dấu chân của "{boxName}"
+                    </p>
                 </div>
                 
                 <div className="flex flex-col items-end gap-5">
-                    {/* Nút Create Journey chuẩn Design */}
                     <button 
                         onClick={() => setIsCreateJourneyModalOpen(true)}
-                        className="text-green-900 dark:text-green-400 text-[22px] font-normal font-['Jua'] hover:opacity-70 transition-opacity"
+                        className="flex items-center gap-2 px-7 py-3.5 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] rounded-[24px] font-black text-[1rem] shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 hover:shadow-[0_12px_28px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 transition-all"
                     >
-                        + Create Journey
+                        <Plus size={20} strokeWidth={3} /> Tạo Hành trình
                     </button>
-
-                    {/* Nút Toggle Style Mới */}
-                    <div className="flex items-center bg-zinc-100/80 dark:bg-zinc-900/60 rounded-[18px] p-1 border border-zinc-200/60 dark:border-zinc-800/50">
-                        <button 
-                            onClick={() => setViewMode('timeline')}
-                            className={cn("px-5 py-2 rounded-2xl transition-all flex items-center gap-2 text-lg font-normal font-['Jua']", viewMode === 'timeline' ? "bg-white dark:bg-zinc-800 text-amber-700 dark:text-amber-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400")}
-                        >
-                            <ListTree size={18} /> Timeline
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('grid')}
-                            className={cn("px-5 py-2 rounded-2xl transition-all flex items-center gap-2 text-lg font-normal font-['Jua']", viewMode === 'grid' ? "bg-white dark:bg-zinc-800 text-amber-700 dark:text-amber-400 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400")}
-                        >
-                            <LayoutGrid size={18} /> Grid
-                        </button>
-                    </div>
                 </div>
             </div>
 
-            {/* --- TRẠNG THÁI TRỐNG --- */}
             {journeys.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32 bg-slate-50 dark:bg-zinc-900/20 rounded-[32px] border border-zinc-200 dark:border-zinc-800/50 border-dashed shadow-sm">
-                    <div className="w-20 h-20 bg-blue-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                        <BookOpen className="text-blue-500 dark:text-zinc-400 w-10 h-10" strokeWidth={1.5} />
+                <div className="flex flex-col items-center justify-center py-28 bg-white/30 dark:bg-[#1A1A1A]/30 backdrop-blur-sm rounded-[40px] border-2 border-[#D6CFC7] dark:border-[#3A3734] border-dashed shadow-[0_8px_32px_rgba(0,0,0,0.02)]">
+                    <div className="w-20 h-20 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[24px] flex items-center justify-center mb-6 shadow-sm border border-white dark:border-transparent">
+                        <BookOpen className="text-[#8A8580] dark:text-[#A09D9A] w-10 h-10" strokeWidth={2.5} />
                     </div>
-                    <h3 className="text-2xl font-normal text-zinc-900 dark:text-zinc-300 mb-2" style={{ fontFamily: '"Jua", sans-serif' }}>A blank page</h3>
-                    <p className="text-zinc-500 text-center max-w-md mb-8 text-base font-medium leading-relaxed">Every box is a story. Start capturing your first moments.</p>
+                    <h3 className="text-[1.6rem] font-black text-[#1A1A1A] dark:text-white mb-2 tracking-tight">Một trang giấy trắng</h3>
+                    <p className="text-[#8A8580] dark:text-[#A09D9A] text-center max-w-md mb-8 text-[1.05rem] font-semibold leading-relaxed">
+                        Mỗi không gian là một câu chuyện. Hãy bắt đầu lưu giữ những khoảnh khắc đầu tiên.
+                    </p>
                     <button 
                         onClick={() => setIsCreateJourneyModalOpen(true)} 
-                        className="text-green-900 dark:text-green-400 text-2xl font-normal font-['Jua'] hover:opacity-70 transition-opacity"
+                        className="flex items-center gap-2 px-8 py-4 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] rounded-[24px] font-black text-[1rem] shadow-[0_8px_24px_rgba(0,0,0,0.15)] active:scale-95 transition-all hover:-translate-y-1"
                     >
-                        + Create Journey
+                        <Plus size={20} strokeWidth={3} /> Bắt đầu ngay
                     </button>
                 </div>
             ) : (
-                <>
-                    {/* =====================================================================
-                        CHẾ ĐỘ DẠNG LƯỚI (Ngang như Mobile)
-                    ===================================================================== */}
-                    {viewMode === 'grid' && (
-                        <div className="flex flex-col gap-10">
-                            
-                            {/* KHỐI ONGOING */}
-                            <div className="w-full bg-orange-100 dark:bg-[#2A1F1A] rounded-[36px] p-8 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.10)] dark:shadow-none">
-                                <h2 className="text-red-950 dark:text-orange-200 text-3xl font-normal font-['Jua'] mb-6 pl-2">
-                                    Ongoing
-                                </h2>
-                                
-                                {activeJourneys.length === 0 ? (
-                                    <div className="w-full h-32 bg-white/50 dark:bg-zinc-900/50 rounded-[24px] flex items-center justify-center border border-dashed border-orange-200 dark:border-orange-900/50 text-orange-900/50 dark:text-orange-200/50 font-['Jua'] text-xl">
-                                        No ongoing journeys
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        {activeJourneys.map(journey => (
-                                            <div 
-                                                key={journey.id}
-                                                onClick={() => navigate(`/journey/${journey.id}`)}
-                                                className="w-full bg-white dark:bg-zinc-900 rounded-[24px] p-6 shadow-sm cursor-pointer hover:-translate-y-1 transition-transform border border-transparent dark:border-zinc-800 flex flex-col justify-between"
-                                            >
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <div className="flex items-center gap-4 w-[75%]">
-                                                        {journey.avatar ? (
-                                                            <span className="text-[32px]">{journey.avatar}</span>
-                                                        ) : (
-                                                            <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500"><Compass size={24}/></div>
-                                                        )}
-                                                        <div>
-                                                            <h3 className="font-['Jua'] text-2xl text-zinc-900 dark:text-zinc-100 truncate">{journey.name}</h3>
-                                                            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mt-0.5">
-                                                                {formatDate(journey.createdAt || journey.startDate)}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-sky-900 dark:text-sky-400 text-lg font-normal font-['Jua'] bg-sky-50 dark:bg-sky-900/20 px-3 py-1 rounded-xl whitespace-nowrap">
-                                                        Open -&gt;
-                                                    </div>
-                                                </div>
-                                                <MiniCalendarGrid previewImages={journey.previewImages} isMobileStyle={true} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* KHỐI MEMORIES */}
-                            {(endedJourneys.length > 0 || true) && (
-                                <div className="w-full bg-indigo-50 dark:bg-[#1A1A2A] rounded-[36px] p-8 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.10)] dark:shadow-none mb-10">
-                                    <h2 className="text-indigo-900 dark:text-indigo-300 text-3xl font-normal font-['Jua'] mb-6 pl-2">
-                                        Memories
-                                    </h2>
-                                    
-                                    {endedJourneys.length === 0 ? (
-                                        <div className="w-full h-32 bg-white/50 dark:bg-zinc-900/50 rounded-[24px] flex items-center justify-center border border-dashed border-indigo-200 dark:border-indigo-900/50 text-indigo-900/50 dark:text-indigo-300/50 font-['Jua'] text-xl">
-                                            Empty
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            {endedJourneys.map(journey => (
-                                                <div 
-                                                    key={journey.id}
-                                                    onClick={() => navigate(`/journey/${journey.id}`)}
-                                                    className="w-full bg-white/90 dark:bg-zinc-900 rounded-[24px] p-6 shadow-sm cursor-pointer hover:-translate-y-1 transition-transform border border-transparent dark:border-zinc-800 flex flex-col justify-between"
-                                                >
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <div className="flex items-center gap-4 w-[75%]">
-                                                            {journey.avatar && <span className="text-[32px] grayscale opacity-90">{journey.avatar}</span>}
-                                                            <div>
-                                                                <h3 className="font-['Jua'] text-2xl text-zinc-700 dark:text-zinc-300 truncate">{journey.name}</h3>
-                                                                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mt-0.5">
-                                                                    {formatDate(journey.createdAt || journey.startDate)}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-sky-900 dark:text-sky-400 text-lg font-normal font-['Jua'] bg-sky-50 dark:bg-sky-900/20 px-3 py-1 rounded-xl whitespace-nowrap">
-                                                            Open -&gt;
-                                                        </div>
-                                                    </div>
-                                                    <MiniCalendarGrid previewImages={journey.previewImages} isMobileStyle={true} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* =====================================================================
-                        CHẾ ĐỘ DÒNG THỜI GIAN (TIMELINE)
-                    ===================================================================== */}
-                    {viewMode === 'timeline' && (
-                        <div className="flex flex-col relative py-8 pl-4">
-                            <div className="absolute top-[82px] left-0 right-0 h-[2px] border-t-2 border-dashed border-zinc-200 dark:border-zinc-800 z-0"></div>
-
-                            <div className="flex flex-row overflow-x-auto custom-scrollbar snap-x snap-mandatory gap-10 pb-10 pt-4">
-                                {journeys.map((journey) => (
-                                    <div 
-                                        key={journey.id} 
-                                        className="relative flex flex-col w-[320px] shrink-0 snap-start cursor-pointer group"
-                                        onClick={() => navigate(`/journey/${journey.id}`)}
-                                    >
-                                        <div className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 pl-2">
-                                            {formatDate(journey.createdAt || journey.startDate)}
-                                        </div>
-
-                                        <div className="w-4 h-4 rounded-full bg-amber-400 dark:bg-amber-600 ring-4 ring-white dark:ring-[#121212] shadow-sm group-hover:bg-amber-300 transition-colors z-10 relative mb-8"></div>
-
-                                        <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 shadow-[0px_4px_12px_rgba(0,0,0,0.06)] dark:shadow-none hover:shadow-[0px_8px_20px_rgba(0,0,0,0.1)] transition-all h-full flex flex-col border border-zinc-100 dark:border-zinc-800 group-hover:-translate-y-2">
-                                            <h3 className="font-normal text-2xl text-zinc-900 dark:text-white transition-colors mb-2 flex items-center justify-between" style={{ fontFamily: '"Jua", sans-serif' }}>
-                                                <div className="flex items-center gap-3 w-[70%]">
-                                                    {journey.avatar && <span className="text-[28px] opacity-90 group-hover:scale-110 transition-transform">{journey.avatar}</span>}
-                                                    <span className="truncate">{journey.name}</span>
-                                                </div>
-                                            </h3>
-                                            
-                                            <MiniCalendarGrid previewImages={journey.previewImages} isMobileStyle={true} />
-
-                                            <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                                                <span className="text-lg font-normal font-['Jua'] text-sky-900 dark:text-sky-400 group-hover:opacity-80 transition-opacity">
-                                                    Open -&gt;
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+                <div className="flex flex-col gap-10">
+                    
+                    <div className="w-full bg-white/60 dark:bg-[#1A1A1A]/60 backdrop-blur-md rounded-[40px] p-8 md:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.03)] border-2 border-dashed border-[#D6CFC7] dark:border-[#3A3734] relative">
+                        <h2 className="text-[#1A1A1A] dark:text-white text-[1.6rem] font-black mb-8 pl-2 tracking-tight">
+                            Đang diễn ra
+                        </h2>
+                        
+                        {activeJourneys.length === 0 ? (
+                            <button 
+                                onClick={() => setIsCreateJourneyModalOpen(true)}
+                                className="w-full h-36 bg-[#F4EBE1]/30 dark:bg-[#2B2A29]/30 hover:bg-[#F4EBE1]/60 dark:hover:bg-[#2B2A29]/60 rounded-[32px] flex flex-col items-center justify-center border-2 border-dashed border-[#D6CFC7] dark:border-[#4A4D55] hover:border-[#1A1A1A] dark:hover:border-white transition-all group active:scale-[0.99]"
+                            >
+                                <Plus size={28} strokeWidth={3} className="text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white mb-2 transition-colors" />
+                                <span className="text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white font-extrabold text-[1rem] transition-colors">Tạo hành trình mới</span>
+                            </button>
+                        ) : (
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                {activeJourneys.map(journey => (
+                                    <ActiveJourneyCard 
+                                        key={journey.id}
+                                        journey={journey}
+                                        isOwner={journey.creatorId === user?.id || journey.role === 'OWNER'}
+                                        isPending={false} 
+                                        hasPendingRequests={journey.hasPendingRequests || false}
+                                        canInvite={journey.creatorId === user?.id || journey.role === 'OWNER' || journey.role === 'ADMIN' || journey.visibility === 'PUBLIC'}
+                                        onEnter={() => navigate(`/journey/${journey.id}`)}
+                                        onInvite={(j) => setInviteJourney(j)}
+                                        onSettings={(j) => setSettingsJourney(j)}
+                                        onRequest={(j) => setRequestsJourney(j)}
+                                    />
                                 ))}
+                            </div>
+                        )}
+                    </div>
 
-                                <div className="relative flex flex-col w-[150px] shrink-0 snap-start">
-                                    <div className="text-xs text-transparent mb-4">.</div>
-                                    <div className="w-3 h-3 rounded-full bg-zinc-200 dark:bg-zinc-700 ring-4 ring-white dark:ring-[#121212] z-10 relative mb-8 mt-0.5"></div>
-                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">The Beginning</span>
-                                </div>
+                    {(endedJourneys.length > 0) && (
+                        <div className="w-full bg-white/40 dark:bg-[#1A1A1A]/40 backdrop-blur-md rounded-[40px] p-8 md:p-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)] border-2 border-dashed border-[#D6CFC7] dark:border-[#3A3734] mb-10 grayscale-[30%] hover:grayscale-0 transition-all duration-500">
+                            <h2 className="text-[#8A8580] dark:text-[#A09D9A] text-[1.5rem] font-black mb-8 pl-2 tracking-tight">
+                                Kỷ niệm đã khép lại
+                            </h2>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                {endedJourneys.map(journey => (
+                                    <ActiveJourneyCard 
+                                        key={journey.id}
+                                        journey={journey}
+                                        isOwner={journey.creatorId === user?.id || journey.role === 'OWNER'}
+                                        isPending={false}
+                                        hasPendingRequests={false}
+                                        canInvite={false}
+                                        onEnter={() => navigate(`/journey/${journey.id}`)}
+                                        onInvite={() => {}}
+                                        onSettings={(j) => setSettingsJourney(j)}
+                                    />
+                                ))}
                             </div>
                         </div>
                     )}
-                </>
+                </div>
+            )}
+
+            {/* ĐÃ FIX: THÊM PROPS CHO MODALS */}
+            {settingsJourney && (
+                <JourneySettingsModal 
+                    isOpen={!!settingsJourney}
+                    onClose={() => setSettingsJourney(null)}
+                    journey={settingsJourney}
+                    onUpdateSuccess={() => window.location.reload()} // Load lại trang khi save settings
+                />
+            )}
+            {inviteJourney && (
+                <InviteMembersModal
+                    isOpen={!!inviteJourney}
+                    onClose={() => setInviteJourney(null)}
+                    journeyId={inviteJourney.id}
+                    inviteCode={inviteJourney.inviteCode} // Đã thêm
+                />
+            )}
+            {requestsJourney && (
+                <PendingRequestsList
+                    isOpen={!!requestsJourney}
+                    onClose={() => setRequestsJourney(null)}
+                    journeyId={requestsJourney.id}
+                />
             )}
         </div>
     );

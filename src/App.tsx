@@ -17,8 +17,11 @@ import BoxListPage from '@/modules/box/pages/BoxListPage';
 import BoxDetailPage from '@/modules/box/pages/BoxDetailPage';
 import { MapPage } from '@/modules/map/pages/MapPage';
 
-// [THÊM MỚI] Import Trang Lịch Ký Ức (Memory Timeline)
+// Import Trang Lịch Ký Ức (Memory Timeline)
 import MemoryTimelinePage from '@/modules/user/pages/MemoryTimelinePage';
+
+// [THÊM MỚI] Import Trang Bảng Tin Lưới Hành Trình
+import JourneyGridFeedPage from '@/modules/journey/pages/JourneyGridFeedPage';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -80,9 +83,13 @@ function App() {
         isAuthenticated ? <MapPage /> : <Navigate to="/" replace />
       } />
 
-      {/* [THÊM MỚI] Route cho module Chuỗi Lịch Ký Ức */}
       <Route path="/streak" element={
         isAuthenticated ? <MemoryTimelinePage /> : <Navigate to="/" replace />
+      } />
+
+      {/* [THÊM MỚI] Route cho Bảng Tin Lưới Hành Trình */}
+      <Route path="/journeys/grid" element={
+        isAuthenticated ? <JourneyGridFeedPage /> : <Navigate to="/" replace />
       } />
 
       {/* Fallback route: Nếu không khớp route nào thì về trang chủ */}

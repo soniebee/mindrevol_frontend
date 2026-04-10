@@ -19,7 +19,6 @@ export const usePostCardLogic = ({ post, onDelete, onUpdate }: UsePostCardLogicP
   
   // State Edit Logic
   const [isEditing, setIsEditing] = useState(false);
-  // [FIX] Luôn đảm bảo giá trị khởi tạo là string, tránh undefined/null
   const [editCaption, setEditCaption] = useState(post.caption || '');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -46,7 +45,6 @@ export const usePostCardLogic = ({ post, onDelete, onUpdate }: UsePostCardLogicP
   };
 
   const handleEditClick = () => { 
-      // [FIX] Reset lại caption từ props mỗi khi mở form sửa
       setEditCaption(post.caption || ''); 
       setIsEditing(true); 
       setShowMenu(false); 
@@ -60,10 +58,9 @@ export const usePostCardLogic = ({ post, onDelete, onUpdate }: UsePostCardLogicP
     try { 
         setIsSaving(true); 
         
-        // Gọi API
-        await checkinService.updateCheckin(post.id, editCaption); 
+        // [ĐÃ SỬA] Đóng gói thành Object { caption: editCaption } để khớp với API
+        await checkinService.updateCheckin(post.id, { caption: editCaption }); 
         
-        // [QUAN TRỌNG] Chỉ truyền chuỗi `editCaption` (đã là string) vào callback
         if (onUpdate) onUpdate(post.id, editCaption); 
         
         setIsEditing(false); 

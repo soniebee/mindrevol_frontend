@@ -13,7 +13,6 @@ export const SocialSetupWizard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Lưu trữ thông tin tạm từ Step 1
   const [basicInfo, setBasicInfo] = useState<StepBasicInfoValues | null>(null);
 
   const handleBasicInfoSubmit = (data: StepBasicInfoValues) => {
@@ -27,14 +26,12 @@ export const SocialSetupWizard = () => {
     setError(null);
 
     try {
-      // [ĐÃ SỬA]: Chuyển sang dùng FormData vì Backend hiện tại yêu cầu Multipart-form-data
       const formData = new FormData();
       if (basicInfo?.fullname) formData.append('fullname', basicInfo.fullname);
       if (basicInfo?.dateOfBirth) formData.append('dateOfBirth', basicInfo.dateOfBirth);
       if (basicInfo?.gender) formData.append('gender', basicInfo.gender);
       formData.append('handle', handle);
 
-      // [ĐÃ SỬA]: URL chuẩn là /users/me và đính kèm header Content-Type
       await http.put('/users/me', formData, {
         headers: {
           Authorization: `Bearer ${tempToken.accessToken}`,
@@ -43,7 +40,7 @@ export const SocialSetupWizard = () => {
       });
 
       toast.success('Hồ sơ đã được thiết lập!', { icon: '🎉' });
-      completeSocialSetup(); // Hoàn tất và chính thức đăng nhập
+      completeSocialSetup();
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật hồ sơ.');
@@ -54,20 +51,26 @@ export const SocialSetupWizard = () => {
 
   return (
     <div className="w-full space-y-4">
-      <div className="mb-4 flex items-center justify-between font-['Nunito']">
-        <div className="text-sm font-bold text-stone-600 uppercase tracking-wider">Hoàn tất hồ sơ</div>
-        <div className="text-sm font-bold text-lime-800 bg-lime-100/70 px-3 py-1.5 rounded-xl">Bước {step}/2</div>
+      <div className="mb-5 flex items-center justify-between font-sans px-2">
+        <div className="text-[0.9rem] font-bold text-[#8A8580] uppercase tracking-wider">Hoàn tất hồ sơ</div>
+        <div className="text-[0.95rem] font-extrabold text-[#1A1A1A] bg-[#FFF8E7] px-3 py-1 rounded-[12px]">
+          Bước {step}/2
+        </div>
       </div>
 
-      {/* PROGRESS BAR - Rút gọn còn 2 bước */}
-      <div className="flex gap-2 mb-8">
+      <div className="flex gap-2 mb-8 px-2">
         {[1, 2].map((i) => (
-          <div key={i} className={`h-2 flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-lime-400 shadow-[0px_2px_4px_0px_rgba(163,230,53,0.5)]' : 'bg-neutral-200'}`} />
+          <div 
+            key={i} 
+            className={`h-2 flex-1 rounded-full transition-all duration-500 ${
+              step >= i ? 'bg-[#1A1A1A]' : 'bg-[#E5E5E5]'
+            }`} 
+          />
         ))}
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-2xl bg-red-100 text-red-600 text-sm font-['Nunito'] font-bold text-center">
+        <div className="mb-4 p-3 bg-white shadow-[0_4px_12px_rgba(239,68,68,0.1)] rounded-[16px] text-red-500 text-[0.9rem] font-bold text-center">
           {error}
         </div>
       )}
@@ -77,7 +80,7 @@ export const SocialSetupWizard = () => {
           <StepBasicInfo 
             key="step1" 
             onNext={handleBasicInfoSubmit} 
-            onBack={resetFlow} // Hủy luồng, quay về màn hình nhập Email
+            onBack={resetFlow} 
           />
         )}
         {step === 2 && (

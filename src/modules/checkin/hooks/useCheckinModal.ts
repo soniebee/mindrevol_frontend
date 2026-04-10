@@ -96,7 +96,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isVideo, setIsVideo] = useState(false);
   
-  // [THÊM MỚI] States cho Timeline cắt Video
   const [videoDuration, setVideoDuration] = useState(0);
   const [startTime, setStartTime] = useState(0);
   
@@ -121,7 +120,8 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
       try {
         const journeys = await journeyService.getUserActiveJourneys('me');
         setActiveJourneys(journeys);
-        if (!selectedJourneyId && journeys.length > 0) setSelectedJourneyId(journeys[0].id);
+        // [ĐÃ SỬA] Nếu có journeyId truyền vào thì dùng, không thì để trống mặc định (Lưu trữ cá nhân)
+        if (!selectedJourneyId && journeyId) setSelectedJourneyId(journeyId);
       } catch (error) {}
     };
     fetchJourneys();
@@ -135,7 +135,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
       setIsVideo(isVideoFile);
 
       if (isVideoFile) {
-          // [THÊM MỚI] Lấy độ dài (duration) của video để làm thanh trượt
           const videoElement = document.createElement('video');
           videoElement.src = url;
           videoElement.onloadedmetadata = () => {
@@ -228,7 +227,8 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   const handleSubmit = async () => {
     if (!file || !previewUrl) return;
-    if (!selectedJourneyId) { alert("Vui lòng chọn một hành trình!"); return; }
+    
+    // [ĐÃ SỬA] Bỏ check bắt buộc hành trình, cho phép submit với selectedJourneyId rỗng (Archive)
     
     try {
       setIsSubmitting(true);
@@ -254,17 +254,20 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
       const payload: any = {
         file: fileToUpload,
-        journeyId: selectedJourneyId, 
         caption, locationName: location,
         activityType: isCustom ? UIActivityType.CUSTOM : selectedActivity.type,
         activityName: finalActivityName,
         statusRequest: 'NORMAL'
       };
 
-      // Gửi kèm tham số Cắt Video (để Backend/ImageKit xử lý cắt nếu cần)
+      // [ĐÃ SỬA] Chỉ gửi journeyId nếu user có chọn
+      if (selectedJourneyId) {
+          payload.journeyId = selectedJourneyId;
+      }
+
       if (isVideo) {
           payload.videoStartTime = startTime;
-          payload.videoDuration = 3; // Mặc định live photo 3 giây
+          payload.videoDuration = 3; 
       }
 
       if (latitude !== null && longitude !== null) {
@@ -272,7 +275,7 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
       }
 
       await checkinService.createCheckin(payload);
-      trackEvent('checkin_completed', { journey_id: selectedJourneyId, is_video: isVideo });
+      trackEvent('checkin_completed', { journey_id: selectedJourneyId || 'archived', is_video: isVideo });
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -292,6 +295,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     latitude, isLocating, handleAutoLocate, locationSearch: location, 
     handleLocationInputChange, locationSuggestions, isSearchingLocation, handleSelectSuggestion, locationContainerRef,
     isVideo,
-    videoDuration, startTime, setStartTime // Trả ra thêm 3 biến này
+    videoDuration, startTime, setStartTime 
   };
 };

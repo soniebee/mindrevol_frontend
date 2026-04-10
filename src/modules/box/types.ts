@@ -1,4 +1,6 @@
-// Dành cho trang BoxList (Giữ nguyên các trường FE đang dùng bằng dấu ? để không lỗi TypeScript)
+// Thêm định nghĩa BoxTab
+export type BoxTab = 'all' | 'personal' | 'friends' | 'invitations';
+
 export interface BoxResponse {
     id: string;
     name: string;
@@ -10,18 +12,17 @@ export interface BoxResponse {
     ownerId?: string;
     isArchived?: boolean;
     memberCount: number;
+    previewMemberAvatars?: string[];
     createdAt?: string;
-    lastActivityAt?: string; // BE trả về cái này thay vì createdAt
+    lastActivityAt?: string;
 }
 
-// Khai báo type Journey để hứng cục data BE trả kèm trong Chi tiết Box
 export interface JourneyResponse {
     id: string;
     name: string;
     status: string;
 }
 
-// Dành riêng cho trang Chi tiết Box (Hứng toàn bộ map, mood, và 2 list hành trình từ BE)
 export interface BoxDetailResponse {
     id: string;
     name: string;
@@ -79,7 +80,7 @@ export interface UpdateBoxRequest {
 }
 
 export interface BoxInvitationResponse {
-    id: string;
+    id: number; 
     boxId: string;
     boxName: string;
     boxAvatar?: string;

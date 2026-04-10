@@ -17,88 +17,90 @@ export const PasswordForm = () => {
       initial={{ opacity: 0, x: 20 }} 
       animate={{ opacity: 1, x: 0 }} 
       exit={{ opacity: 0, x: 20 }}
-      className="flex flex-col h-full space-y-6"
+      className="flex flex-col h-full space-y-6 w-full"
     >
       <div className="mb-2">
         <button 
           onClick={handleBack} 
-          className="text-stone-500 hover:text-red-950 flex items-center text-sm font-sans transition-colors mb-4 group"
+          className="text-[#8A8580] hover:text-[#1A1A1A] flex items-center text-[0.95rem] font-bold transition-colors mb-4 group"
           type="button"
         >
-          <ArrowLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> 
+          <ArrowLeft className="w-4 h-4 mr-1 transition-transform duration-300 group-hover:-translate-x-1" /> 
           Quay lại
         </button>
         
-        <div className="flex items-center gap-2 mt-2 text-sm font-sans text-stone-500">
+        {/* Khung email: Giữ nguyên viền và nền vàng nhạt, chỉ loại bỏ box-shadow cứng */}
+        <div className="flex items-center gap-2 mt-2 text-[0.95rem] font-bold text-[#8A8580]">
            <span>Đang đăng nhập:</span>
-           <span className="text-blue-900 font-medium bg-blue-50 px-3 py-1 rounded-xl">
+           <span className="text-cute-dark bg-cute-yellow/60 border-2 border-cute-dark px-3 py-1 rounded-[10px]">
              {email}
            </span>
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-5 flex-1">
+      <form onSubmit={onSubmit} className="space-y-5 flex-1 w-full">
         <div className="relative">
           <Input 
             {...register("password")}
             type={showPassword ? "text" : "password"} 
-            label="Mật khẩu hiện tại"
-            placeholder="Nhập mật khẩu..." 
+            label="Mật khẩu"
+            placeholder="••••••••" 
             autoFocus
             disabled={isLoading}
-            className="h-14 rounded-[20px] bg-neutral-100/70 border-none shadow-inner text-lg focus:ring-2 focus:ring-blue-300 font-sans pr-12" 
+            className="pr-12" 
           />
           <button
             type="button"
             onClick={toggleShowPassword}
-            className="absolute right-4 top-[42px] text-stone-400 hover:text-stone-600 transition-colors"
+            className="absolute right-[20px] top-[46px] text-[#A09D9A] hover:text-[#1A1A1A] transition-colors"
           >
             {showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
           </button>
         </div>
         
-        <div className="flex justify-end -mt-2">
+        <div className="flex justify-end -mt-3 mb-5">
             <button 
               type="button"
               onClick={handleForgotPassword}
-              className="text-sm font-sans text-stone-500 hover:text-blue-800 transition-colors hover:underline"
+              className="text-[0.95rem] font-bold text-[#8A8580] hover:text-[#1A1A1A] transition-colors relative after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:w-full after:bg-[#1A1A1A] after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
             >
-              Quên mật khẩu?
+              Quên mật khẩu hả?
             </button>
         </div>
 
         {error && (
-          <div className="text-red-500 text-sm font-sans font-medium bg-red-50 p-3 rounded-2xl border border-red-100 flex items-center justify-center">
+          <div className="text-red-500 text-[0.9rem] bg-white shadow-[0_4px_12px_rgba(239,68,68,0.1)] font-bold p-3 rounded-[16px] flex items-center justify-center mb-4">
             {error}
           </div>
         )}
 
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-2 w-full">
             <Button 
               type="submit" 
               isLoading={isLoading} 
-              className="w-full h-14 text-xl font-normal bg-blue-800/80 hover:bg-blue-800 text-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] transition-all"
+              className="w-full flex items-center justify-center gap-2 group"
             >
-              Đăng nhập
+              Mở cửa bước vào
+              <svg className="transition-transform duration-300 group-hover:translate-x-1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
             </Button>
 
-            <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-red-950/10" />
-                </div>
-                <div className="relative flex justify-center text-sm font-normal">
-                  <span className="bg-[#fdfdfc] px-4 text-red-950/50">Hoặc</span>
-                </div>
+            <div className="relative text-center my-[1.5rem] text-[0.95rem] font-semibold text-[#8A8580]">
+              <div className="absolute top-1/2 left-0 w-[25%] h-[1px] bg-[#D6CFC7]"></div>
+              <span className="relative z-10 px-4">Hoặc là</span>
+              <div className="absolute top-1/2 right-0 w-[25%] h-[1px] bg-[#D6CFC7]"></div>
             </div>
 
             <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleSwitchToOtp}
-                className="w-full h-14 text-lg font-normal bg-lime-50/50 hover:bg-lime-100 border-none text-lime-950 rounded-[20px] shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05)]"
+                className="w-full"
             >
                 <RefreshCw className="w-5 h-5 mr-2" />
-                Đăng nhập bằng mã OTP
+                Dùng mã OTP cho nhanh
             </Button>
         </div>
       </form>

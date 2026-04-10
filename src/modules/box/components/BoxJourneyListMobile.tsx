@@ -1,6 +1,10 @@
-import React from 'react';
-import { BookOpen } from 'lucide-react';
-import { MiniCalendarGrid } from './BoxJourneyShared';
+import React, { useState } from 'react';
+import { BookOpen, Plus } from 'lucide-react';
+import { useAuth } from '@/modules/auth/store/AuthContext';
+import { ActiveJourneyCard } from '@/modules/journey/components/ActiveJourneyCard';
+import { JourneySettingsModal } from '@/modules/journey/components/JourneySettingsModal';
+import { InviteMembersModal } from '@/modules/journey/components/InviteMembersModal';
+import { PendingRequestsList } from '@/modules/journey/components/PendingRequestsList';
 
 interface BoxJourneyListMobileProps {
     journeys: any[];
@@ -11,86 +15,103 @@ interface BoxJourneyListMobileProps {
 export const BoxJourneyListMobile: React.FC<BoxJourneyListMobileProps> = ({
     journeys, setIsCreateJourneyModalOpen, navigate
 }) => {
+    const { user } = useAuth();
     const activeJourneys = journeys.filter(j => j.status !== 'COMPLETED');
     const endedJourneys = journeys.filter(j => j.status === 'COMPLETED');
 
+    const [settingsJourney, setSettingsJourney] = useState<any>(null);
+    const [inviteJourney, setInviteJourney] = useState<any>(null);
+    const [requestsJourney, setRequestsJourney] = useState<any>(null);
+
     return (
-        <div className="flex md:hidden flex-col gap-6 mt-4">
+        <div className="flex md:hidden flex-col gap-6 mt-4 font-quicksand">
             
-            <div className="flex justify-end w-full px-1">
+            <div className="flex justify-between items-center w-full px-1 mb-2">
+                <h2 className="text-[#1A1A1A] dark:text-white text-[1.5rem] font-black tracking-tight">Hành trình</h2>
                 <button 
                     onClick={() => setIsCreateJourneyModalOpen(true)}
-                    className="text-green-950 dark:text-green-400 text-xl font-normal font-['Jua'] hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-2 px-5 py-3 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] rounded-[20px] font-black text-[0.9rem] shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 hover:-translate-y-0.5 transition-all"
                 >
-                    + Create Journey
+                    <Plus size={18} strokeWidth={3} /> Tạo mới
                 </button>
             </div>
 
-            <div className="w-full bg-orange-100 dark:bg-[#2A1F1A] rounded-[28px] p-5 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.20)] dark:shadow-none">
-                <h2 className="text-red-950 dark:text-orange-200 text-2xl font-normal font-['Jua'] mb-4 pl-1">Ongoing</h2>
+            <div className="w-full bg-white/60 dark:bg-[#1A1A1A]/60 backdrop-blur-md rounded-[36px] p-5 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.03)] border-2 border-dashed border-[#D6CFC7] dark:border-[#3A3734]">
+                <h2 className="text-[#1A1A1A] dark:text-white text-[1.2rem] font-black mb-5 pl-1 tracking-tight">Đang diễn ra</h2>
                 
                 {activeJourneys.length === 0 ? (
-                    <div className="w-full h-24 bg-white/50 dark:bg-zinc-900/50 rounded-2xl flex items-center justify-center border border-dashed border-orange-200 dark:border-orange-900/50 text-orange-900/50 dark:text-orange-200/50 font-['Jua'] text-lg">
-                        No ongoing journeys
-                    </div>
+                    <button 
+                        onClick={() => setIsCreateJourneyModalOpen(true)}
+                        className="w-full h-28 bg-[#F4EBE1]/30 dark:bg-[#2B2A29]/30 hover:bg-[#F4EBE1]/60 rounded-[28px] flex flex-col items-center justify-center border-2 border-dashed border-[#D6CFC7] dark:border-[#4A4D55] hover:border-[#1A1A1A] transition-all group active:scale-[0.98]"
+                    >
+                         <Plus size={24} strokeWidth={3} className="text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white mb-1 transition-colors" />
+                         <span className="text-[#8A8580] dark:text-[#A09D9A] group-hover:text-[#1A1A1A] dark:group-hover:text-white font-extrabold text-[0.9rem] transition-colors">Thêm Hành trình</span>
+                    </button>
                 ) : (
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-5">
                         {activeJourneys.map(journey => (
-                            <div 
+                            <ActiveJourneyCard 
                                 key={journey.id}
-                                onClick={() => navigate(`/journey/${journey.id}`)}
-                                className="w-full bg-white dark:bg-zinc-900 rounded-[20px] p-4 shadow-sm cursor-pointer hover:-translate-y-1 transition-transform border border-transparent dark:border-zinc-800"
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3 w-[70%]">
-                                        {journey.avatar ? (
-                                            <span className="text-2xl">{journey.avatar}</span>
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500"><BookOpen size={16}/></div>
-                                        )}
-                                        <h3 className="font-['Jua'] text-xl text-zinc-900 dark:text-zinc-100 truncate">{journey.name}</h3>
-                                    </div>
-                                    <div className="text-sky-900 dark:text-sky-400 text-base font-normal font-['Jua'] whitespace-nowrap">
-                                        Open -&gt;
-                                    </div>
-                                </div>
-                                <MiniCalendarGrid previewImages={journey.previewImages} isMobileStyle={true} />
-                            </div>
+                                journey={journey}
+                                isOwner={journey.creatorId === user?.id || journey.role === 'OWNER'}
+                                isPending={false} 
+                                hasPendingRequests={journey.hasPendingRequests || false}
+                                canInvite={journey.creatorId === user?.id || journey.role === 'OWNER' || journey.role === 'ADMIN' || journey.visibility === 'PUBLIC'}
+                                onEnter={() => navigate(`/journey/${journey.id}`)}
+                                onInvite={(j) => setInviteJourney(j)}
+                                onSettings={(j) => setSettingsJourney(j)}
+                                onRequest={(j) => setRequestsJourney(j)}
+                            />
                         ))}
                     </div>
                 )}
             </div>
 
-            <div className="w-full bg-indigo-50 dark:bg-[#1A1A2A] rounded-[28px] p-5 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.20)] dark:shadow-none mb-10">
-                <h2 className="text-indigo-900 dark:text-indigo-300 text-2xl font-normal font-['Jua'] mb-4 pl-1">Memories</h2>
-                
-                {endedJourneys.length === 0 ? (
-                    <div className="w-full h-24 bg-white/50 dark:bg-zinc-900/50 rounded-2xl flex items-center justify-center border border-dashed border-indigo-200 dark:border-indigo-900/50 text-indigo-900/50 dark:text-indigo-300/50 font-['Jua'] text-lg">
-                        Empty
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-4">
+            {(endedJourneys.length > 0) && (
+                <div className="w-full bg-white/40 dark:bg-[#1A1A1A]/40 backdrop-blur-md rounded-[36px] p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] border-2 border-dashed border-[#D6CFC7] dark:border-[#3A3734] mb-10 grayscale-[20%]">
+                    <h2 className="text-[#8A8580] dark:text-[#A09D9A] text-[1.1rem] font-black mb-5 pl-1 tracking-tight">Kỷ niệm đã khép lại</h2>
+                    <div className="flex flex-col gap-5">
                         {endedJourneys.map(journey => (
-                            <div 
+                            <ActiveJourneyCard 
                                 key={journey.id}
-                                onClick={() => navigate(`/journey/${journey.id}`)}
-                                className="w-full bg-white dark:bg-zinc-900 rounded-[20px] p-4 shadow-sm cursor-pointer hover:-translate-y-1 transition-transform border border-transparent dark:border-zinc-800 opacity-95"
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3 w-[70%]">
-                                        {journey.avatar && <span className="text-2xl grayscale">{journey.avatar}</span>}
-                                        <h3 className="font-['Jua'] text-xl text-zinc-700 dark:text-zinc-300 truncate">{journey.name}</h3>
-                                    </div>
-                                    <div className="text-sky-900 dark:text-sky-400 text-base font-normal font-['Jua'] whitespace-nowrap">
-                                        Open -&gt;
-                                    </div>
-                                </div>
-                                <MiniCalendarGrid previewImages={journey.previewImages} isMobileStyle={true} />
-                            </div>
+                                journey={journey}
+                                isOwner={journey.creatorId === user?.id || journey.role === 'OWNER'}
+                                isPending={false}
+                                hasPendingRequests={false}
+                                canInvite={false}
+                                onEnter={() => navigate(`/journey/${journey.id}`)}
+                                onInvite={() => {}}
+                                onSettings={(j) => setSettingsJourney(j)}
+                            />
                         ))}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
+
+            {/* ĐÃ FIX THIẾU PROPS */}
+            {settingsJourney && (
+                <JourneySettingsModal 
+                    isOpen={!!settingsJourney}
+                    onClose={() => setSettingsJourney(null)}
+                    journey={settingsJourney}
+                    onUpdateSuccess={() => window.location.reload()} 
+                />
+            )}
+            {inviteJourney && (
+                <InviteMembersModal
+                    isOpen={!!inviteJourney}
+                    onClose={() => setInviteJourney(null)}
+                    journeyId={inviteJourney.id}
+                    inviteCode={inviteJourney.inviteCode}
+                />
+            )}
+            {requestsJourney && (
+                <PendingRequestsList
+                    isOpen={!!requestsJourney}
+                    onClose={() => setRequestsJourney(null)}
+                    journeyId={requestsJourney.id}
+                />
+            )}
         </div>
     );
 };

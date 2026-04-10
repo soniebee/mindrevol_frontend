@@ -38,22 +38,22 @@ export const StepHandle: React.FC<Props> = ({ onFinish, onBack, isLoading }) => 
   return (
     <motion.div 
       initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-      className="space-y-6"
+      className="space-y-5 w-full"
     >
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bold font-['Baloo_2'] text-blue-950">Tạo dấu ấn riêng</h2>
-        <p className="text-stone-600 font-['Nunito'] font-semibold text-base">Chọn một ID độc nhất để bạn bè tìm thấy bạn.</p>
+      <div className="space-y-1 mb-8 text-center">
+        <h2 className="text-[1.8rem] font-extrabold text-[#1A1A1A]">Tạo dấu ấn riêng</h2>
+        <p className="text-[0.95rem] font-semibold text-[#8A8580]">Chọn một ID độc nhất để bạn bè tìm thấy cậu.</p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form onSubmit={onSubmit} className="space-y-5">
         <div className="relative">
-          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-500 z-10 mt-3">
+          <div className="absolute left-[20px] top-[45px] text-[#A09D9A] z-10">
             <AtSign className="w-5 h-5" />
           </div>
           <Input 
-            className="pl-12 h-14 rounded-[20px] bg-neutral-100/70 border-none shadow-inner text-lg focus:ring-2 focus:ring-blue-400 font-['Nunito'] font-semibold text-stone-800"
+            className="pl-[3rem]"
             placeholder="mindrevol_minh"
-            label="ID của bạn (Handle)"
+            label="ID của cậu (Handle)"
             {...register('handle')} 
             onBlur={handleHandleBlur}
             error={(errors as any).handle?.message}
@@ -61,18 +61,18 @@ export const StepHandle: React.FC<Props> = ({ onFinish, onBack, isLoading }) => 
             disabled={isLoading || isChecking}
           />
           {isChecking && (
-            <span className="absolute right-5 top-[50px] text-sm text-blue-600 font-['Nunito'] font-bold">
-              Đang kiểm tra...
+            <span className="absolute right-[20px] top-[45px] text-[0.9rem] text-[#8A8580] font-bold animate-pulse">
+              Đang dò...
             </span>
           )}
         </div>
 
-        <div className="flex gap-3 mt-8">
-          <Button type="button" variant="ghost" onClick={onBack} disabled={isLoading} className="w-1/3 h-14 rounded-[20px] text-lg font-['Baloo_2'] bg-stone-100 hover:bg-stone-200 text-stone-700">
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={onBack} disabled={isLoading} className="w-1/3">
             Quay lại
           </Button>
-          <Button type="submit" isLoading={isLoading || isChecking} className="w-2/3 h-14 text-xl font-bold font-['Baloo_2'] bg-blue-800/90 hover:bg-blue-800 text-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]">
-            Hoàn tất
+          <Button type="submit" isLoading={isLoading || isChecking} className="w-2/3">
+            Hoàn tất 🎉
           </Button>
         </div>
       </form>

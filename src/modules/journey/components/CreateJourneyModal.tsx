@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Leaf, Star, Check, ChevronDown, Package } from 'lucide-react';
+import { Loader2, Check, ChevronDown, Package, X, Sparkles, Globe, Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { CreateJourneyRequest, JourneyType, JourneyVisibility } from '../types';
@@ -26,10 +26,10 @@ const getLocalISODate = () => {
 const todayStr = getLocalISODate();
 
 const DEFAULT_ICONS = [
-  { id: 'cozy', label: '🌿 Cozy', icon: '🌿' },
-  { id: 'trip', label: '✈️ Trip', icon: '✈️' },
-  { id: 'picnic', label: '🍓 Picnic', icon: '🍓' },
-  { id: 'food', label: '🍜 Food', icon: '🍜' },
+  { id: 'cozy', label: '🌿 Chữa lành', icon: '🌿' },
+  { id: 'trip', label: '✈️ Du lịch', icon: '✈️' },
+  { id: 'picnic', label: '🍓 Đi chơi', icon: '🍓' },
+  { id: 'food', label: '🍜 Ăn uống', icon: '🍜' },
 ];
 
 interface FormValues extends Omit<CreateJourneyRequest, 'endDate'> {
@@ -76,7 +76,7 @@ export const CreateJourneyModal: React.FC<Props> = ({ isOpen, onClose, onSuccess
 
   useEffect(() => {
     if (isOpen) {
-        boxService.getMyBoxes(0, 100).then(res => {
+        boxService.getMyBoxes('all', '', 0, 100).then(res => {
             const boxes = res.content || [];
             setMyBoxes(boxes);
             
@@ -88,7 +88,6 @@ export const CreateJourneyModal: React.FC<Props> = ({ isOpen, onClose, onSuccess
                     return;
                 }
             }
-            
             if (boxes.length > 0) {
                 setSelectedBox(boxes[0]);
                 setValue('boxId', boxes[0].id, { shouldValidate: true });
@@ -125,7 +124,7 @@ export const CreateJourneyModal: React.FC<Props> = ({ isOpen, onClose, onSuccess
   };
 
   const handleCreateCustomIcon = () => {
-    const labelText = customLabel.trim() || 'Custom';
+    const labelText = customLabel.trim() || 'Tùy chỉnh';
     setCustomIcon({ id: `custom_icon`, label: `${customEmoji} ${labelText}`, icon: customEmoji });
     setValue('avatar', customEmoji);
     setShowCustomIconForm(false);
@@ -144,230 +143,268 @@ export const CreateJourneyModal: React.FC<Props> = ({ isOpen, onClose, onSuccess
   const currentDuration = watch('duration');
   const isFormValid = isValid && currentBoxId && currentDuration >= 1 && currentDuration <= 30;
 
-  // [ĐÃ THÊM] Hàm xử lý render Avatar thông minh (Phân biệt Link Ảnh và Emoji)
   const renderBoxAvatar = (avatarStr: string | null | undefined, sizeIcon: string, sizeText: string) => {
-      if (!avatarStr) return <Package className={cn("text-zinc-500", sizeIcon)} />;
-      
-      // Nếu là một URL (bắt đầu bằng http, / hoặc blob:) -> Render thẻ <img>
+      if (!avatarStr) return <Package className={cn("text-[#8A8580] dark:text-[#A09D9A]", sizeIcon)} strokeWidth={2.5} />;
       if (avatarStr.startsWith('http') || avatarStr.startsWith('/') || avatarStr.startsWith('blob:')) {
           return <img src={avatarStr} alt="box-avatar" className="w-full h-full object-cover rounded-full" />;
       }
-      
-      // Còn lại coi như là Text/Emoji -> Render thẻ <span>
       return <span className={sizeText}>{avatarStr}</span>;
   };
 
   return createPortal(
-    <div 
-      className="fixed inset-0 z-[10000] overflow-y-auto custom-scrollbar bg-white dark:bg-[#0a0a0a] transition-colors duration-500 flex flex-col"
-      style={{ fontFamily: '"Jua", sans-serif' }}
-    >
-      <div className="fixed inset-0 pointer-events-none overflow-hidden flex justify-center z-0">
-         <div className="w-full max-w-[1000px] h-full relative">
-            <div className="absolute -top-10 -left-20 w-[400px] h-[300px] bg-amber-200/80 dark:bg-amber-600/10 blur-[100px] rounded-full transition-colors duration-500" />
-            <div className="absolute top-[50%] -right-20 w-[400px] h-[400px] bg-rose-200/60 dark:bg-rose-600/10 blur-[120px] rounded-full transition-colors duration-500" />
-            <Leaf className="absolute right-[10%] top-[15%] w-16 h-16 text-green-300 dark:text-green-500/30 opacity-50 rotate-12 transition-colors duration-500" />
-            <Star className="absolute left-[10%] top-[45%] w-12 h-12 text-amber-300 dark:text-amber-500/30 opacity-50 -rotate-12 transition-colors duration-500" />
-         </div>
-      </div>
+    <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center p-0 md:p-6 font-quicksand">
+        
+        <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" 
+            onClick={onClose}
+        />
 
-      <div className="relative min-h-full w-full flex flex-col items-center sm:py-12 pt-20 pb-4">
-         <div className="mt-auto sm:my-auto relative z-10 w-full max-w-[460px] mx-auto min-h-[85vh] sm:min-h-0 flex flex-col px-4 sm:px-6 py-6 sm:py-8 transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8">
-             
-            <div className="flex-1 flex flex-col h-full relative z-10 space-y-8">
+        <div className="relative w-full md:w-[560px] bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-2xl flex flex-col max-h-[92vh] md:max-h-[90vh] animate-in slide-in-from-bottom-1/2 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300 overflow-hidden">
+            
+            <div className="w-full flex justify-center pt-3 pb-1 md:hidden shrink-0">
+                <div className="w-12 h-1.5 bg-[#D6CFC7] dark:bg-[#3A3734] rounded-full"></div>
+            </div>
+
+            <div className="flex items-center justify-between px-6 md:px-8 py-5 shrink-0 border-b border-[#F4EBE1] dark:border-[#2B2A29]">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[14px] flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-[#1A1A1A] dark:text-white" strokeWidth={2.5} />
+                    </div>
+                    <h2 className="text-[1.4rem] md:text-[1.5rem] font-black text-[#1A1A1A] dark:text-white tracking-tight">
+                        Hành trình mới
+                    </h2>
+                </div>
+                <button onClick={onClose} className="p-2.5 bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE] dark:hover:bg-[#3A3734] rounded-[16px] text-[#8A8580] dark:text-[#A09D9A] transition-colors active:scale-95">
+                    <X size={20} strokeWidth={2.5} />
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 py-6 space-y-6">
                 
-                {/* HEADER */}
-                <div className="flex items-center gap-4">
-                    <button type="button" onClick={onClose} className="text-[32px] text-black dark:text-white hover:scale-110 transition-all active:scale-90 font-sans leading-none pb-1 mt-1">
-                        &lt;
+                <div className="relative" ref={boxDropdownRef}>
+                    <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">
+                        Thêm vào Không gian
+                    </label>
+                    <button 
+                        type="button" 
+                        onClick={() => setShowBoxDropdown(!showBoxDropdown)}
+                        className="w-full h-[56px] flex items-center justify-between bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[20px] px-5 hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] transition-all"
+                    >
+                        <span className={cn("font-bold text-[1.05rem] flex items-center gap-3", selectedBox ? "text-[#1A1A1A] dark:text-white" : "text-[#A09D9A]")}>
+                            {selectedBox ? (
+                                <>
+                                    <div className="w-7 h-7 rounded-full bg-white dark:bg-[#3A3734] flex items-center justify-center shrink-0 shadow-sm border border-[#D6CFC7]/50 dark:border-transparent overflow-hidden">
+                                        {renderBoxAvatar(selectedBox.avatar, "w-4 h-4", "text-sm")}
+                                    </div>
+                                    {selectedBox.name}
+                                </>
+                            ) : "Chọn Không gian..."}
+                        </span>
+                        <ChevronDown className="w-5 h-5 text-[#8A8580] dark:text-[#A09D9A]" strokeWidth={2.5} />
                     </button>
-                    <h2 className="text-black dark:text-white text-[32px] leading-tight font-normal transition-colors">New Journey</h2>
+
+                    {showBoxDropdown && (
+                        <div className="absolute top-[calc(100%+8px)] left-0 w-full max-h-[240px] overflow-y-auto custom-scrollbar bg-white dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#3A3734] rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] z-50 animate-in fade-in zoom-in-95 p-2 flex flex-col gap-1">
+                            {myBoxes.length === 0 ? (
+                                <div className="p-4 text-center text-[0.95rem] text-[#8A8580] font-semibold">
+                                    Bạn chưa có Không gian nào.
+                                </div>
+                            ) : (
+                                myBoxes.map(box => (
+                                    <button 
+                                        key={box.id}
+                                        type="button"
+                                        onClick={() => handleSelectBox(box)}
+                                        className={cn(
+                                            "flex items-center gap-3 w-full px-4 py-3 rounded-[16px] text-left transition-colors active:scale-[0.98]",
+                                            selectedBox?.id === box.id ? "bg-[#F4EBE1] dark:bg-[#2B2A29]" : "hover:bg-[#F4EBE1]/50 dark:hover:bg-[#2B2A29]/50"
+                                        )}
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-white dark:bg-[#3A3734] flex items-center justify-center shrink-0 shadow-sm border border-[#D6CFC7]/50 dark:border-transparent overflow-hidden">
+                                            {renderBoxAvatar(box.avatar, "w-4 h-4", "text-lg")}
+                                        </div>
+                                        <div className="flex flex-col flex-1 min-w-0">
+                                            <span className="text-[1rem] font-bold text-[#1A1A1A] dark:text-white leading-tight truncate">{box.name}</span>
+                                            <span className="text-[0.8rem] text-[#8A8580] dark:text-[#A09D9A] truncate font-semibold">{box.memberCount} thành viên</span>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                <div className="space-y-6">
-                    {/* CHỌN BOX */}
-                    <div className="relative" ref={boxDropdownRef}>
-                        <label className="text-zinc-500 dark:text-zinc-400 text-sm font-bold block mb-2 transition-colors">Add to Box</label>
-                        <button 
-                            type="button" 
-                            onClick={() => setShowBoxDropdown(!showBoxDropdown)}
-                            className="w-full flex items-center justify-between bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 hover:bg-black/10 dark:hover:bg-white/10 transition-all"
-                        >
-                            <span className={cn("font-medium transition-colors flex items-center gap-2", selectedBox ? "text-black dark:text-white" : "text-zinc-400")}>
-                                {selectedBox ? (
-                                    <>
-                                        <div className="w-6 h-6 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-700 overflow-hidden">
-                                            {/* SỬ DỤNG HÀM RENDER MỚI */}
-                                            {renderBoxAvatar(selectedBox.avatar, "w-3 h-3", "text-xs")}
-                                        </div>
-                                        {selectedBox.name}
-                                    </>
-                                ) : "Select a Box..."}
-                            </span>
-                            <ChevronDown className="w-5 h-5 text-zinc-500 transition-colors" />
-                        </button>
+                <div>
+                    <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">
+                        Tên Hành trình
+                    </label>
+                    <input 
+                        className="w-full h-[56px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] font-bold text-[1.05rem] outline-none transition-all focus:ring-0 shadow-sm" 
+                        placeholder="VD: Chuyến đi Đà Nẵng..." 
+                        {...register('name', { required: true })}
+                    />
+                </div>
 
-                        {showBoxDropdown && (
-                            <div className="absolute top-[calc(100%+8px)] left-0 w-full max-h-[250px] overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl z-50 animate-in fade-in zoom-in-95">
-                                <div className="p-2 flex flex-col gap-1">
-                                    {myBoxes.length === 0 ? (
-                                        <div className="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400 font-sans">
-                                            Bạn chưa có Không gian (Box) nào. Vui lòng tạo Box trước!
-                                        </div>
-                                    ) : (
-                                        myBoxes.map(box => (
-                                            <button 
-                                                key={box.id}
-                                                type="button"
-                                                onClick={() => handleSelectBox(box)}
-                                                className={cn(
-                                                    "flex items-center gap-3 w-full p-2.5 rounded-xl text-left transition-colors",
-                                                    selectedBox?.id === box.id ? "bg-black/5 dark:bg-white/10" : "hover:bg-zinc-50 dark:hover:bg-white/5"
-                                                )}
-                                            >
-                                                <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-700 overflow-hidden">
-                                                    {/* SỬ DỤNG HÀM RENDER MỚI */}
-                                                    {renderBoxAvatar(box.avatar, "w-4 h-4", "text-lg")}
-                                                </div>
-                                                <div className="flex flex-col flex-1 min-w-0">
-                                                    <span className="text-[15px] font-bold text-black dark:text-white leading-tight truncate">{box.name}</span>
-                                                    <span className="text-xs text-zinc-500 truncate">{box.memberCount} thành viên</span>
-                                                </div>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* NAME */}
-                    <div>
-                        <label className="text-zinc-500 dark:text-zinc-400 text-sm font-bold block mb-2 transition-colors">Journey Name</label>
+                <div className="flex flex-col sm:flex-row gap-5">
+                    <div className="flex-1">
+                        <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">Ngày bắt đầu</label>
                         <input 
-                            className="w-full h-14 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl px-4 text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-amber-300 dark:focus:ring-amber-600 font-sans font-medium transition-all" 
-                            placeholder="e.g Da Nang trip..." 
-                            {...register('name', { required: true })}
+                            type="date" 
+                            readOnly
+                            className="w-full h-[56px] bg-[#E2D9CE]/30 dark:bg-[#2B2A29]/30 border border-transparent dark:border-[#2B2A29] rounded-[20px] px-5 text-[#8A8580] dark:text-[#A09D9A] outline-none font-bold text-[1.05rem] transition-colors cursor-not-allowed" 
+                            {...register('startDate')}
                         />
                     </div>
-
-                    {/* DATES */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                            <label className="text-zinc-500 dark:text-zinc-400 text-sm font-bold block mb-2 transition-colors">Start date (Today)</label>
-                            <input 
-                                type="date" 
-                                readOnly
-                                className="w-full h-14 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl px-4 text-zinc-500 outline-none font-sans font-medium text-sm transition-colors cursor-not-allowed" 
-                                {...register('startDate')}
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="text-zinc-500 dark:text-zinc-400 text-sm font-bold block mb-2 transition-colors">Duration (Max 30 days)</label>
-                            <input 
-                                type="number" 
-                                min="1"
-                                max="30"
-                                className="w-full h-14 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl px-4 text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-300 dark:focus:ring-amber-600 font-sans font-medium text-sm transition-colors" 
-                                {...register('duration', { required: true, min: 1, max: 30, valueAsNumber: true })}
-                            />
-                        </div>
+                    <div className="flex-1">
+                        <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">Thời lượng (Ngày)</label>
+                        <input 
+                            type="number" 
+                            min="1"
+                            max="30"
+                            className="w-full h-[56px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white outline-none font-bold text-[1.05rem] transition-all shadow-sm" 
+                            {...register('duration', { required: true, min: 1, max: 30, valueAsNumber: true })}
+                        />
                     </div>
+                </div>
 
-                    {/* ICON */}
-                    <div>
-                        <label className="text-zinc-500 dark:text-zinc-400 text-sm font-bold block mb-2 transition-colors">Icon</label>
-                        <div className="flex flex-wrap gap-2.5 relative">
-                            {renderIcons.map(i => (
-                                <button
+                {/* [THÊM MỚI] CỤM QUYỀN RIÊNG TƯ */}
+                <div>
+                    <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-3 pl-1">
+                        Quyền truy cập
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            type="button"
+                            onClick={() => setValue('visibility', JourneyVisibility.PUBLIC, { shouldValidate: true })}
+                            className={cn(
+                                "p-4 rounded-[24px] border-2 text-left transition-all active:scale-95",
+                                watch('visibility') === JourneyVisibility.PUBLIC 
+                                    ? "bg-[#1A1A1A] dark:bg-white border-transparent shadow-[0_8px_20px_rgba(0,0,0,0.15)] -translate-y-1" 
+                                    : "bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border-[#D6CFC7]/50 dark:border-[#3A3734] hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29]"
+                            )}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <Globe className={cn("w-5 h-5", watch('visibility') === JourneyVisibility.PUBLIC ? "text-white dark:text-[#1A1A1A]" : "text-blue-500")} strokeWidth={2.5} />
+                                <span className={cn("text-[1rem] font-black", watch('visibility') === JourneyVisibility.PUBLIC ? "text-white dark:text-[#1A1A1A]" : "text-[#1A1A1A] dark:text-white")}>Mở cửa</span>
+                            </div>
+                            <p className={cn("text-[0.8rem] font-semibold leading-snug", watch('visibility') === JourneyVisibility.PUBLIC ? "text-white/80 dark:text-[#1A1A1A]/80" : "text-[#8A8580] dark:text-[#A09D9A]")}>
+                                {currentBoxId ? "Tất cả thành viên Không gian đều thấy." : "Mọi người đều có thể thấy và tham gia."}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setValue('visibility', JourneyVisibility.PRIVATE, { shouldValidate: true })}
+                            className={cn(
+                                "p-4 rounded-[24px] border-2 text-left transition-all active:scale-95",
+                                watch('visibility') === JourneyVisibility.PRIVATE
+                                    ? "bg-[#1A1A1A] dark:bg-white border-transparent shadow-[0_8px_20px_rgba(0,0,0,0.15)] -translate-y-1" 
+                                    : "bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border-[#D6CFC7]/50 dark:border-[#3A3734] hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29]"
+                            )}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <Lock className={cn("w-5 h-5", watch('visibility') === JourneyVisibility.PRIVATE ? "text-white dark:text-[#1A1A1A]" : "text-orange-500")} strokeWidth={2.5} />
+                                <span className={cn("text-[1rem] font-black", watch('visibility') === JourneyVisibility.PRIVATE ? "text-white dark:text-[#1A1A1A]" : "text-[#1A1A1A] dark:text-white")}>Khép kín</span>
+                            </div>
+                            <p className={cn("text-[0.8rem] font-semibold leading-snug", watch('visibility') === JourneyVisibility.PRIVATE ? "text-white/80 dark:text-[#1A1A1A]/80" : "text-[#8A8580] dark:text-[#A09D9A]")}>
+                                Chỉ những người được mời mới thấy.
+                            </p>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-3 pl-1">
+                        Nhãn dán (Icon)
+                    </label>
+                    <div className="flex flex-wrap gap-3 relative">
+                        {renderIcons.map(i => (
+                            <button
                                 key={i.id}
                                 type="button"
                                 onClick={() => setValue('avatar', i.icon)}
                                 className={cn(
-                                    "px-4 h-11 rounded-2xl text-sm transition-all flex items-center justify-center border font-sans font-medium",
+                                    "px-4 h-[44px] rounded-[16px] text-[0.95rem] transition-all flex items-center justify-center font-bold",
                                     watch('avatar') === i.icon 
-                                    ? "bg-black dark:bg-white text-white dark:text-black border-transparent scale-105 shadow-md" 
-                                    : "bg-black/5 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10"
+                                    ? "bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] shadow-[0_6px_16px_rgba(0,0,0,0.12)] -translate-y-1" 
+                                    : "bg-[#F4EBE1]/50 dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] hover:bg-[#F4EBE1] dark:hover:bg-[#3A3734] border border-[#D6CFC7]/50 dark:border-transparent active:scale-95"
                                 )}
-                                >
+                            >
                                 {i.label}
-                                </button>
-                            ))}
-                            
-                            <div className="relative">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowCustomIconForm(!showCustomIconForm)}
-                                    className="px-4 h-11 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl text-zinc-700 dark:text-zinc-300 font-sans font-medium text-sm hover:bg-black/10 dark:hover:bg-white/10 transition-all"
-                                >
-                                    Other...
-                                </button>
+                            </button>
+                        ))}
+                        
+                        <div className="relative">
+                            <button 
+                                type="button" 
+                                onClick={() => setShowCustomIconForm(!showCustomIconForm)}
+                                className="px-5 h-[44px] bg-[#F4EBE1]/50 dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] hover:bg-[#F4EBE1] dark:hover:bg-[#3A3734] border border-[#D6CFC7]/50 dark:border-transparent rounded-[16px] font-bold text-[0.95rem] transition-all active:scale-95"
+                            >
+                                Khác...
+                            </button>
 
-                                {showCustomIconForm && (
-                                    <div ref={emojiPickerRef} className="absolute bottom-[calc(100%+8px)] left-0 sm:left-auto sm:right-0 w-[280px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-bottom-2">
-                                        <h4 className="text-sm font-bold text-black dark:text-white mb-2 font-sans">Create custom tag</h4>
-                                        <div className="flex gap-2 mb-3">
-                                            <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-lg shrink-0 cursor-help font-sans" title="Emoji">
-                                                {customEmoji}
-                                            </div>
-                                            <input 
-                                                autoFocus
-                                                value={customLabel}
-                                                onChange={e => setCustomLabel(e.target.value)}
-                                                placeholder="Tag name"
-                                                className="flex-1 h-10 min-w-0 bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl px-3 outline-none text-sm text-black dark:text-white placeholder:text-zinc-400 font-sans"
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={handleCreateCustomIcon}
-                                                disabled={!customLabel.trim()}
-                                                className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center shrink-0 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transition-all"
-                                            >
-                                                <Check className="w-4 h-4" />
-                                            </button>
+                            {showCustomIconForm && (
+                                <div ref={emojiPickerRef} className="absolute bottom-[calc(100%+12px)] left-0 sm:left-auto sm:right-0 w-[300px] bg-white dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#3A3734] rounded-[28px] shadow-[0_16px_40px_rgba(0,0,0,0.12)] p-4 z-50 animate-in fade-in slide-in-from-bottom-2">
+                                    <h4 className="text-[0.9rem] font-extrabold text-[#1A1A1A] dark:text-white mb-3">Tạo nhãn tùy chỉnh</h4>
+                                    <div className="flex gap-2 mb-4">
+                                        <div className="w-12 h-12 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[16px] flex items-center justify-center text-[1.4rem] shrink-0 shadow-inner">
+                                            {customEmoji}
                                         </div>
-                                        <div className="w-full h-[220px] overflow-hidden rounded-xl border border-zinc-100 dark:border-zinc-800">
-                                            <EmojiPicker 
-                                                theme={appTheme === 'dark' ? Theme.DARK : Theme.LIGHT} 
-                                                onEmojiClick={e => setCustomEmoji(e.emoji)} 
-                                                width="100%" 
-                                                height="100%" 
-                                                searchDisabled 
-                                                skinTonesDisabled 
-                                            />
-                                        </div>
+                                        <input 
+                                            autoFocus
+                                            value={customLabel}
+                                            onChange={e => setCustomLabel(e.target.value)}
+                                            placeholder="Tên nhãn..."
+                                            className="flex-1 h-12 min-w-0 bg-[#F4EBE1]/50 dark:bg-[#2B2A29]/50 border border-transparent focus:border-[#D6CFC7] dark:focus:border-[#3A3734] rounded-[16px] px-3 outline-none text-[0.95rem] font-bold text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A]"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={handleCreateCustomIcon}
+                                            disabled={!customLabel.trim()}
+                                            className="w-12 h-12 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] rounded-[16px] flex items-center justify-center shrink-0 disabled:opacity-30 disabled:cursor-not-allowed hover:-translate-y-0.5 active:scale-95 transition-all shadow-md"
+                                        >
+                                            <Check className="w-5 h-5" strokeWidth={3} />
+                                        </button>
                                     </div>
-                                )}
-                            </div>
+                                    <div className="w-full h-[240px] overflow-hidden rounded-[20px] border border-[#D6CFC7]/50 dark:border-[#2B2A29]">
+                                        <EmojiPicker 
+                                            theme={appTheme === 'dark' ? Theme.DARK : Theme.LIGHT} 
+                                            onEmojiClick={e => setCustomEmoji(e.emoji)} 
+                                            width="100%" 
+                                            height="100%" 
+                                            searchDisabled 
+                                            skinTonesDisabled 
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
-
-                {/* NÚT TẠO */}
-                <div className="mt-auto relative z-10 pt-8 pb-4">
-                    <button
-                        type="button"
-                        onClick={handleSubmit(onSubmit)}
-                        disabled={!isFormValid || isCreating}
-                        className={cn(
-                            "w-full h-14 rounded-2xl shadow-md text-white dark:text-black text-[20px] font-sans font-bold flex items-center justify-center gap-2 transition-all",
-                            (!isFormValid || isCreating)
-                            ? "bg-zinc-300 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none" 
-                            : "bg-black dark:bg-white hover:scale-[1.02] active:scale-95"
-                        )}
-                    >
-                        {isCreating ? <Loader2 className="w-6 h-6 animate-spin" /> : null}
-                        Create Journey
-                    </button>
-                    {!currentBoxId && (
-                        <p className="text-red-500 font-sans font-medium text-sm mt-4 flex items-center justify-center gap-1 text-center">
-                            Vui lòng chọn Box (Không gian) để tiếp tục.
-                        </p>
-                    )}
-                </div>
             </div>
-         </div>
-      </div>
+
+            <div className="p-6 md:p-8 bg-white dark:bg-[#121212] border-t border-[#F4EBE1] dark:border-[#2B2A29] shrink-0">
+                <button
+                    type="button"
+                    onClick={handleSubmit(onSubmit)}
+                    disabled={!isFormValid || isCreating}
+                    className={cn(
+                        "w-full h-[60px] rounded-[24px] text-[1.1rem] font-black flex items-center justify-center gap-2 transition-all",
+                        (!isFormValid || isCreating)
+                        ? "bg-[#E2D9CE] dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] cursor-not-allowed" 
+                        : "bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] hover:-translate-y-1 active:scale-[0.98] shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
+                    )}
+                >
+                    {isCreating ? <Loader2 className="w-6 h-6 animate-spin" /> : null}
+                    Bắt đầu Hành trình
+                </button>
+                {!currentBoxId && (
+                    <p className="text-red-500/80 font-bold text-[0.85rem] mt-3 text-center">
+                        Vui lòng chọn Không gian để tiếp tục.
+                    </p>
+                )}
+            </div>
+        </div>
     </div>,
     document.body
   );

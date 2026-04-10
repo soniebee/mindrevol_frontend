@@ -1,40 +1,41 @@
-//src/hooks/useChatSocket
+// File: src/modules/chat/hooks/useChatSocket.ts
 import { useEffect } from 'react';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { socket } from '@/lib/socket'; 
 import { useChatStore } from '../store/useChatStore';
 import { Message } from '../types';
 
-// [FIX] Cho phép nhận string | null
 export const useChatSocket = (conversationId: string | null) => {
   const { user } = useAuth();
   const { addMessage, setTyping, markConversationAsSeen } = useChatStore();
+
   useEffect(() => {
-    // Nếu không có user hoặc chưa chọn hội thoại thì không làm gì cả
     if (!user || !conversationId) return;
 
-    // 1. Kênh nhận tin nhắn
+    // 1. Kênh nhận tin nhắn (Tin mới, Sửa, Thu hồi, React đều bắn vào đây)
     const topic = `/topic/chat.${conversationId}`;
-    const msgSub = socket.subscribe(topic, (msg: Message) => addMessage(msg));
+    const msgSub = socket.subscribe(topic, (msg: Message) => {
+        addMessage(msg); // Hàm addMessage bên store đã xử lý: nếu tồn tại thì update, chưa thì add
+    });
 
     // 2. Kênh đang gõ (Typing)
-    const typingSub = socket.subscribe(`/user/queue/typing`, (payload: any) => {
-        if (payload.conversationId === conversationId && payload.senderId !== user.id) {
+    const typingSub = socket.subscribe(`/topic/chat.${conversationId}.typing`, (payload: any) => {
+        if (payload.senderId !== user.id) {
             setTyping(conversationId, payload.isTyping);
         }
     });
 
-    // 3. [THÊM MỚI] Kênh lắng nghe "Đã xem" (Read Receipt)
-    const readSub = socket.subscribe(`/user/queue/read-receipt`, (payload: any) => {
-        // Khi đối phương (khác user.id) đã đọc đoạn chat này
-        if (payload.conversationId === conversationId && payload.readerId !== user.id) {
+    // 3. Kênh lắng nghe "Đã xem" (Read Receipt)
+    const readSub = socket.subscribe(`/topic/chat.${conversationId}.read`, (payload: any) => {
+        if (payload.readerId !== user.id) {
             markConversationAsSeen(conversationId);
         }
     });
+
     return () => {
       msgSub?.unsubscribe();
       typingSub?.unsubscribe();
-      readSub?.unsubscribe(); // Hủy đăng ký
+      readSub?.unsubscribe();
     };
   }, [user, conversationId, addMessage, setTyping, markConversationAsSeen]);
 };

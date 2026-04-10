@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X, Loader2, LogOut, Trash2, UserCog, Globe, Lock, Palette, Package, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { X, Loader2, LogOut, Trash2, UserCog, Globe, Lock, Palette, Package, ChevronDown, CheckCircle2, Settings, BellRing, ChevronRight } from 'lucide-react';
 import EmojiPicker, { Theme, EmojiStyle, EmojiClickData } from 'emoji-picker-react';
 import { JourneyResponse, JourneyRole, JourneyVisibility } from '../types';
 import { useJourneySettings } from '../hooks/useJourneySettings';
@@ -12,6 +12,7 @@ import { PendingRequestsList } from './PendingRequestsList';
 import { MemberList } from './MemberList';
 import { boxService } from '@/modules/box/services/box.service'; 
 import { BoxResponse } from '@/modules/box/types';
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -21,12 +22,13 @@ interface Props {
   onUpdateSuccess: () => void;
 }
 
-const PRESET_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
+const PRESET_COLORS = ['#1A1A1A', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
 
 export const JourneySettingsModal: React.FC<Props> = ({ 
   isOpen, onClose, journey, onUpdateSuccess 
 }) => {
   const { user } = useAuth();
+  const { theme: appTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -34,23 +36,38 @@ export const JourneySettingsModal: React.FC<Props> = ({
   const [refreshMemberKey, setRefreshMemberKey] = useState(0); 
   const [mounted, setMounted] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
 
-  // States cho Emoji Picker
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // States cho Box Dropdown
   const [boxes, setBoxes] = useState<BoxResponse[]>([]);
   const [isBoxDropdownOpen, setIsBoxDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isOwner = user?.id ? String(user.id) === String(journey?.creatorId) : false;
 
-  // Lấy danh sách Box khi mở Modal
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+
+  const onDragStart = (clientY: number) => { dragStartY.current = clientY; setIsDragging(true); };
+  const onDragMove = (clientY: number) => {
+    if (!isDragging) return;
+    const delta = clientY - dragStartY.current;
+    if (delta > 0) setDragY(delta);
+  };
+  const onDragEnd = () => {
+    setIsDragging(false);
+    if (dragY > 150) { onClose(); setTimeout(() => setDragY(0), 300); } 
+    else { setDragY(0); }
+  };
+
   useEffect(() => {
     const fetchBoxes = async () => {
         try {
-            const data = await boxService.getMyBoxes(0, 50);
+            const data = await boxService.getMyBoxes('all', '', 0, 50);
             setBoxes(data.content || []);
         } catch (error) {
             console.error("Lỗi tải danh sách Box", error);
@@ -75,15 +92,10 @@ export const JourneySettingsModal: React.FC<Props> = ({
     return () => setMounted(false);
   }, []);
 
-  // Xử lý click outside cho cả Emoji và Dropdown Box
   useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-          if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-              setShowEmojiPicker(false);
-          }
-          if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-              setIsBoxDropdownOpen(false);
-          }
+          if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) setShowEmojiPicker(false);
+          if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsBoxDropdownOpen(false);
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -96,257 +108,208 @@ export const JourneySettingsModal: React.FC<Props> = ({
 
   if (!mounted || !isOpen || !journey || !user) return null;
 
-  const portalTarget = typeof document !== 'undefined' ? document.body : null;
-  if (!portalTarget) return null;
-
   const selectedBox = boxes.find(b => b.id === settings.boxId);
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 animate-in fade-in zoom-in-95 duration-200">
-        <div className="w-full max-w-lg bg-[#18181b] border border-white/10 rounded-2xl flex flex-col max-h-[90vh]">
-          
-          <div className="flex justify-between items-center p-6 border-b border-white/5 shrink-0">
-            <h2 className="text-xl font-bold text-white">Cài đặt Hành trình</h2>
-            <button onClick={onClose}><X className="text-zinc-400 hover:text-white transition-colors" /></button>
-          </div>
+      <div className="fixed inset-0 z-[9990] flex items-end md:items-center justify-center p-0 md:p-6 font-quicksand">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" onClick={onClose} />
 
-          <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
-            
-            {/* 1. THÔNG TIN CƠ BẢN */}
-            <div className="space-y-5">
-              <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Thông tin chung</h3>
-              
-              {/* Tên & Icon */}
-              <div>
-                <label className="text-sm text-zinc-400 mb-2 block">Tên & Biểu tượng</label>
-                <div className="flex gap-3">
-                  <div className="relative" ref={pickerRef}>
-                    <button
-                      type="button"
-                      disabled={!isOwner}
-                      onClick={() => isOwner && setShowEmojiPicker(!showEmojiPicker)}
-                      className="h-12 w-12 flex items-center justify-center bg-zinc-900 border border-white/10 rounded-xl text-2xl hover:bg-zinc-800 transition-colors disabled:opacity-50"
-                    >
-                      {settings.avatar || '🚀'}
-                    </button>
-                    {showEmojiPicker && (
-                      <div className="absolute top-[52px] left-0 z-50 shadow-2xl">
-                        <EmojiPicker onEmojiClick={onEmojiClick} theme={Theme.DARK} emojiStyle={EmojiStyle.NATIVE} width={300} height={350} />
-                      </div>
-                    )}
-                  </div>
-                  <input 
-                    value={settings.name}
-                    onChange={(e) => updateField('name', e.target.value)}
-                    disabled={!isOwner}
-                    className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 text-white focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 transition-all"
-                  />
-                </div>
+        <div 
+          className={cn(
+            "relative w-full md:w-[560px] h-[95vh] md:h-auto bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-2xl flex flex-col md:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-full md:zoom-in-95",
+            !isDragging ? "transition-transform duration-300 ease-out" : ""
+          )}
+          style={{ transform: dragY > 0 ? `translateY(${dragY}px)` : 'none' }}
+        >
+          
+          <div 
+              className="w-full shrink-0 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-md cursor-grab active:cursor-grabbing touch-none z-30"
+              onTouchStart={(e) => onDragStart(e.touches[0].clientY)}
+              onTouchMove={(e) => onDragMove(e.touches[0].clientY)}
+              onTouchEnd={onDragEnd}
+              onMouseDown={(e) => onDragStart(e.clientY)}
+              onMouseMove={(e) => onDragMove(e.clientY)}
+              onMouseUp={onDragEnd}
+              onMouseLeave={() => { if (isDragging) onDragEnd(); }}
+          >
+              <div className="w-full flex justify-center pt-4 pb-2 md:hidden">
+                  <div className="w-12 h-1.5 bg-[#D6CFC7] dark:bg-[#3A3734] rounded-full"></div>
               </div>
 
-              {/* Màu sắc */}
-              {isOwner && (
-                <div>
-                  <label className="text-sm text-zinc-400 mb-2 block">Màu sắc chủ đạo</label>
-                  <div className="flex flex-wrap gap-3 p-3 bg-zinc-900/50 rounded-xl border border-white/5">
-                      {PRESET_COLORS.map(color => (
-                          <button
-                              key={color} 
-                              type="button" 
-                              onClick={() => updateField('themeColor', color)}
-                              className={`w-8 h-8 rounded-full transition-all duration-200 ${
-                                  settings.themeColor === color 
-                                  ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-[#18181b] border border-black shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                                  : 'opacity-50 hover:opacity-100 hover:scale-105'
-                              }`}
-                              style={{ backgroundColor: color }}
-                          />
-                      ))}
-                      
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/20 hover:scale-105 transition-transform group">
-                          <input 
-                              type="color" 
-                              value={settings.themeColor || '#3b82f6'} 
-                              onChange={(e) => updateField('themeColor', e.target.value)} 
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                          />
-                          <div className="w-full h-full flex items-center justify-center bg-zinc-800 group-hover:bg-zinc-700 transition-colors">
-                              <Palette size={14} className="text-zinc-400" />
-                          </div>
+              <div className="flex items-center justify-between px-6 md:px-8 py-2 md:py-5 border-b border-[#F4EBE1] dark:border-[#2B2A29]">
+                  <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[14px] flex items-center justify-center shadow-sm">
+                          <Settings className="w-5 h-5 text-[#1A1A1A] dark:text-white" strokeWidth={2.5} />
                       </div>
+                      <h2 className="text-[#1A1A1A] dark:text-white text-[1.4rem] font-black tracking-tight pointer-events-none">
+                          Cài đặt Hành trình
+                      </h2>
                   </div>
-                </div>
-              )}
-
-              {/* [THÊM MỚI] GẮN VÀO BOX */}
-              {isOwner && (
-                <div className="space-y-2 relative" ref={dropdownRef}>
-                  <label className="text-sm text-zinc-400 mb-2 block">Gắn vào Không gian</label>
-                  <button
-                      type="button"
-                      onClick={() => setIsBoxDropdownOpen(!isBoxDropdownOpen)}
-                      className="w-full bg-zinc-900/50 border border-white/10 text-white rounded-xl p-3 flex items-center justify-between hover:bg-zinc-800 transition-colors"
+                  <button 
+                      onMouseDown={e => e.stopPropagation()}
+                      onTouchStart={e => e.stopPropagation()}
+                      onClick={onClose} 
+                      className="p-2.5 bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE] dark:hover:bg-[#3A3734] rounded-[16px] text-[#8A8580] dark:text-[#A09D9A] transition-colors active:scale-95 cursor-pointer"
                   >
-                      <div className="flex items-center gap-3">
-                          <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center transition-colors text-lg",
-                              selectedBox ? "bg-black/20" : "bg-zinc-800 text-zinc-500"
-                          )}
-                          style={selectedBox ? { borderBottom: `2px solid ${selectedBox.themeColor || '#3b82f6'}` } : {}}
-                          >
-                              {selectedBox ? selectedBox.avatar || '📦' : <Package size={16} />}
-                          </div>
-                          <div className="flex flex-col items-start">
-                              <span className={cn("text-sm font-bold", selectedBox ? "text-white" : "text-zinc-400")}>
-                                  {selectedBox ? selectedBox.name : "Không gian chung (Tùy chọn)"}
-                              </span>
-                          </div>
-                      </div>
-                      <ChevronDown size={18} className={cn("text-zinc-500 transition-transform duration-200", isBoxDropdownOpen ? "rotate-180" : "")} />
+                      <X size={20} strokeWidth={2.5} />
                   </button>
+              </div>
+          </div>
 
-                  {isBoxDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-full bg-[#1A1A1A] border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
-                          <div className="max-h-[220px] overflow-y-auto custom-scrollbar p-1">
-                              <button
-                                  type="button"
-                                  onClick={() => { updateField('boxId', ''); setIsBoxDropdownOpen(false); }}
-                                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-zinc-800 transition-colors text-left group"
-                              >
-                                  <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-zinc-400">
-                                          <Package size={16} />
-                                      </div>
-                                      <span className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300">Không gắn vào Không gian nào</span>
-                                  </div>
-                                  {!settings.boxId && <CheckCircle2 size={18} className="text-zinc-500" />}
-                              </button>
-
-                              {boxes.length > 0 && <div className="h-px w-full bg-zinc-800/50 my-1" />}
-
-                              {boxes.map(box => (
-                                  <button
-                                      key={box.id}
-                                      type="button"
-                                      onClick={() => { updateField('boxId', box.id); setIsBoxDropdownOpen(false); }}
-                                      className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-zinc-800 transition-colors text-left group"
-                                  >
-                                      <div className="flex items-center gap-3">
-                                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xl bg-black/20" style={{ borderBottom: `2px solid ${box.themeColor || '#3b82f6'}` }}>
-                                              {box.avatar || '📦'}
-                                          </div>
-                                          <span className={cn("text-sm font-bold transition-colors", settings.boxId === box.id ? "text-blue-400" : "text-zinc-300 group-hover:text-white")}>
-                                              {box.name}
-                                          </span>
-                                      </div>
-                                      {settings.boxId === box.id && <CheckCircle2 size={18} className="text-blue-500" />}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
+          <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1 bg-gradient-to-b from-[#F4EBE1]/30 to-white dark:from-[#1A1A1A]/30 dark:to-[#0A0A0A]">
+            
+            <div className="space-y-6">
+              <h3 className="text-[0.75rem] font-extrabold text-[#8A8580] dark:text-[#A09D9A] uppercase tracking-widest pl-1">Thông tin chung</h3>
+              
+              <div className="flex gap-4">
+                <div className="relative shrink-0" ref={pickerRef}>
+                  <button
+                    type="button"
+                    disabled={!isOwner}
+                    onClick={() => isOwner && setShowEmojiPicker(!showEmojiPicker)}
+                    className="h-[56px] w-[56px] flex items-center justify-center bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[20px] text-[1.6rem] hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] transition-colors disabled:opacity-50 shadow-sm"
+                  >
+                    {settings.avatar || '🚀'}
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute top-[64px] left-0 z-50 shadow-[0_16px_40px_rgba(0,0,0,0.12)] rounded-[24px] overflow-hidden border border-[#D6CFC7]/50 dark:border-[#3A3734] bg-white dark:bg-[#1A1A1A] animate-in fade-in slide-in-from-top-2">
+                      <EmojiPicker onEmojiClick={onEmojiClick} theme={appTheme === 'dark' ? Theme.DARK : Theme.LIGHT} emojiStyle={EmojiStyle.NATIVE} width={300} height={350} previewConfig={{showPreview: false}}/>
+                    </div>
                   )}
                 </div>
-              )}
+                <input 
+                  value={settings.name}
+                  onChange={(e) => updateField('name', e.target.value)}
+                  disabled={!isOwner}
+                  placeholder="Tên hành trình..."
+                  className="flex-1 h-[56px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[20px] px-5 text-[#1A1A1A] dark:text-white font-bold text-[1.05rem] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] outline-none disabled:opacity-50 transition-all shadow-sm"
+                />
+              </div>
 
-              {/* Chỉnh sửa Quyền riêng tư */}
               {isOwner && (
                 <div>
-                  <label className="text-sm text-zinc-400 mb-2 block">Quyền riêng tư</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-3 pl-1">Quyền truy cập</label>
+                  <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={() => updateField('visibility', JourneyVisibility.PUBLIC)}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={cn(
+                        "p-4 rounded-[24px] border-2 text-left transition-all active:scale-95",
                         settings.visibility === JourneyVisibility.PUBLIC 
-                          ? 'bg-blue-600/10 border-blue-500/50' 
-                          : 'bg-zinc-900 border-white/10 hover:border-white/20'
-                      }`}
+                          ? "bg-[#1A1A1A] dark:bg-white border-transparent shadow-[0_8px_20px_rgba(0,0,0,0.15)] -translate-y-1" 
+                          : "bg-white/60 dark:bg-[#1A1A1A]/60 border-[#D6CFC7] dark:border-[#3A3734] hover:bg-white dark:hover:bg-[#2B2A29]"
+                      )}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Globe className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm font-bold text-white">Công khai</span>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className={cn("w-5 h-5", settings.visibility === JourneyVisibility.PUBLIC ? "text-white dark:text-[#1A1A1A]" : "text-blue-500")} strokeWidth={2.5} />
+                        <span className={cn("text-[1rem] font-black", settings.visibility === JourneyVisibility.PUBLIC ? "text-white dark:text-[#1A1A1A]" : "text-[#1A1A1A] dark:text-white")}>Mở cửa</span>
                       </div>
-                      <p className="text-[10px] text-zinc-500">Ai cũng vào được nếu được mời.</p>
+                      <p className={cn("text-[0.8rem] font-semibold leading-snug", settings.visibility === JourneyVisibility.PUBLIC ? "text-white/80 dark:text-[#1A1A1A]/80" : "text-[#8A8580] dark:text-[#A09D9A]")}>
+                          {settings.boxId ? "Tất cả thành viên Không gian đều thấy." : "Mọi người đều có thể thấy và tham gia."}
+                      </p>
                     </button>
 
                     <button
                       onClick={() => updateField('visibility', JourneyVisibility.PRIVATE)}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={cn(
+                        "p-4 rounded-[24px] border-2 text-left transition-all active:scale-95",
                         settings.visibility === JourneyVisibility.PRIVATE
-                          ? 'bg-blue-600/10 border-blue-500/50' 
-                          : 'bg-zinc-900 border-white/10 hover:border-white/20'
-                      }`}
+                          ? "bg-[#1A1A1A] dark:bg-white border-transparent shadow-[0_8px_20px_rgba(0,0,0,0.15)] -translate-y-1" 
+                          : "bg-white/60 dark:bg-[#1A1A1A]/60 border-[#D6CFC7] dark:border-[#3A3734] hover:bg-white dark:hover:bg-[#2B2A29]"
+                      )}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Lock className="w-4 h-4 text-orange-400" />
-                        <span className="text-sm font-bold text-white">Riêng tư</span>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lock className={cn("w-5 h-5", settings.visibility === JourneyVisibility.PRIVATE ? "text-white dark:text-[#1A1A1A]" : "text-orange-500")} strokeWidth={2.5} />
+                        <span className={cn("text-[1rem] font-black", settings.visibility === JourneyVisibility.PRIVATE ? "text-white dark:text-[#1A1A1A]" : "text-[#1A1A1A] dark:text-white")}>Khép kín</span>
                       </div>
-                      <p className="text-[10px] text-zinc-500">Chỉ chủ phòng được mời.</p>
+                      <p className={cn("text-[0.8rem] font-semibold leading-snug", settings.visibility === JourneyVisibility.PRIVATE ? "text-white/80 dark:text-[#1A1A1A]/80" : "text-[#8A8580] dark:text-[#A09D9A]")}>
+                          Chỉ những người được mời mới thấy.
+                      </p>
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* DANH SÁCH YÊU CẦU */}
             {isOwner && (
-               <PendingRequestsList 
-                 journeyId={journey.id} 
-                 onSuccess={() => {
-                   setRefreshMemberKey(prev => prev + 1);
-                   onUpdateSuccess(); 
-                 }}
-               />
+              <div className="pt-2 border-t border-[#F4EBE1] dark:border-[#2B2A29]">
+                <button 
+                  onClick={() => setShowRequestsModal(true)} 
+                  className="flex items-center justify-between w-full p-4 bg-white dark:bg-[#1A1A1A] hover:bg-[#F4EBE1]/50 dark:hover:bg-[#2B2A29] rounded-[24px] border border-[#D6CFC7]/50 dark:border-white/5 transition-all shadow-sm active:scale-[0.98] group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-[16px] text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                      <BellRing size={22} strokeWidth={2.5} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[#1A1A1A] dark:text-white font-black text-[1rem]">Yêu cầu tham gia</p>
+                      <p className="text-[0.85rem] font-semibold text-[#8A8580] dark:text-[#A09D9A]">Duyệt thành viên mới</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} strokeWidth={2.5} className="text-[#8A8580] dark:text-[#A09D9A]" />
+                </button>
+              </div>
             )}
 
-            {/* DANH SÁCH THÀNH VIÊN */}
             <MemberList 
                 journeyId={journey.id} 
                 currentUserRole={isOwner ? JourneyRole.OWNER : JourneyRole.MEMBER}
                 refreshTrigger={refreshMemberKey}
             />
 
-            {/* VÙNG NGUY HIỂM */}
-            <div className="space-y-3 pt-2 border-t border-white/5">
-              <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider">Vùng nguy hiểm</h3>
+            <div className="space-y-4 pt-6 border-t border-[#F4EBE1] dark:border-[#2B2A29]">
+              <h3 className="text-[0.75rem] font-extrabold text-red-500 uppercase tracking-widest pl-1">Vùng nguy hiểm</h3>
               {isOwner ? (
-                <div className="grid gap-3">
-                  <button onClick={() => setShowTransferModal(true)} className="flex items-center justify-between w-full p-4 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-white/5 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-yellow-500/10 rounded-lg text-yellow-500 group-hover:bg-yellow-500/20"><UserCog className="w-5 h-5" /></div>
-                      <div className="text-left"><p className="text-white font-medium text-sm">Chuyển quyền sở hữu</p><p className="text-xs text-zinc-500">Nhường quyền chủ phòng</p></div>
+                <div className="grid gap-4">
+                  <button onClick={() => setShowTransferModal(true)} className="flex items-center justify-between w-full p-5 bg-white dark:bg-[#1A1A1A] hover:bg-[#FFF9E6] dark:hover:bg-[#332A1A] rounded-[24px] border border-yellow-200 dark:border-yellow-900/50 transition-colors shadow-sm active:scale-[0.98] group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-yellow-100 dark:bg-yellow-500/20 rounded-[16px] text-yellow-600 dark:text-yellow-500 group-hover:scale-110 transition-transform"><UserCog size={22} strokeWidth={2.5} /></div>
+                      <div className="text-left"><p className="text-[#1A1A1A] dark:text-white font-black text-[1rem]">Chuyển quyền sở hữu</p><p className="text-[0.85rem] font-semibold text-[#8A8580] dark:text-[#A09D9A]">Nhường quyền chủ phòng</p></div>
                     </div>
                   </button>
-                  <button onClick={() => deleteJourney(journey.id)} disabled={isProcessing} className="flex items-center justify-between w-full p-4 bg-red-500/5 hover:bg-red-500/10 rounded-xl border border-red-500/20 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-red-500/10 rounded-lg text-red-500"><Trash2 className="w-5 h-5" /></div>
-                      <div className="text-left"><p className="text-red-400 font-medium text-sm">Giải tán hành trình</p><p className="text-xs text-red-500/60">Xóa vĩnh viễn nhóm này</p></div>
+                  <button onClick={() => deleteJourney(journey.id)} disabled={isProcessing} className="flex items-center justify-between w-full p-5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-[24px] border border-red-200 dark:border-red-500/30 transition-colors shadow-sm active:scale-[0.98] group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white dark:bg-red-500/20 rounded-[16px] text-red-500 group-hover:scale-110 transition-transform shadow-sm"><Trash2 size={22} strokeWidth={2.5} /></div>
+                      <div className="text-left"><p className="text-red-600 dark:text-red-400 font-black text-[1rem]">Giải tán hành trình</p><p className="text-[0.85rem] font-semibold text-red-500/80 dark:text-red-400/80">Xóa vĩnh viễn nhóm này</p></div>
                     </div>
-                    {isProcessing && <Loader2 className="w-4 h-4 animate-spin text-red-500"/>}
+                    {isProcessing && <Loader2 className="w-5 h-5 animate-spin text-red-500"/>}
                   </button>
                 </div>
               ) : (
-                <button onClick={() => leaveJourney(journey.id)} disabled={isProcessing} className="flex items-center justify-between w-full p-4 bg-zinc-900 hover:bg-red-500/10 rounded-xl border border-white/5 hover:border-red-500/20 transition-colors group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-zinc-800 rounded-lg text-zinc-400 group-hover:text-red-500 group-hover:bg-red-500/10"><LogOut className="w-5 h-5" /></div>
-                    <div className="text-left"><p className="text-white font-medium text-sm group-hover:text-red-400">Rời hành trình</p><p className="text-xs text-zinc-500">Thoát khỏi nhóm này</p></div>
+                <button onClick={() => leaveJourney(journey.id)} disabled={isProcessing} className="flex items-center justify-between w-full p-5 bg-white dark:bg-[#1A1A1A] hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[24px] border border-[#D6CFC7] dark:border-[#3A3734] hover:border-red-200 dark:hover:border-red-500/30 transition-colors shadow-sm active:scale-[0.98] group">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[16px] text-[#8A8580] dark:text-[#A09D9A] group-hover:bg-white dark:group-hover:bg-red-500/20 group-hover:text-red-500 group-hover:scale-110 transition-transform"><LogOut size={22} strokeWidth={2.5} /></div>
+                    <div className="text-left"><p className="text-[#1A1A1A] dark:text-white font-black text-[1rem] group-hover:text-red-600 dark:group-hover:text-red-400">Rời hành trình</p><p className="text-[0.85rem] font-semibold text-[#8A8580] dark:text-[#A09D9A]">Thoát khỏi nhóm này</p></div>
                   </div>
-                  {isProcessing && <Loader2 className="w-4 h-4 animate-spin text-zinc-400"/>}
+                  {isProcessing && <Loader2 className="w-5 h-5 animate-spin text-red-500"/>}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Footer Save */}
           {isOwner && (
-            <div className="p-6 border-t border-white/5 flex justify-end shrink-0">
-              <button onClick={handleSave} disabled={isLoading} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all">
-                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />} Lưu thay đổi
+            <div className="p-6 md:p-8 bg-white dark:bg-[#121212] border-t border-[#F4EBE1] dark:border-[#2B2A29] shrink-0">
+              <button 
+                onClick={handleSave} 
+                disabled={isLoading} 
+                className="w-full h-[60px] bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] rounded-[24px] font-black text-[1.1rem] flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.15)] hover:-translate-y-1 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading && <Loader2 className="w-5 h-5 animate-spin" />} Lưu thay đổi
               </button>
             </div>
           )}
         </div>
       </div>
+
+      <PendingRequestsList 
+        isOpen={showRequestsModal}
+        onClose={() => setShowRequestsModal(false)}
+        journeyId={journey.id}
+        onSuccess={() => {
+          setRefreshMemberKey(prev => prev + 1);
+          onUpdateSuccess();
+        }}
+      />
 
       <TransferOwnershipModal 
         isOpen={showTransferModal}
@@ -360,6 +323,6 @@ export const JourneySettingsModal: React.FC<Props> = ({
         }}
       />
     </>,
-    portalTarget
+    document.body
   );
 };

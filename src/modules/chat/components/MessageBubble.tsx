@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+// File: src/modules/chat/components/MessageBubble.tsx
+import React, { useState, useRef, useEffect } from 'react';
 import { Message } from '../types';
 import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
-import { ExternalLink, Reply } from 'lucide-react'; 
+import { Reply, Trash2, Edit2, SmilePlus, MoreVertical, Forward, Pin } from 'lucide-react'; 
 import { useChatStore } from '../store/useChatStore'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
+import { chatService } from '../services/chat.service';
 
 interface Props {
   message: Message;
@@ -14,189 +15,200 @@ interface Props {
 }
 
 const renderContentWithMentions = (content: string) => {
-  if (!content) return "";
-  const parts = content.split(/(@\w+)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith('@')) {
-      return (
-        <span key={index} className="text-lime-600 dark:text-lime-400 font-bold hover:underline cursor-pointer decoration-2 underline-offset-4">
-          {part}
-        </span>
-      );
-    }
-    return part;
-  });
+    if (!content) return "";
+    const parts = content.split(/(@\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) return <span key={index} className="text-[#9288AD] dark:text-white underline font-bold cursor-pointer">{part}</span>;
+      return part;
+    });
 };
-
+  
 const ChatAvatar = ({ show, url, isMe }: { show: boolean, url?: string, isMe: boolean }) => {
-  if (isMe) return null; 
-  return (
-    <div className="w-10 h-10 flex-shrink-0">
-       {show ? (
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 cursor-pointer shadow-sm">
-              <img src={url || "https://placehold.co/40x40"} alt="Avatar" className="w-full h-full object-cover" />
-          </div>
-       ) : <div className="w-10 h-10" />}
-    </div>
-  );
-};
-
-const MessageImage = ({ src, isMe }: { src: string, isMe: boolean }) => (
-  <div className={cn(
-    "mb-2 relative z-0 cursor-pointer transition-all hover:scale-[1.01]",
-    isMe ? "mr-0" : "ml-0"
-  )}>
-    <div 
-        className="absolute inset-0 rounded-[32px] opacity-50 blur-2xl scale-95 translate-y-4 z-[-1]"
-        style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-    />
-    <div className={cn(
-        "relative overflow-hidden aspect-square border border-white/10 shadow-xl bg-[#18181b]",
-        "w-80", "rounded-[24px]" 
-    )}>
-        <img src={src} alt="Reply" className="w-full h-full object-cover" />
-        <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
-              <p className="text-[11px] text-white/95 font-medium pl-1 drop-shadow-md">💬 Đã trả lời</p>
-        </div>
-    </div>
-  </div>
-);
-
-const PostSharePreview = ({ postId, isMe }: { postId: string, isMe: boolean }) => {
-  const navigate = useNavigate();
-  return (
-    <div 
-      onClick={() => navigate(`/post/${postId}`)} 
-      className="mb-2 w-80 bg-sky-100/70 dark:bg-sky-900/30 rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] dark:shadow-none p-3 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 flex items-center gap-3 border border-transparent hover:border-sky-200 dark:hover:border-sky-700"
-    >
-      <div className="w-16 h-16 bg-zinc-300 dark:bg-zinc-800 rounded-xl overflow-hidden shrink-0">
-        <img src="https://placehold.co/64x64" className="w-full h-full object-cover" alt="Thumb" />
-      </div>
-      <div className="flex-1 flex flex-col justify-center">
-          <span className="text-gray-400 text-xs font-normal" style={{ fontFamily: '"Jua", sans-serif' }}>Quoted moment</span>
-          <span className="text-black dark:text-white text-lg font-normal leading-tight truncate" style={{ fontFamily: '"Jua", sans-serif' }}>Shared Post</span>
-          <span className="text-sky-700 dark:text-sky-400 text-xs font-normal mt-1 flex items-center gap-1" style={{ fontFamily: '"Jua", sans-serif' }}>Nhấp để xem <ExternalLink className="w-3 h-3" /></span>
-      </div>
-    </div>
-  );
-};
-
-// --- CHỈ SỬA COMPONENT NÀY, CÁC COMPONENT KHÁC GIỮ NGUYÊN ---
-const RepliedMessagePreview = ({ messageId, conversationId, currentUserId }: { messageId: string, conversationId: string, currentUserId?: string }) => {
-    // 1. Lấy danh sách tin nhắn để tìm tin gốc
-    const messages = useChatStore(state => state.messages[conversationId] || []);
-    // 2. Lấy thông tin cuộc trò chuyện hiện tại để biết tên đối phương là gì
-    const conversation = useChatStore(state => state.conversations.find(c => c.id === conversationId));
-    
-    const originalMsg = messages.find(m => String(m.id) === String(messageId));
-
-    if (originalMsg) {
-        // Kiểm tra xem ai là người gửi tin nhắn gốc
-        const isMeOrigin = originalMsg.senderId === currentUserId;
-        
-        // Logic tìm tên: Nếu là mình -> "Bạn", Nếu là đối phương -> Lấy tên đối phương, Khác -> "Người dùng"
-        const displayName = isMeOrigin 
-            ? "Bạn" 
-            : (conversation?.partner?.id === originalMsg.senderId 
-                ? conversation?.partner?.fullname 
-                : "Người dùng"); // Fallback an toàn
-
-        const previewText = originalMsg.type === 'IMAGE' ? '[Hình ảnh]' 
-                          : originalMsg.type === 'VOICE' ? '[Ghi âm]' 
-                          : originalMsg.content;
-
-        return (
-            <div className="mb-1 opacity-80 cursor-pointer hover:opacity-100 transition-opacity flex items-center gap-1.5 p-1.5 rounded-lg bg-black/5 dark:bg-white/5 w-fit">
-                <div className="w-[3px] h-full min-h-[14px] bg-black/40 dark:bg-white/40 rounded-full shrink-0" />
-                <div className="text-[12px] truncate max-w-[200px] text-black/70 dark:text-white/70 font-medium flex gap-1" style={{ fontFamily: '"Jua", sans-serif' }}>
-                    <span className="font-bold shrink-0">{displayName} trả lời:</span>
-                    <span className="truncate">{previewText}</span>
-                </div>
-            </div>
-        );
-    }
-
+    if (isMe) return null; 
     return (
-        <div className="mb-1 opacity-60 flex items-center gap-1.5 p-1.5 rounded-lg bg-black/5 dark:bg-white/5 w-fit">
-            <div className="w-[3px] h-full min-h-[14px] bg-black/40 dark:bg-white/40 rounded-full shrink-0" />
-            <div className="text-[12px] truncate max-w-[200px] text-black/70 dark:text-white/70 italic" style={{ fontFamily: '"Jua", sans-serif' }}>
-                Đã trả lời một tin nhắn
-            </div>
-        </div>
+      <div className="w-9 h-9 flex-shrink-0">
+         {show ? (
+            <img src={url || "https://placehold.co/40x40"} alt="Avatar" className="w-9 h-9 rounded-full object-cover shadow-sm bg-white border border-zinc-100 dark:border-zinc-800" />
+         ) : <div className="w-9 h-9" />}
+      </div>
     );
+};
+  
+const MessageImage = ({ src, isMe }: { src: string, isMe: boolean }) => (
+    <div className={cn("mb-1 relative z-0 cursor-pointer transition-all hover:scale-[1.01]", isMe ? "mr-0" : "ml-0")}>
+      <div className={cn("relative overflow-hidden aspect-square shadow-sm w-72 rounded-[20px] border border-black/5 dark:border-white/10")}>
+          <img src={src} alt="Image" className="w-full h-full object-cover" />
+      </div>
+    </div>
+);
+  
+const RepliedMessagePreview = ({ messageId, conversationId, currentUserId }: { messageId: string, conversationId: string, currentUserId?: string }) => {
+      const messages = useChatStore(state => state.messages[conversationId] || []);
+      const conversation = useChatStore(state => state.conversations.find(c => c.id === conversationId));
+      const originalMsg = messages.find(m => String(m.id) === String(messageId));
+  
+      if (originalMsg) {
+          const isMeOrigin = originalMsg.senderId === currentUserId;
+          const displayName = isMeOrigin ? "Bạn" : (conversation?.partner?.id === originalMsg.senderId ? conversation?.partner?.fullname : "Người dùng");
+          const previewText = originalMsg.isDeleted ? 'Tin nhắn đã bị thu hồi' : (originalMsg.type === 'IMAGE' ? '[Hình ảnh]' : originalMsg.type === 'VOICE' ? '[Ghi âm]' : originalMsg.content);
+  
+          return (
+              <div className="mb-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity flex items-center gap-2 p-2 rounded-[16px] bg-black/5 dark:bg-white/10 w-fit border border-black/5 dark:border-white/5">
+                  <Reply className="w-3 h-3 text-zinc-500 dark:text-zinc-300" />
+                  <div className="text-[12.5px] truncate max-w-[200px] text-zinc-600 dark:text-zinc-200 font-semibold flex gap-1" style={{ fontFamily: '"Nunito", sans-serif' }}>
+                      <span className="font-bold shrink-0">{displayName}:</span>
+                      <span className="truncate">{previewText}</span>
+                  </div>
+              </div>
+          );
+      }
+      return null;
 };
 
 export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avatarUrl }) => {
   const [showTime, setShowTime] = useState(false);
-  const setReplyingTo = useChatStore(state => state.setReplyingTo);
-  const { user } = useAuth(); // Import useAuth để lấy currentUserId
+  const [showReacts, setShowReacts] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  
+  const menuRef = useRef<HTMLDivElement>(null);
+  const reactRef = useRef<HTMLDivElement>(null);
+  
+  const { setReplyingTo, setEditingMessage, setForwardingMessage, conversations, updateMessage } = useChatStore();
+  const { user } = useAuth(); 
   const currentUserId = user?.id;
 
   const replyImage = message.metadata?.replyToImage;
-  const isSharedPost = message.metadata?.contentType === 'SHARE_POST';
-  const sharedPostId = message.metadata?.sharedPostId;
+  const isEdited = message.metadata?.isEdited;
+  
+  const conversation = conversations.find(c => c.id === message.conversationId);
+  const isGroup = !!conversation?.boxId;
+
+  const isPinned = message.isPinned !== undefined ? message.isPinned : (message as any).pinned;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setShowMenu(false);
+      if (reactRef.current && !reactRef.current.contains(event.target as Node)) setShowReacts(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDelete = async () => {
+    if (confirm('Bạn muốn thu hồi tin nhắn này?')) {
+      try { await chatService.deleteMessage(message.id); } catch (e) { console.error(e); }
+    }
+  };
+
+  const handleReact = async (icon: string) => {
+    try { await chatService.reactToMessage(message.id, icon); setShowReacts(false); } catch (e) { console.error(e); }
+  };
+
+  const handleTogglePin = async () => {
+    setShowMenu(false);
+    updateMessage({ ...message, isPinned: !isPinned });
+    try {
+        await chatService.togglePinMessage(message.id);
+    } catch (e) {
+        console.error(e);
+        updateMessage({ ...message, isPinned: isPinned });
+    }
+  };
+
+  const reactionCounts = Object.values(message.reactions || {}).reduce((acc: any, reaction) => {
+      acc[reaction] = (acc[reaction] || 0) + 1; return acc;
+  }, {});
 
   return (
     <div className={cn("flex flex-col w-full group relative", isMe ? "items-end" : "items-start")}>
-      
-      <div className={cn("flex gap-3 w-full items-end", isMe ? "justify-end" : "justify-start")}>
+      <div className={cn("flex gap-2.5 w-full items-end", isMe ? "justify-end" : "justify-start")}>
         <ChatAvatar show={showAvatar} url={avatarUrl} isMe={isMe} />
         
-        <div className={cn("flex flex-col max-w-[70%] mb-1 relative", isMe ? "items-end" : "items-start")}>
+        <div className={cn("flex flex-col max-w-[75%] relative", isMe ? "items-end" : "items-start")}>
           
-          <button 
-              onClick={() => setReplyingTo(message)}
-              className={cn(
-                  "absolute top-1/2 -translate-y-1/2 p-1.5 bg-white dark:bg-zinc-800 shadow-md border border-zinc-200 dark:border-zinc-700 rounded-full text-zinc-500 hover:text-black dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10 active:scale-90",
-                  isMe ? "-left-10" : "-right-10"
-              )}
-              title="Trả lời"
-          >
-              <Reply className="w-[14px] h-[14px]" />
-          </button>
+          {!message.isDeleted && (
+              <div className={cn("absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-20", isMe ? "-left-[72px]" : "-right-[72px]")}>
+                
+                <div className="relative" ref={reactRef}>
+                    <button onClick={() => setShowReacts(!showReacts)} className="p-1.5 bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 rounded-full text-zinc-400 hover:text-yellow-500 active:scale-90" title="Thả cảm xúc"><SmilePlus className="w-4 h-4" /></button>
+                    {showReacts && (
+                        <div className={cn("absolute bottom-full mb-2 bg-white dark:bg-zinc-800 shadow-lg border border-zinc-100 dark:border-zinc-700 rounded-full flex gap-1 p-1 z-50", isMe ? "right-0" : "left-0")}>
+                            {['❤️', '😂', '😮', '😢', '👍'].map(emoji => (
+                                <button key={emoji} onClick={() => handleReact(emoji)} className="w-8 h-8 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-110 active:scale-90">{emoji}</button>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-          {message.replyToMsgId && (
-              <RepliedMessagePreview 
-                  messageId={message.replyToMsgId} 
-                  conversationId={message.conversationId} 
-                  currentUserId={currentUserId} // Truyền currentUserId xuống
-              />
+                <div className="relative" ref={menuRef}>
+                    <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 active:scale-90">
+                        <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {showMenu && (
+                        <div className={cn("absolute top-full mt-1 bg-white dark:bg-[#1E1E24] shadow-xl border border-zinc-100 dark:border-zinc-800 rounded-xl flex flex-col py-1.5 w-[150px] z-50", isMe ? "right-0" : "left-0")}>
+                            <button onClick={() => { setReplyingTo(message); setShowMenu(false); }} className="px-3 py-2.5 text-left text-[14px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"><Reply className="w-4 h-4 text-zinc-400"/> Trả lời</button>
+                            <button onClick={() => { setForwardingMessage(message); setShowMenu(false); }} className="px-3 py-2.5 text-left text-[14px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"><Forward className="w-4 h-4 text-zinc-400"/> Chuyển tiếp</button>
+                            <button onClick={handleTogglePin} className="px-3 py-2.5 text-left text-[14px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"><Pin className="w-4 h-4 text-zinc-400"/> {isPinned ? 'Bỏ ghim' : 'Ghim tin nhắn'}</button>
+                            {isMe && message.type === 'TEXT' && <button onClick={() => { setEditingMessage(message); setShowMenu(false); }} className="px-3 py-2.5 text-left text-[14px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2.5 transition-colors"><Edit2 className="w-4 h-4"/> Chỉnh sửa</button>}
+                            {isMe && <button onClick={() => { handleDelete(); setShowMenu(false); }} className="px-3 py-2.5 text-left text-[14px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"><Trash2 className="w-4 h-4"/> Thu hồi</button>}
+                        </div>
+                    )}
+                </div>
+              </div>
           )}
 
-          {replyImage && <MessageImage src={replyImage} isMe={isMe} />}
-          {isSharedPost && sharedPostId && <div onClick={() => setShowTime(!showTime)}><PostSharePreview postId={sharedPostId} isMe={isMe} /></div>}
+          {message.replyToMsgId && <RepliedMessagePreview messageId={message.replyToMsgId} conversationId={message.conversationId} currentUserId={currentUserId} />}
+          {!message.isDeleted && replyImage && <MessageImage src={replyImage} isMe={isMe} />}
           
-          {message.type === 'VOICE' ? (
-               <div className="relative z-10 py-1">
-                  <audio controls src={message.content} className="max-w-[250px] h-11 outline-none" />
-               </div>
+          {message.isDeleted ? (
+              <div className="px-4 py-2.5 text-[15px] italic text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded-[24px] bg-transparent" style={{ fontFamily: '"Nunito", sans-serif' }}>Tin nhắn đã bị thu hồi</div>
+          ) : message.type === 'VOICE' ? (
+               <div className="relative z-10 py-1"><audio controls src={message.content} className="max-w-[250px] h-10 outline-none rounded-full" /></div>
           ) : (
               message.content && message.content.trim() !== "" && (
-                   <div 
-                    onClick={() => setShowTime(!showTime)} 
-                    className={cn(
-                      "px-5 py-3 text-[17px] shadow-sm break-words leading-relaxed border transition-all duration-200 inline-block cursor-pointer active:scale-[0.98]",
-                      isMe 
-                        ? "bg-lime-100 text-blue-950 dark:bg-lime-900/50 dark:text-lime-50 rounded-[20px] rounded-br-[4px] border-transparent" 
-                        : "bg-yellow-50 text-blue-950 dark:bg-zinc-800 dark:text-zinc-100 rounded-[20px] rounded-bl-[4px] border-transparent" 
-                    )}
-                    style={{ fontFamily: '"Jua", sans-serif' }}
-                   >
-                      {renderContentWithMentions(message.content)}
+                   <div onClick={() => setShowTime(!showTime)} className={cn(
+                      "px-4 py-2.5 text-[15.5px] shadow-[0_4px_16px_rgba(146,136,173,0.08)] dark:shadow-none break-words leading-relaxed transition-all duration-200 inline-block cursor-pointer active:scale-[0.98] relative",
+                      message.type === 'IMAGE' ? "bg-transparent p-0 shadow-none border-none" : 
+                      isMe ? "bg-white text-zinc-800 dark:bg-[#756A91] dark:text-white rounded-[24px] rounded-br-[6px] border border-zinc-100 dark:border-[#756A91] font-sans font-semibold" 
+                           : "bg-[#FFF5E8] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100 rounded-[24px] rounded-bl-[6px] border border-[#FFF5E8] dark:border-zinc-700 font-sans font-semibold" 
+                    )} style={{ fontFamily: '"Nunito", sans-serif' }}>
+                      
+                      {!isMe && isGroup && message.type !== 'IMAGE' && <div className="text-[11px] text-[#9288AD] mb-0.5 font-bold">{message.senderName || "Thành viên"}</div>}
+                      
+                      {message.type === 'IMAGE' ? (
+                          <div className="rounded-[20px] overflow-hidden border border-zinc-200 dark:border-zinc-700 max-w-[250px]">
+                              <img src={message.content} alt="Attachment" className="w-full h-auto object-cover" loading="lazy" />
+                          </div>
+                      ) : (
+                          renderContentWithMentions(message.content)
+                      )}
+
+                      {isPinned && (
+                          <div className={cn("absolute -top-2 flex items-center justify-center w-5 h-5 bg-white dark:bg-zinc-800 rounded-full shadow-md border border-zinc-100 dark:border-zinc-700 z-10", isMe ? "-right-2" : "-left-2")}>
+                              <Pin className="w-3 h-3 text-blue-500 fill-blue-500" />
+                          </div>
+                      )}
+
+                      {Object.keys(reactionCounts).length > 0 && (
+                          <div className={cn("absolute -bottom-3 flex gap-0.5 bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded-full shadow-md border border-zinc-100 dark:border-zinc-700 text-[12px] z-10", isMe ? "left-2" : "right-2")}>
+                              {Object.entries(reactionCounts).map(([reaction, count]) => (
+                                  <span key={reaction} className="flex items-center space-x-0.5"><span>{reaction}</span>{Number(count) > 1 && <span className="text-[10px] font-bold text-zinc-500">{String(count)}</span>}</span>
+                              ))}
+                          </div>
+                      )}
                    </div>
               )
           )}
         </div>
       </div>
 
-      <div className={cn("overflow-hidden transition-all duration-300 ease-in-out flex items-center", showTime ? "h-5 opacity-100 mb-1" : "h-0 opacity-0 mb-0", isMe ? "pr-2" : "pl-[52px]" )}>
-          <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 select-none flex items-center gap-1">
-              {/* CHỈ SỬA DÒNG NÀY: */}
-              {isMe && <span className="text-[10px] font-semibold">{message.status === 'SEEN' ? 'Đã xem' : 'Đã gửi'}</span>}
+      <div className={cn("overflow-hidden transition-all duration-300 ease-in-out flex items-center", showTime ? "h-5 opacity-100 mt-2" : "h-0 opacity-0 mt-0", isMe ? "pr-1" : "pl-[46px]" )}>
+          <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 select-none flex items-center gap-1" style={{ fontFamily: '"Nunito", sans-serif' }}>
+              {isMe && <span>{message.status === 'SEEN' ? 'Đã xem' : 'Đã gửi'}</span>}
               {new Date(message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              {isEdited && <span className="italic ml-1">(Đã chỉnh sửa)</span>}
           </span>
       </div>
-
     </div>
   );
 };

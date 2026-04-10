@@ -6,13 +6,14 @@ import {
     CreateBoxRequest, 
     UpdateBoxRequest, 
     BoxMemberPageResponse,
-    BoxInvitationResponse 
+    BoxInvitationResponse,
+    BoxTab
 } from '../types';
 
 export const boxService = {
-    // 1. Lấy danh sách Box (Khớp với @GetMapping ở BE)
-    getMyBoxes: async (page = 0, size = 20): Promise<BoxPageResponse> => {
-        const response = await http.get(`/boxes?page=${page}&size=${size}`);
+    // 1. Lấy danh sách Box (Đã thêm tab và search)
+    getMyBoxes: async (tab: BoxTab = 'all', search: string = '', page = 0, size = 20): Promise<BoxPageResponse> => {
+        const response = await http.get(`/boxes?tab=${tab}&search=${encodeURIComponent(search)}&page=${page}&size=${size}`);
         return response.data.data;
     },
 
@@ -34,13 +35,13 @@ export const boxService = {
         return response.data.data;
     },
 
-    // 5. Xóa Box (Tương đương giải tán)
+    // 5. Xóa Box
     disbandBox: async (boxId: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}`);
         return response.data?.message || "Box deleted";
     },
 
-    // 6. Rời khỏi Box (Khớp với @DeleteMapping("/{boxId}/leave"))
+    // 6. Rời khỏi Box
     leaveBox: async (boxId: string, myUserId?: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}/leave`);
         return response.data?.message || "Left Box";
@@ -52,42 +53,34 @@ export const boxService = {
         return response.data?.message || "Ownership transferred";
     },
 
-    // ==========================================
-    // QUẢN LÝ LỜI MỜI VÀ THÀNH VIÊN
-    // ==========================================
-
-    // 8. Mời thành viên (Khớp với @PostMapping("/{boxId}/invites"))
+    // 8. Mời thành viên
     inviteMember: async (boxId: string, targetUserId: string): Promise<string> => {
         const response = await http.post(`/boxes/${boxId}/invites`, { inviteeId: targetUserId });
         return response.data?.message || "Invitation sent";
     },
 
-    // 9. Chấp nhận lời mời (Khớp với @PostMapping("/invitations/{invitationId}?accept=true"))
-    acceptInvite: async (invitationId: string): Promise<string> => {
+    // 9. Chấp nhận lời mời
+    acceptInvite: async (invitationId: number): Promise<string> => {
         const response = await http.post(`/boxes/invitations/${invitationId}?accept=true`);
         return response.data?.message || "Invitation accepted";
     },
 
-    // 10. Từ chối lời mời (Khớp với @PostMapping("/invitations/{invitationId}?accept=false"))
-    rejectInvite: async (invitationId: string): Promise<string> => {
+    // 10. Từ chối lời mời
+    rejectInvite: async (invitationId: number): Promise<string> => {
         const response = await http.post(`/boxes/invitations/${invitationId}?accept=false`);
         return response.data?.message || "Invitation declined";
     },
 
-    // 11. Kick thành viên (Khớp với @DeleteMapping("/{boxId}/members/{memberId}"))
+    // 11. Kick thành viên
     removeMember: async (boxId: string, targetUserId: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}/members/${targetUserId}`);
         return response.data?.message || "Member removed";
     },
 
-    // ==========================================
-    // CÁC API HIỆN BE ĐANG THIẾU -> DÙNG TRY-CATCH ĐỂ FE KHÔNG BỊ SẬP
-    // ==========================================
-
-    getMyPendingInvitations: async (): Promise<BoxInvitationResponse[]> => {
+    // 12. Lấy lời mời đang chờ (Đã thêm search)
+    getMyPendingInvitations: async (search: string = ''): Promise<BoxInvitationResponse[]> => {
         try {
-            // BE chưa có hàm GET cho URL này
-            const response = await http.get(`/boxes/invitations/me`);
+            const response = await http.get(`/boxes/invitations/me?search=${encodeURIComponent(search)}`);
             return response.data?.data || [];
         } catch (error) {
             console.warn("Backend does not have API GET /boxes/invitations/me");
@@ -109,7 +102,6 @@ export const boxService = {
             const response = await http.get(`/boxes/${boxId}/members?page=${page}&size=${size}`);
             return response.data?.data;
         } catch (error) {
-            // Ép kiểu để TypeScript không báo lỗi thiếu các trường phân trang (totalElements, totalPages...)
             return { 
                 content: [],
                 totalElements: 0,

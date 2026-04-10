@@ -103,11 +103,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         hideBottomNav={isChatPage}
       />
 
-      <main className={cn(
+<main className={cn(
         "relative w-full flex flex-col z-0", 
         "transition-all duration-300 ease-in-out",
         isHomePage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]",
-        isChatPage ? "pb-0" : "pb-[72px] md:pb-0", 
+        
+        // ĐÃ SỬA: Thêm isHomePage vào đây để thả rông cho trang chủ cuộn full màn hình
+        (isChatPage || isHomePage) ? "pb-0" : "pb-[72px] md:pb-0", 
+        
         isSidebarExpanded ? "md:pl-[260px]" : "md:pl-[80px]"
       )}>
         {children || <Outlet />}
