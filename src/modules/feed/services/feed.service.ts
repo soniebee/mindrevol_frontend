@@ -2,10 +2,11 @@ import { http } from '@/lib/http';
 import { FeedItem, PostProps, AdProps, InteractionType, Emotion } from '../types';
 
 const mapToFeedItem = (item: any): FeedItem => {
-  if (item.type === 'AD' || item.feedType === 'AD') {
+  // [ĐÃ SỬA] Nhận diện đúng type quảng cáo từ Backend trả về
+  if (item.type === 'INTERNAL_AD' || item.type === 'AFFILIATE_AD' || item.feedType === 'AD') {
       return {
           id: item.id,
-          type: 'AD',
+          type: item.type, // [ĐÃ SỬA] Truyền thẳng type gốc (INTERNAL_AD / AFFILIATE_AD) thay vì gán cứng chữ 'AD'
           title: item.title || "Quảng cáo",
           description: item.description,
           imageUrl: item.imageUrl || item.image,
@@ -59,10 +60,8 @@ export const feedService = {
     return rawData.map(mapToFeedItem);
   },
 
-  // [THÊM MỚI] Lấy Grid Feed
   getJourneyGridFeed: async (page: number = 0, limit: number = 18): Promise<FeedItem[]> => {
     const response = await http.get<any>(`/checkins/journeys/grid`, { params: { page, limit } });
-    // Hỗ trợ cả 2 trường hợp backend trả về List hoặc Page object
     const rawData = response.data.data.content || response.data.data || [];
     return rawData.map(mapToFeedItem);
   },

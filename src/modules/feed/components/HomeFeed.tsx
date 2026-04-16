@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { feedService } from '../services/feed.service';
-import { FeedItem, PostProps } from '../types';
+import { FeedItem } from '../types';
 import { LocketFeedViewer } from './LocketFeedViewer'; 
 import { Loader2 } from 'lucide-react';
 import { MemberFilter } from './MemberFilter'; 
@@ -40,12 +40,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
 
   const feedMembers = useMemo(() => {
     const membersMap = new Map();
-    posts.forEach(post => {
-      if (post.type !== 'AD') {
-        const uid = post.user?.id || post.userId;
+    posts.forEach(item => {
+      if (item.type === 'POST') {
+        const uid = item.user?.id || item.userId;
         if (uid && !membersMap.has(uid)) {
           membersMap.set(uid, {
-            id: uid, name: post.user?.name || 'User', avatar: post.user?.avatar, status: 'NORMAL', presenceRate: 0 
+            id: uid, name: item.user?.name || 'User', avatar: item.user?.avatar, status: 'NORMAL', presenceRate: 0 
           });
         }
       }
@@ -55,18 +55,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
 
   const filteredPosts = useMemo(() => {
     if (!selectedUserId) return posts; 
-    return posts.filter(post => {
-      if (post.type !== 'AD') {
-          const uid = post.user?.id || post.userId;
+    return posts.filter(item => {
+      if (item.type === 'POST') {
+          const uid = item.user?.id || item.userId;
           return String(uid) === String(selectedUserId);
       }
       return false; 
     });
   }, [posts, selectedUserId]);
-
-  const actualPostsForLocket = useMemo(() => {
-     return filteredPosts.filter(p => p.type !== 'AD') as PostProps[];
-  }, [filteredPosts]);
 
   if (loading) {
     return (
@@ -87,7 +83,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
   return (
     <div className="w-full h-full flex flex-col relative bg-transparent">
         
-      {/* [ĐÃ SỬA] Đặt pointer-events-none ở thẻ cha và pointer-events-auto ở thẻ con để vùng trống không chắn click chuột */}
       {feedMembers.length > 0 && (
         <div className="absolute top-2 left-0 right-0 z-30 flex justify-center pointer-events-none">
             <div className="pointer-events-auto">
@@ -97,7 +92,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
       )}
 
       <div className="flex-1 w-full relative overflow-hidden">
-        <LocketFeedViewer posts={actualPostsForLocket} />
+        <LocketFeedViewer posts={filteredPosts} />
       </div>
       
     </div>

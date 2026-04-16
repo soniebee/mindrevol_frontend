@@ -1,19 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { JourneyPostCard } from './JourneyPostCard';
+import { FeedAdCard } from './FeedAdCard';
 import { Send, SmilePlus, Activity } from 'lucide-react';
-import { PostProps } from '../types';
+import { FeedItem, PostProps, AdProps } from '../types';
 import { cn } from '@/lib/utils';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from '@/contexts/ThemeContext';
-// ĐÃ ĐỔI: Import chatService thay vì chỉ dùng feedService cho tin nhắn
 import { feedService } from '../services/feed.service'; 
 import { chatService } from '@/modules/chat/services/chat.service'; 
 import { useAuth } from '@/modules/auth/store/AuthContext'; 
 import { ActivityModal } from './ActivityModal'; 
-import { toast } from 'react-hot-toast'; // Thêm toast để báo lỗi hoặc thành công (tuỳ chọn)
+import { toast } from 'react-hot-toast'; 
 
 interface LocketFeedProps {
-  posts: PostProps[];
+  posts: FeedItem[];
 }
 
 const QUICK_REACTIONS = ['❤️', '🔥', '😂', '😮', '🥺'];
@@ -33,8 +33,9 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   const pickerRef = useRef<HTMLDivElement>(null);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
 
-  const activePost = posts.find(p => p.id === activePostId) || posts[0];
-
+  // Xác định Item đang hiển thị
+  const activeItem = posts.find(p => p.id === activePostId) || posts[0];
+  const activePost = activeItem?.type === 'POST' ? (activeItem as PostProps) : null;
   const isOwner = activePost?.userId === currentUser?.id || activePost?.user?.id === currentUser?.id;
 
   useEffect(() => {
@@ -62,21 +63,18 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
     return () => observer.disconnect();
   }, [posts]);
 
-  // [CẬP NHẬT LẠI LOGIC GỬI TIN NHẮN]
   const handleSendMessage = async () => {
     if (!message.trim() || !activePost || !activePost.userId) return;
     setIsSending(true);
     try {
-      // 1. Lấy ID của người sở hữu bài viết (người nhận tin nhắn)
       const targetUserId = activePost.userId || activePost.user?.id;
       
-      // 2. Dùng chatService.sharePostToChat để gửi thẳng vào Chat 1v1
       if (targetUserId) {
          await chatService.sharePostToChat(
-            targetUserId,       // ID người nhận
-            activePost.id,      // ID bài viết
-            activePost.image,   // Ảnh bài viết
-            message             // Nội dung tin nhắn
+            targetUserId, 
+            activePost.id, 
+            activePost.image, 
+            message 
          );
          setMessage('');
          toast.success("Đã gửi tin nhắn riêng");
@@ -90,7 +88,7 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   };
 
   const handleReact = async (emoji: string) => {
-    if (!activePostId) return;
+    if (!activePostId || !activePost) return;
     try {
       await feedService.toggleReaction(activePostId, emoji);
     } catch (error) {
@@ -132,85 +130,96 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
       </div>
 
       <div className="flex-1 w-full h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar relative z-10">
-        {posts.map(post => (
-          <div 
-            key={post.id} 
-            data-post-id={post.id} 
-            className="snap-post-container snap-always snap-center h-full w-full flex flex-col items-center justify-center shrink-0 px-4 pt-24 pb-12 md:pb-20"
-          >
-            <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] relative transition-all duration-300">
-              <JourneyPostCard post={post} isActive={activePostId === post.id} headerTarget={headerTarget} />
+        {posts.map((item, index) => {
+          const isAd = item.type === 'INTERNAL_AD' || item.type === 'AFFILIATE_AD';
+          const key = isAd ? `ad-${item.id}-${index}` : `post-${item.id}`;
+
+          return (
+            <div 
+              key={key} 
+              data-post-id={item.id} 
+              className="snap-post-container snap-always snap-center h-full w-full flex flex-col items-center justify-center shrink-0 px-4 pt-24 pb-12 md:pb-20"
+            >
+              <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] relative transition-all duration-300">
+                {isAd ? (
+                  <FeedAdCard ad={item as AdProps} />
+                ) : (
+                  <JourneyPostCard post={item as PostProps} isActive={activePostId === item.id} headerTarget={headerTarget} />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-8 pb-2 md:pt-20 md:pb-6 px-4 z-30 pointer-events-none transition-all duration-300">
-        <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col gap-3 pointer-events-auto relative">
-            
-            {isOwner ? (
-              <button 
-                onClick={() => setIsActivityModalOpen(true)}
-                className="w-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-300 dark:border-white/20 rounded-full py-3 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] gap-2 text-zinc-900 dark:text-white font-bold active:scale-95 transition-transform"
-              >
-                <Activity className="w-5 h-5 text-blue-500" />
-                Xem hoạt động bài viết
-              </button>
-            ) : (
-              <>
-                {showEmojiPicker && (
-                  <div ref={pickerRef} className="absolute bottom-full left-0 mb-3 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
-                    <EmojiPicker theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} onEmojiClick={handleSelectEmoji} lazyLoadEmojis={true} searchDisabled={true} skinTonesDisabled={true} height={350} />
-                  </div>
-                )}
-
-                <div className="flex-1 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-300 dark:border-white/20 rounded-full pl-3 pr-2 py-2 flex items-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-colors gap-2">
-                  <button 
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
-                    className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
-                  >
-                      <SmilePlus className="w-6 h-6" />
-                  </button>
-
-                  {/* Đã sửa placeholder cho rõ nghĩa */}
-                  <input
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Gửi tin nhắn riêng..." 
-                    className="bg-transparent text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-white/60 outline-none w-full text-[15px] font-medium"
-                    style={{ fontFamily: '"Jua", sans-serif' }}
-                  />
-
-                  {message.trim() ? (
-                    <button 
-                      onClick={handleSendMessage} 
-                      disabled={isSending}
-                      className="w-10 h-10 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-full flex items-center justify-center transition-transform active:scale-90 shrink-0 shadow-sm"
-                    >
-                      <Send className="w-4 h-4 ml-0.5" />
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1 shrink-0 border-l border-zinc-300 dark:border-white/20 pl-2">
-                      {QUICK_REACTIONS.map(em => (
-                        <button 
-                          key={em} 
-                          onClick={() => handleReact(em)} 
-                          className="text-[20px] hover:scale-125 hover:-translate-y-1 transition-all active:scale-90 leading-none p-1"
-                        >
-                          {em}
-                        </button>
-                      ))}
+      {/* Chỉ hiển thị thanh nhập text nếu item đang xem là POST (Không phải Ad) */}
+      {activePost && (
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-8 pb-2 md:pt-20 md:pb-6 px-4 z-30 pointer-events-none transition-all duration-300">
+          <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col gap-3 pointer-events-auto relative">
+              
+              {isOwner ? (
+                <button 
+                  onClick={() => setIsActivityModalOpen(true)}
+                  className="w-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-300 dark:border-white/20 rounded-full py-3 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] gap-2 text-zinc-900 dark:text-white font-bold active:scale-95 transition-transform"
+                >
+                  <Activity className="w-5 h-5 text-blue-500" />
+                  Xem hoạt động bài viết
+                </button>
+              ) : (
+                <>
+                  {showEmojiPicker && (
+                    <div ref={pickerRef} className="absolute bottom-full left-0 mb-3 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
+                      <EmojiPicker theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} onEmojiClick={handleSelectEmoji} lazyLoadEmojis={true} searchDisabled={true} skinTonesDisabled={true} height={350} />
                     </div>
                   )}
-                </div>
-              </>
-            )}
 
+                  <div className="flex-1 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-300 dark:border-white/20 rounded-full pl-3 pr-2 py-2 flex items-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-colors gap-2">
+                    <button 
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
+                      className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
+                    >
+                        <SmilePlus className="w-6 h-6" />
+                    </button>
+
+                    <input
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                      placeholder="Gửi tin nhắn riêng..." 
+                      className="bg-transparent text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-white/60 outline-none w-full text-[15px] font-medium"
+                      style={{ fontFamily: '"Jua", sans-serif' }}
+                    />
+
+                    {message.trim() ? (
+                      <button 
+                        onClick={handleSendMessage} 
+                        disabled={isSending}
+                        className="w-10 h-10 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-full flex items-center justify-center transition-transform active:scale-90 shrink-0 shadow-sm"
+                      >
+                        <Send className="w-4 h-4 ml-0.5" />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1 shrink-0 border-l border-zinc-300 dark:border-white/20 pl-2">
+                        {QUICK_REACTIONS.map(em => (
+                          <button 
+                            key={em} 
+                            onClick={() => handleReact(em)} 
+                            className="text-[20px] hover:scale-125 hover:-translate-y-1 transition-all active:scale-90 leading-none p-1"
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+          </div>
         </div>
-      </div>
+      )}
       
-      {isActivityModalOpen && activePostId && (
+      {isActivityModalOpen && activePostId && activePost && (
         <ActivityModal 
           isOpen={isActivityModalOpen} 
           onClose={() => setIsActivityModalOpen(false)} 

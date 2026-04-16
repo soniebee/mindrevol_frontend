@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X, Loader2, LogOut, Trash2, UserCog, Globe, Lock, Palette, Package, ChevronDown, CheckCircle2, Settings, BellRing, ChevronRight } from 'lucide-react';
+import { X, Loader2, LogOut, Trash2, UserCog, Globe, Lock, Package, BellRing, ChevronRight, Settings, Film } from 'lucide-react';
 import EmojiPicker, { Theme, EmojiStyle, EmojiClickData } from 'emoji-picker-react';
+
 import { JourneyResponse, JourneyRole, JourneyVisibility } from '../types';
 import { useJourneySettings } from '../hooks/useJourneySettings';
 import { useJourneyAction } from '../hooks/useJourneyAction';
@@ -14,6 +15,8 @@ import { boxService } from '@/modules/box/services/box.service';
 import { BoxResponse } from '@/modules/box/types';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
+// IMPORT MODAL RECAP
+import { CreateRecapModal } from '@/modules/recap/components/CreateRecapModal';
 
 interface Props {
   isOpen: boolean;
@@ -21,8 +24,6 @@ interface Props {
   journey: JourneyResponse | null;
   onUpdateSuccess: () => void;
 }
-
-const PRESET_COLORS = ['#1A1A1A', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
 
 export const JourneySettingsModal: React.FC<Props> = ({ 
   isOpen, onClose, journey, onUpdateSuccess 
@@ -36,8 +37,10 @@ export const JourneySettingsModal: React.FC<Props> = ({
   const [refreshMemberKey, setRefreshMemberKey] = useState(0); 
   const [mounted, setMounted] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  
   const [showRequestsModal, setShowRequestsModal] = useState(false);
+  
+  // STATE MỞ MODAL RECAP
+  const [showRecapModal, setShowRecapModal] = useState(false);
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -107,8 +110,6 @@ export const JourneySettingsModal: React.FC<Props> = ({
   };
 
   if (!mounted || !isOpen || !journey || !user) return null;
-
-  const selectedBox = boxes.find(b => b.id === settings.boxId);
 
   return createPortal(
     <>
@@ -258,15 +259,32 @@ export const JourneySettingsModal: React.FC<Props> = ({
             />
 
             <div className="space-y-4 pt-6 border-t border-[#F4EBE1] dark:border-[#2B2A29]">
-              <h3 className="text-[0.75rem] font-extrabold text-red-500 uppercase tracking-widest pl-1">Vùng nguy hiểm</h3>
+              <h3 className="text-[0.75rem] font-extrabold text-red-500 uppercase tracking-widest pl-1">Vùng nguy hiểm / Nâng cao</h3>
               {isOwner ? (
                 <div className="grid gap-4">
+                  {/* NÚT TẠO RECAP GỌI MODAL TÙY CHỈNH */}
+                  <button 
+                    onClick={() => setShowRecapModal(true)} 
+                    className="flex items-center justify-between w-full p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-900/20 dark:hover:to-pink-900/20 rounded-[24px] border border-purple-200 dark:border-purple-900/30 transition-colors shadow-sm active:scale-[0.98] group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white dark:bg-purple-500/20 rounded-[16px] text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                        <Film size={22} strokeWidth={2.5} />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-purple-900 dark:text-purple-300 font-black text-[1rem]">Tạo Thước phim</p>
+                        <p className="text-[0.85rem] font-semibold text-purple-700/80 dark:text-purple-400/80">Gói gọn hành trình thành 1 video</p>
+                      </div>
+                    </div>
+                  </button>
+
                   <button onClick={() => setShowTransferModal(true)} className="flex items-center justify-between w-full p-5 bg-white dark:bg-[#1A1A1A] hover:bg-[#FFF9E6] dark:hover:bg-[#332A1A] rounded-[24px] border border-yellow-200 dark:border-yellow-900/50 transition-colors shadow-sm active:scale-[0.98] group">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-yellow-100 dark:bg-yellow-500/20 rounded-[16px] text-yellow-600 dark:text-yellow-500 group-hover:scale-110 transition-transform"><UserCog size={22} strokeWidth={2.5} /></div>
                       <div className="text-left"><p className="text-[#1A1A1A] dark:text-white font-black text-[1rem]">Chuyển quyền sở hữu</p><p className="text-[0.85rem] font-semibold text-[#8A8580] dark:text-[#A09D9A]">Nhường quyền chủ phòng</p></div>
                     </div>
                   </button>
+                  
                   <button onClick={() => deleteJourney(journey.id)} disabled={isProcessing} className="flex items-center justify-between w-full p-5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-[24px] border border-red-200 dark:border-red-500/30 transition-colors shadow-sm active:scale-[0.98] group">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-white dark:bg-red-500/20 rounded-[16px] text-red-500 group-hover:scale-110 transition-transform shadow-sm"><Trash2 size={22} strokeWidth={2.5} /></div>
@@ -321,6 +339,13 @@ export const JourneySettingsModal: React.FC<Props> = ({
           onUpdateSuccess();
           onClose();
         }}
+      />
+
+      {/* RENDER MODAL TẠO RECAP (Gắn ở cuối cùng để nó overlay lên) */}
+      <CreateRecapModal 
+        isOpen={showRecapModal}
+        onClose={() => setShowRecapModal(false)}
+        journeyId={journey.id}
       />
     </>,
     document.body

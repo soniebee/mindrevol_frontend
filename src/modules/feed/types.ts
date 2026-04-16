@@ -1,5 +1,3 @@
-// src/modules/feed/types.ts
-
 // 1. Enums
 export enum InteractionType {
   PRIVATE_REPLY = 'PRIVATE_REPLY',
@@ -23,8 +21,6 @@ export enum CheckinStatus {
   REJECTED = 'REJECTED'
 }
 
-
-
 // 2. Data Models (API Response)
 export interface ReactionDetail {
   id: string;
@@ -36,9 +32,8 @@ export interface ReactionDetail {
   createdAt: string;
 }
 
-// [CẬP NHẬT] Thêm type discriminator và isSaved
 export interface JourneyPost {
-  type: 'POST'; // Cờ nhận biết
+  type: 'POST';
   id: string;
   imageUrl: string;
   thumbnailUrl: string;
@@ -53,7 +48,6 @@ export interface JourneyPost {
   journeyName?: string;
   interactionType: InteractionType;
   
-  // Dữ liệu ngữ cảnh
   activityName?: string;
   locationName?: string;
   taskTitle?: string;
@@ -61,11 +55,10 @@ export interface JourneyPost {
   reactionCount?: number;
   commentCount?: number;
   isLiked?: boolean;
-  isSaved?: boolean; // [MỚI] Thêm cờ nhận biết bài đã lưu từ API trả về
+  isSaved?: boolean; 
   latestReactions: ReactionDetail[];
 }
 
-// Alias cho Service
 export type Checkin = JourneyPost;
 
 // 3. Request Models
@@ -82,10 +75,10 @@ export interface CreateCheckinRequest {
   tags?: string[];
 }
 
-// [MỚI] Type cho Quảng cáo
+// [CẬP NHẬT] Đổi type thành union để hứng cả 2 loại quảng cáo
 export interface AdProps {
   id: string;
-  type: 'AD'; // Cờ nhận biết
+  type: 'INTERNAL_AD' | 'AFFILIATE_AD'; 
   title: string;
   description?: string;
   imageUrl: string;
@@ -98,21 +91,19 @@ export interface AdProps {
 export interface PostProps {
   type: 'POST';
   id: string;
-  userId: string; // Vẫn giữ lại cho an toàn tương thích ngược
+  userId: string;
   user: { 
-    id: string; // [ĐÃ SỬA] Thêm id vào đây để HomeFeed không bị lỗi
+    id: string; 
     name: string; 
     avatar: string; 
   };
   image: string;
   caption: string;
   
-  // Logic hiển thị
   status: 'completed' | 'failed' | 'comeback' | 'rest' | 'normal'; 
   emotion: Emotion;           
   interactionType: InteractionType; 
   
-  // Các trường hiển thị nhãn
   activityName?: string; 
   locationName?: string;
   taskName?: string; 
@@ -126,5 +117,4 @@ export interface PostProps {
   isSaved?: boolean; 
 }
 
-// [QUAN TRỌNG] Union Type dùng cho danh sách Feed
 export type FeedItem = PostProps | AdProps;

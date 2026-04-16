@@ -22,7 +22,7 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Alias & Types */
-    "baseUrl": ".",
+    // Đã xóa "baseUrl": ".", TypeScript tự hiểu "./src/*" là tính từ thư mục hiện tại
     "paths": {
       "@/*": ["./src/*"]
     },
