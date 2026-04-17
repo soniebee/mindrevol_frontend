@@ -82,6 +82,11 @@ const META_BY_TYPE: Record<string, NotificationUiMeta> = {
     iconClassName: 'text-orange-600 dark:text-orange-300',
     iconContainerClassName: 'bg-orange-50 dark:bg-orange-500/15 border-orange-200 dark:border-orange-500/30',
   },
+  BOX_MEMBER_JOINED: {
+    icon: UserCheck,
+    iconClassName: 'text-emerald-600 dark:text-emerald-300',
+    iconContainerClassName: 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/30',
+  },
 
   // Journey Types
   JOURNEY_INVITE: {
@@ -194,6 +199,7 @@ export const resolveNotificationPath = (noti: NotificationResponse): string | nu
     case 'BOX_INVITE':
     case 'BOX_REMOVED':
     case 'BOX_MEMBER_REMOVED':
+    case 'BOX_MEMBER_JOINED':
       return referenceId ? `/box/${referenceId}` : '/box';
 
     // Journey Routes

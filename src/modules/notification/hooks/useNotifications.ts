@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { resolveNotificationCategory } from '../constants';
-// Lấy trạng thái bật/tắt từng danh mục từ localStorage
+// Read per-category on/off state from localStorage
 type CategorySettings = Record<'COMMENT' | 'REACTION' | 'MESSAGE' | 'JOURNEY' | 'FRIEND', boolean>;
 const getCategorySettingsFromStorage = (): CategorySettings => {
   try {
@@ -98,7 +98,7 @@ export const useNotifications = (isOpen: boolean) => {
             const normalizedData = (data.content || []).map((item: NotificationPayload) => normalizeNotification(item));
             setNotifications(normalizedData);
         } catch (error) {
-            console.error("Lỗi tải thông báo", error);
+            console.error("Failed to load notifications", error);
         } finally {
             setIsLoading(false);
         }
@@ -122,14 +122,14 @@ export const useNotifications = (isOpen: boolean) => {
         }
     };
 
-    // [SPRINT 2] Cập nhật state isSeen và gọi API
+    // [Sprint 2] Update isSeen state and call the API
     const markAllAsSeen = async () => {
         try {
-            // Optimistic UI: Update UI ngay lập tức cho mượt
+            // Optimistic UI: update immediately for a smoother experience
             setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
             await notificationService.markAllAsSeen();
         } catch (e) {
-            console.error("Lỗi mark all as seen", e);
+            console.error("Failed to mark all as seen", e);
         }
     };
 
@@ -143,11 +143,11 @@ export const useNotifications = (isOpen: boolean) => {
     };
 
     const deleteAll = async () => {
-        if (!window.confirm("Bạn có chắc chắn muốn dọn sạch toàn bộ thông báo không?")) return;
+        if (!window.confirm("Are you sure you want to clear all notifications?")) return;
         try {
             setNotifications([]);
             await notificationService.deleteAllNotifications();
-            toast.success("Đã dọn sạch thông báo");
+            toast.success("Notifications cleared");
         } catch (e) {
             console.error(e);
         }
@@ -173,7 +173,7 @@ export const useNotifications = (isOpen: boolean) => {
             } else if (noti.type === 'JOURNEY_INVITE') {
                 const invitationId = parseNumericReferenceId(noti.referenceId);
                 if (invitationId === null) {
-                    throw new Error('ID lời mời hành trình không hợp lệ');
+                    throw new Error('Invalid journey invitation ID');
                 }
 
                 if (action === 'ACCEPT') {
@@ -191,9 +191,9 @@ export const useNotifications = (isOpen: boolean) => {
             }
 
             if (action === 'ACCEPT') {
-                toast.success("Đã chấp nhận thành công!");
+                toast.success("Accepted successfully!");
             } else {
-                toast.success("Đã từ chối!");
+                toast.success("Declined successfully!");
             }
 
             await notificationService.markAsRead(noti.id);
@@ -209,26 +209,26 @@ export const useNotifications = (isOpen: boolean) => {
 
             return true;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Yêu cầu đã hết hạn hoặc có lỗi xảy ra';
+            const message = error instanceof Error ? error.message : 'The request has expired or an error occurred';
             toast.error(message);
             return false;
         }
     };
 
-    // Lọc theo settings
+    // Filter by settings
     const categorySettings = getCategorySettingsFromStorage();
     let filteredNotifications = notifications;
-    // Lọc theo trạng thái bật/tắt danh mục
+    // Filter by category on/off state
     filteredNotifications = filteredNotifications.filter(noti => {
       const cat = resolveNotificationCategory(noti.type);
       if (cat === 'OTHER') return true;
       return categorySettings[cat];
     });
-    // Lọc unread nếu cần
+    // Filter unread items if needed
     if (filter === 'UNREAD') {
       filteredNotifications = filteredNotifications.filter(n => !n.isRead);
     }
-    // Sort mới nhất lên trên
+    // Sort newest first
     filteredNotifications = filteredNotifications.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return {
