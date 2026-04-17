@@ -25,7 +25,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Tăng giới hạn lên hẳn 10MB để an toàn tuyệt đối
+        // Tăng giới hạn lên 10MB
         maximumFileSizeToCacheInBytes: 10485760, 
         globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
@@ -49,7 +49,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500, 
     rollupOptions: {
       output: {
-        // Dùng function để quét chính xác đường dẫn, bắt trọn cả các module con (như @firebase)
+        // Tách file an toàn dựa theo đường dẫn, không gây lỗi Circular
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('firebase') || id.includes('@firebase')) return 'firebase-vendor';
