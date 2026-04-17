@@ -60,18 +60,29 @@ export default defineConfig({
     drop: ['console', 'debugger'] as any,
   },
   
-  build: {
+build: {
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // 1. Tách các thư viện React cốt lõi
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
               return 'react-vendor';
             }
+            // 2. Tách UI và Animations
             if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('zod')) {
               return 'ui-vendor';
             }
+            // 3. THÊM MỚI: Tách riêng Firebase (rất nặng)
+            if (id.includes('firebase')) {
+              return 'firebase-vendor';
+            }
+            // 4. THÊM MỚI: Tách riêng thư viện Emoji (rất nặng)
+            if (id.includes('emoji-picker-react')) {
+              return 'emoji-vendor';
+            }
+            // Phần còn lại
             return 'vendor';
           }
         },
