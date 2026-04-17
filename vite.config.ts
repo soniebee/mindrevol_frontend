@@ -15,10 +15,10 @@ export default defineConfig({
         name: 'MindRevol',
         short_name: 'MindRevol',
         description: 'Nơi lưu giữ những hành trình kỷ niệm thân mật.',
-        theme_color: '#09090b', // Màu nền (trùng với bg-zinc-950)
+        theme_color: '#09090b', 
         background_color: '#09090b',
-        display: 'standalone', // Quan trọng: Chế độ full màn hình như App
-        orientation: 'portrait', // Khóa màn hình dọc
+        display: 'standalone', 
+        orientation: 'portrait', 
         start_url: '/',
         icons: [
           {
@@ -35,9 +35,13 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable' // Icon cho Android mới (bo tròn)
+            purpose: 'any maskable' 
           }
         ]
+      },
+      // THÊM ĐOẠN NÀY ĐỂ FIX LỖI: Tăng giới hạn cache lên 5MB (5 * 1024 * 1024 bytes)
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5242880,
       }
     })
   ],
