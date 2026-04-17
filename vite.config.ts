@@ -1,13 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-// 1. Import plugin PWA
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
     react(),
-    // 2. Cấu hình PWA
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
@@ -15,33 +13,21 @@ export default defineConfig({
         name: 'MindRevol',
         short_name: 'MindRevol',
         description: 'Nơi lưu giữ những hành trình kỷ niệm thân mật.',
-        theme_color: '#09090b', 
+        theme_color: '#09090b',
         background_color: '#09090b',
-        display: 'standalone', 
-        orientation: 'portrait', 
+        display: 'standalone',
+        orientation: 'portrait',
         start_url: '/',
         icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable' 
-          }
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
       },
-      // THÊM ĐOẠN NÀY ĐỂ FIX LỖI: Tăng giới hạn cache lên 5MB (5 * 1024 * 1024 bytes)
       workbox: {
-        maximumFileSizeToCacheInBytes: 5242880,
+        // Tăng giới hạn lên hẳn 10MB để an toàn tuyệt đối
+        maximumFileSizeToCacheInBytes: 10485760, 
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
     })
   ],
@@ -51,7 +37,6 @@ export default defineConfig({
     },
   },
   
-  // [FIX LỖI]: Định nghĩa biến global là window để các thư viện cũ không bị crash
   define: {
     global: 'window',
   },
@@ -60,16 +45,18 @@ export default defineConfig({
     drop: ['console', 'debugger'] as any,
   },
   
-build: {
-    chunkSizeWarningLimit: 1000, 
+  build: {
+    chunkSizeWarningLimit: 1500, 
     rollupOptions: {
       output: {
-        // Cú pháp Object giúp tránh lỗi Circular Dependency hoàn toàn
-        manualChunks: {
-          'react-core': ['react', 'react-dom', 'react-router-dom', 'zustand'],
-          'firebase-vendor': ['firebase'],
-          'map-vendor': ['leaflet', 'react-leaflet', 'mapbox-gl', 'react-map-gl'],
-          'ui-vendor': ['framer-motion', 'lucide-react', 'react-hot-toast']
+        // Dùng function để quét chính xác đường dẫn, bắt trọn cả các module con (như @firebase)
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('firebase') || id.includes('@firebase')) return 'firebase-vendor';
+            if (id.includes('emoji-picker-react')) return 'emoji-vendor';
+            if (id.includes('mapbox') || id.includes('leaflet') || id.includes('@mapbox')) return 'map-vendor';
+            if (id.includes('framer-motion')) return 'motion-vendor';
+          }
         }
       }
     }
