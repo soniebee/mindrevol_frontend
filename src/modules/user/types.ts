@@ -25,4 +25,5 @@ export interface UserProfile {
   isBlockedByMe: boolean;
   isBlockedByThem: boolean;
   isMe: boolean;
+  accountType?: 'FREE' | 'GOLD' | string;
 }

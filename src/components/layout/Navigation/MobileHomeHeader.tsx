@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Users, Bell, Settings } from 'lucide-react';
+import { MessageCircle, Users, Bell, Settings, Crown } from 'lucide-react'; // [THÊM MỚI] Import Crown
 import { useNavigate } from 'react-router-dom';
 
 // Import các Modal và Auth
@@ -7,6 +7,7 @@ import { NotificationPanel } from './NotificationPanel';
 import { SettingsModal } from '@/modules/user/components/SettingsModal';
 import { FriendsModal } from '@/modules/user/components/FriendsModal';
 import { useAuth } from '@/modules/auth/store/AuthContext';
+import { UpgradeModal } from '@/modules/payment/components/UpgradeModal'; // [THÊM MỚI] Import UpgradeModal
 
 // Component Icon Ngôi sao 4 cánh
 const Star4 = ({ className }: { className?: string }) => (
@@ -19,10 +20,14 @@ export const MobileHomeHeader = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Kiểm tra tài khoản Gold
+  const isGold = user?.accountType === 'GOLD';
+  
   // Các state quản lý việc đóng/mở Modal
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFriendsOpen, setIsFriendsOpen] = useState(false);
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false); // [THÊM MỚI] State cho Upgrade Modal
 
   return (
     <>
@@ -37,6 +42,24 @@ export const MobileHomeHeader = () => {
         >
           {/* Lớp phủ đen mờ */}
           <div className="absolute inset-0 bg-black/15 dark:bg-black/50 backdrop-blur-[0px]"></div>
+
+          {/* [THÊM MỚI] NÚT UPGRADE / BADGE GOLD GÓC TRÊN BÊN PHẢI */}
+          <div className="absolute top-6 right-5 z-50">
+            {!isGold ? (
+              <button
+                onClick={() => setIsUpgradeOpen(true)}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-3 py-1.5 rounded-full font-bold text-xs shadow-lg active:scale-95 transition-transform"
+              >
+                <Crown size={16} strokeWidth={2.5} />
+                <span>Nâng cấp</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1.5 rounded-full font-bold text-xs shadow-lg border border-yellow-300 cursor-default">
+                <Crown size={16} strokeWidth={2.5} className="drop-shadow-sm" />
+                <span>Gold</span>
+              </div>
+            )}
+          </div>
 
           {/* Ghim chiều cao phần chứa text là 200px */}
           <div className="relative z-10 w-full h-[200px] flex flex-col items-start justify-center pt-2 px-8">
@@ -111,6 +134,14 @@ export const MobileHomeHeader = () => {
           isOpen={true} 
           userId={user.id} 
           onClose={() => setIsFriendsOpen(false)} 
+        />
+      )}
+
+      {/* [THÊM MỚI] Render Modal Nâng Cấp */}
+      {isUpgradeOpen && (
+        <UpgradeModal 
+          isOpen={isUpgradeOpen} 
+          onClose={() => setIsUpgradeOpen(false)} 
         />
       )}
     </>

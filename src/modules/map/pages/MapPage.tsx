@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import hook điều hướng
 import MainLayout from '@/components/layout/MainLayout';
 import { JourneyMap } from '@/modules/map/components/JourneyMap';
 import { boxService } from '@/modules/box/services/box.service';
 import { BoxResponse } from '@/modules/box/types';
 import { JourneyResponse } from '@/modules/journey/types';
-import { MapPin, ChevronDown, ChevronRight, Layers, Globe, Filter, X, SlidersHorizontal } from 'lucide-react';
+import { MapPin, ChevronDown, ChevronRight, Layers, Globe, Filter, X, SlidersHorizontal, ArrowLeft } from 'lucide-react'; // Thêm ArrowLeft
 import { cn } from '@/lib/utils';
-// Nếu bạn có dùng một state (hook) lưu trạng thái đóng/mở sidebar bên trái, hãy import vào đây. 
-// Ví dụ: import { useLayoutStore } from '@/store/layoutStore';
 
 export const MapPage = () => {
-    // const { isSidebarLeftOpen } = useLayoutStore(); // Giả sử có cái này
+    const navigate = useNavigate(); // Khởi tạo hook điều hướng
     
     const [boxes, setBoxes] = useState<BoxResponse[]>([]);
     const [boxJourneys, setBoxJourneys] = useState<Record<string, JourneyResponse[]>>({});
@@ -23,26 +22,20 @@ export const MapPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // =========================================================================
-    // [THÊM MỚI] XỬ LÝ LỖI KHUYẾT BẢN ĐỒ KHI SIDEBAR TRÁI CO GIÃN
+    // XỬ LÝ LỖI KHUYẾT BẢN ĐỒ KHI SIDEBAR TRÁI CO GIÃN
     // =========================================================================
     useEffect(() => {
-        // Hàm này sẽ giả lập việc người dùng kéo giãn cửa sổ trình duyệt.
-        // Nó sẽ "ép" component bản đồ bên dưới tính toán lại kích thước.
         const triggerMapResize = () => {
             window.dispatchEvent(new Event('resize'));
         };
 
-        // Khi component vừa mount, ta đợi 1 chút (300ms là đủ để CSS animation hoàn tất) rồi resize
         const timer1 = setTimeout(triggerMapResize, 300);
         
-        // Thêm một cái ResizeObserver giám sát cái thẻ div bọc ngoài cùng.
-        // Bất cứ khi nào div này bị to ra/nhỏ đi (do sidebar trái đẩy vào), ta gọi resize.
         const mapContainer = document.getElementById('map-wrapper-container');
         let resizeObserver: ResizeObserver;
         
         if (mapContainer) {
             resizeObserver = new ResizeObserver(() => {
-                // Đợi CSS transition của Sidebar chạy xong
                 setTimeout(triggerMapResize, 300); 
             });
             resizeObserver.observe(mapContainer);
@@ -54,14 +47,14 @@ export const MapPage = () => {
                 resizeObserver.unobserve(mapContainer);
             }
         };
-        // Nếu bạn có biến isSidebarLeftOpen, hãy cho vào mảng dependency bên dưới: [isSidebarLeftOpen]
     }, []);
     // =========================================================================
 
     useEffect(() => {
         const fetchBoxes = async () => {
             try {
-                const res: any = await boxService.getMyBoxes(0, 50);
+                // [FIX LỖI TS] Truyền đầy đủ các tham số tab, search, page, size
+                const res: any = await boxService.getMyBoxes('all', '', 0, 50);
                 setBoxes(res.content || []);
             } catch (error) {
                 console.error("Lỗi lấy danh sách Box:", error);
@@ -104,7 +97,6 @@ export const MapPage = () => {
 
     return (
         <MainLayout>
-            {/* [SỬA LỖI] Gắn id="map-wrapper-container" vào đây để ResizeObserver theo dõi */}
             <div id="map-wrapper-container" className="relative w-full h-[100dvh] bg-[#121212] overflow-hidden text-white pt-16 md:pt-0">
                 
                 {/* --- LỚP NỀN: BẢN ĐỒ TRÀN VIỀN --- */}
@@ -117,10 +109,19 @@ export const MapPage = () => {
                     />
                 </div>
 
+                {/* --- NÚT QUAY LẠI TRÊN MOBILE --- */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="absolute top-6 left-4 md:hidden z-10 bg-black/40 hover:bg-black/60 backdrop-blur-xl p-2.5 rounded-full shadow-2xl border border-white/10 text-white transition-all active:scale-95 flex items-center justify-center"
+                >
+                    <ArrowLeft size={20} />
+                </button>
+
                 {/* HUY HIỆU BỘ LỌC (Góc trên trái) */}
-                <div className="absolute top-6 left-6 z-10 bg-black/40 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-2xl border border-white/10 flex items-center gap-2 pointer-events-none transition-all">
+                {/* Trên mobile dời sang left-16 để tránh đè lên nút quay lại */}
+                <div className="absolute top-6 left-16 md:left-6 z-10 bg-black/40 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-2xl border border-white/10 flex items-center gap-2 pointer-events-none transition-all">
                     <Filter size={16} className="text-blue-400" />
-                    <span className="text-sm font-bold text-white tracking-wide">
+                    <span className="text-sm font-bold text-white tracking-wide truncate max-w-[150px] md:max-w-none">
                         {filterType === 'me' && 'Tất cả kỷ niệm của tôi'}
                         {filterType === 'box' && 'Bản đồ theo Không gian'}
                         {filterType === 'journey' && 'Bản đồ Hành trình'}

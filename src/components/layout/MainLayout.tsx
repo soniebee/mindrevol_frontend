@@ -1,19 +1,25 @@
+// src/components/layout/MainLayout.tsx
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { Navigation } from './Navigation'; 
 import { CreateJourneyModal } from '@/modules/journey/components/CreateJourneyModal';
 import { CheckinModal } from '@/modules/checkin/components/CheckinModal';
-import { CameraModal } from '@/modules/checkin/components/CameraModal'; // [THÊM MỚI]
+import { CameraModal } from '@/modules/checkin/components/CameraModal'; 
 import { JourneyListModal } from '@/modules/journey/components/JourneyListModal'; 
 import { SettingsModal } from '@/modules/user/components/SettingsModal'; 
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { cn } from '@/lib/utils';
+// [THÊM MỚI] Import hook thanh toán
+import { usePaymentSuccessHandler } from '@/modules/payment/hooks/usePaymentSuccessHandler';
 
 interface MainLayoutProps {
   children?: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  // [THÊM MỚI] Khởi tạo lắng nghe Webhook Thanh toán
+  usePaymentSuccessHandler();
+
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
@@ -21,7 +27,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isJourneyListOpen, setIsJourneyListOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); 
 
-  // [THÊM MỚI] Tách riêng 2 Modal Camera và Checkin
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [checkinFile, setCheckinFile] = useState<File | null>(null);
@@ -64,12 +69,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     fetchDefaultJourney();
   }, []);
 
-  // [ĐÃ SỬA] Khi nhấn dấu Cộng (+) -> Mở Camera Modal
   const handleCheckinClick = () => {
     setIsCameraModalOpen(true);
   };
 
-  // [THÊM MỚI] Khi Camera chụp xong hoặc Thư viện chọn xong -> Mở Checkin Modal
   const handleCaptureComplete = (file: File) => {
     setCheckinFile(file);
     setIsCameraModalOpen(false);
@@ -103,14 +106,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         hideBottomNav={isChatPage}
       />
 
-<main className={cn(
+      <main className={cn(
         "relative w-full flex flex-col z-0", 
         "transition-all duration-300 ease-in-out",
         isHomePage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]",
-        
-        // ĐÃ SỬA: Thêm isHomePage vào đây để thả rông cho trang chủ cuộn full màn hình
         (isChatPage || isHomePage) ? "pb-0" : "pb-[72px] md:pb-0", 
-        
         isSidebarExpanded ? "md:pl-[260px]" : "md:pl-[80px]"
       )}>
         {children || <Outlet />}
@@ -130,14 +130,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onClose={() => setIsJourneyListOpen(false)}
       />
 
-      {/* [THÊM MỚI] MÀN HÌNH CAMERA */}
       <CameraModal 
          isOpen={isCameraModalOpen}
          onClose={() => setIsCameraModalOpen(false)}
          onCapture={handleCaptureComplete}
       />
 
-      {/* MÀN HÌNH GHI CHÚ BÀI ĐĂNG */}
       {activeJourneyId && isCheckinModalOpen && (
           <CheckinModal 
             isOpen={isCheckinModalOpen} 

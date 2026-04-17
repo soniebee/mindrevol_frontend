@@ -159,10 +159,16 @@ export const useNotifications = (isOpen: boolean) => {
     const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse): Promise<boolean> => {
         try {
             if (noti.type === 'BOX_INVITE') {
+                // FIX: Ép kiểu sang số vì boxService yêu cầu number
+                const inviteId = parseNumericReferenceId(noti.referenceId);
+                if (inviteId === null) {
+                    throw new Error('ID lời mời box không hợp lệ');
+                }
+
                 if (action === 'ACCEPT') {
-                    await boxService.acceptInvite(noti.referenceId);
+                    await boxService.acceptInvite(inviteId);
                 } else {
-                    await boxService.rejectInvite(noti.referenceId);
+                    await boxService.rejectInvite(inviteId);
                 }
             } else if (noti.type === 'JOURNEY_INVITE') {
                 const invitationId = parseNumericReferenceId(noti.referenceId);
@@ -176,6 +182,7 @@ export const useNotifications = (isOpen: boolean) => {
                     await journeyService.rejectInvitation(invitationId);
                 }
             } else if (noti.type === 'FRIEND_REQUEST') {
+                // friendService dùng string nên gọi trực tiếp
                 if (action === 'ACCEPT') {
                     await friendService.acceptRequest(noti.referenceId);
                 } else {

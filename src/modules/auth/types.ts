@@ -2,7 +2,7 @@
 
 // 1. DTO cho User (dùng chung cho Auth và User module)
 export interface UserSummary {
-  id: number; // Lưu ý: Backend trả về String (UUID) nếu cần có thể đổi sang string
+  id: string; // [ĐÃ SỬA] Đổi sang string vì Backend dùng UUID
   handle: string;
   fullname: string;
   avatarUrl: string;
@@ -10,6 +10,9 @@ export interface UserSummary {
   
   hasPassword: boolean; 
   authProvider: string; 
+
+  // [THÊM MỚI] Khai báo accountType để hết báo lỗi đỏ ở giao diện
+  accountType?: 'FREE' | 'GOLD' | string; 
 }
 
 // 2. DTO phản hồi khi Login/Register thành công

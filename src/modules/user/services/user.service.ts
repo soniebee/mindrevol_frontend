@@ -8,6 +8,9 @@ export interface CalendarRecap {
 }
 
 // 1. Interface đầy đủ cho Profile User
+// src/modules/user/services/user.service.ts
+
+// 1. Interface đầy đủ cho Profile User
 export interface UserProfile {
   id: string;
   email?: string;
@@ -22,7 +25,7 @@ export interface UserProfile {
   friendCount: number;
   journeyCount?: number;
   
-  // --- THÊM 3 DÒNG NÀY VÀO ĐÂY ---
+  // --- THÊM CÁC DÒNG NÀY ---
   currentStreak?: number; 
   createdAt?: string;      
   totalCheckins?: number;  
@@ -33,6 +36,9 @@ export interface UserProfile {
   isBlockedByMe?: boolean;
   isBlockedByThem?: boolean;
   isMe?: boolean;
+
+  // [THÊM MỚI] Sửa lỗi đỏ TypeScript ở DesktopSidebar
+  accountType?: 'FREE' | 'GOLD' | string;
 }
 
 // 2. Interface rút gọn cho Search/List

@@ -46,6 +46,18 @@ export default {
       },
       backgroundSize: {
         'cute-dots': '20px 20px',
+      },
+      
+      // =========================================================
+      // [THÊM MỚI] Hiệu ứng lấp lánh (Shimmer) cho nút Upgrade Gold
+      // =========================================================
+      keyframes: {
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        }
+      },
+      animation: {
+        shimmer: 'shimmer 2s infinite',
       }
     },
   },
