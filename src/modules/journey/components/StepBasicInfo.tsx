@@ -50,7 +50,8 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
   useEffect(() => {
       const fetchBoxes = async () => {
           try {
-              const data = await boxService.getMyBoxes(0, 50);
+              // SỬA LỖI 1: Cập nhật đúng các tham số (tab, search, page, size)
+              const data = await boxService.getMyBoxes('all', '', 0, 50);
               setBoxes(data.content || []);
           } catch (error) {
               console.error("Lỗi tải danh sách Box", error);
@@ -89,7 +90,7 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
 
   useEffect(() => {
       setValue('endDate', endDatePreview.toISOString().split('T')[0]);
-  }, []);
+  }, [endDatePreview, setValue]);
 
   return (
     <div className="space-y-6">
@@ -123,7 +124,7 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
               />
           </div>
         </div>
-        {errors.name && <p className="text-red-400 text-xs ml-2 font-medium flex items-center gap-1">⚠️ {errors.name.message}</p>}
+        {errors.name && <p className="text-red-400 text-xs ml-2 font-medium flex items-center gap-1">⚠️ {errors.name.message as string}</p>}
       </div>
 
       {/* 2. MÀU SẮC CHỦ ĐẠO */}
@@ -173,7 +174,8 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
                       "w-8 h-8 rounded-xl flex items-center justify-center transition-colors text-xl",
                       selectedBox ? "bg-black/20" : "bg-zinc-800 text-zinc-500 group-hover:text-zinc-400"
                   )}
-                  style={selectedBox ? { borderBottom: `2px solid ${selectedBox.themeColor || '#3b82f6'}` } : {}}
+                  // SỬA LỖI 2: Đã gỡ bỏ selectedBox.themeColor gây lỗi
+                  style={selectedBox ? { borderBottom: `2px solid #3b82f6` } : {}}
                   >
                       {selectedBox ? selectedBox.avatar || '📦' : <Package size={16} />}
                   </div>
@@ -216,7 +218,8 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
                               className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-zinc-800/80 transition-colors text-left group"
                           >
                               <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xl bg-black/20" style={{ borderBottom: `2px solid ${box.themeColor || '#3b82f6'}` }}>
+                                  {/* SỬA LỖI 2: Đã gỡ bỏ box.themeColor gây lỗi */}
+                                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xl bg-black/20" style={{ borderBottom: `2px solid #3b82f6` }}>
                                       {box.avatar || '📦'}
                                   </div>
                                   <span className={cn("text-sm font-bold transition-colors", currentBoxId === box.id ? "text-blue-400" : "text-zinc-300 group-hover:text-white")}>
